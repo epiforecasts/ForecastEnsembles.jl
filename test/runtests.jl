@@ -8,4 +8,5 @@ using DataFrames
     include("test_interop.jl")
     include("test_distfromq.jl")
     include("test_linear_pool.jl")
+    include("test_qra.jl")
 end

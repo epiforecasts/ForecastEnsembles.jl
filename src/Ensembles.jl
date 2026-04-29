@@ -6,6 +6,7 @@ using StatsBase
 using Tables
 
 import DataFrames: combine
+import StatsBase: fit
 
 export ForecastTable,
        output_type,
@@ -17,6 +18,7 @@ export ForecastTable,
        SimpleEnsemble,
        LinearPool,
        QRA,
+       FittedQRA,
        CRPSStacking,
        combine,
        fit
@@ -27,6 +29,7 @@ include("methods.jl")
 include("simple.jl")
 include("distfromq.jl")
 include("linear_pool.jl")
+include("qra.jl")
 include("interop.jl")
 
 end # module

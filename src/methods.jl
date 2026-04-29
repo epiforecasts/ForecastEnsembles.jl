@@ -112,11 +112,6 @@ function CRPSStacking(;
     )
 end
 
-"""
-    fit(method::TrainedMethod, training::ForecastTable, observations) -> UnfittedMethod
-
-Estimate any method-specific parameters (e.g. weights, regression coefficients)
-from `training` paired with `observations`, returning a fitted counterpart that
-can be passed to [`combine`](@ref). Implementations live with each method.
-"""
-function fit end
+# `fit` is `StatsBase.fit` (imported in src/Ensembles.jl). Method
+# definitions live with each TrainedMethod (see src/qra.jl,
+# src/crps_stacking.jl).
