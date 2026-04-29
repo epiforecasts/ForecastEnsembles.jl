@@ -45,25 +45,54 @@ end
 
 @testset "Parity — hubEnsembles::linear_pool (sample)" begin
     using Random: MersenneTwister
+    using Distributions: Normal, pdf, quantile as dquantile
+
     in_df = _read_input("lp_sample_input.csv")
     in_df.output_type_id = parse.(Int, string.(in_df.output_type_id))
     ft = ForecastTable(in_df; task_id_cols = [:location])
-    out = combine(ft, LinearPool(; n_samples = 600); rng = MersenneTwister(2026))
+
+    n_j = 600
+    out = combine(ft, LinearPool(; n_samples = n_j); rng = MersenneTwister(2026))
     out_df = DataFrame(out)
     ref = CSV.read(joinpath(REF, "lp_sample_output.csv"), DataFrame)
-    # Both R and Julia produce 600/150 random samples per location. Compare
-    # summary stats per location: mean and std should agree to within MC error.
-    # Generous tolerance: R draws 150 samples per location; Julia 600. The
-    # mixture distributions are the same in expectation but Monte Carlo
-    # noise dominates, especially for quantile estimates from the 150-sample
-    # R reference.
+    n_r = 150  # n_output_samples used in test/reference/generate.R
+
+    # Theoretical Monte Carlo standard errors for two independent empirical
+    # samples from the same distribution with std σ:
+    #   SE(mean_a − mean_b)     = σ √(1/n_a + 1/n_b)
+    #   SE(std_a  − std_b)      ≈ σ √(1/(2n_a) + 1/(2n_b))   (Gaussian approx)
+    #   SE(qτ_a − qτ_b)         = √(τ(1−τ)) / f(F⁻¹(τ)) · √(1/n_a + 1/n_b)
+    # We use a 4σ envelope (≈ 1 in 60k under normality), comfortably absorbing
+    # mild non-normality of the mixture.
+    K = 4.0
+
     for loc in unique(out_df.location)
-        ours  = out_df[out_df.location .== loc, :value]
+        ours   = out_df[out_df.location .== loc, :value]
         theirs = ref[ref.location .== loc, :value]
-        @test abs(mean(ours) - mean(theirs)) < 0.25
-        @test abs(std(ours)  - std(theirs))  < 0.30
+        σ̂ = std(vcat(ours, theirs))
+        nf = sqrt(1/n_r + 1/n_j)
+
+        Δμ  = abs(mean(ours) - mean(theirs))
+        SEμ = σ̂ * nf
+        @info "lp-sample mean" loc Δμ SE=SEμ ratio=Δμ/SEμ
+        @test Δμ < K * SEμ
+
+        Δσ  = abs(std(ours) - std(theirs))
+        SEσ = σ̂ * sqrt(0.5 * (1/n_r + 1/n_j))
+        @info "lp-sample std" loc Δσ SE=SEσ ratio=Δσ/SEσ
+        @test Δσ < K * SEσ
+
         for τ in (0.1, 0.5, 0.9)
-            @test abs(quantile(ours, τ) - quantile(theirs, τ)) < 0.6
+            qa = quantile(ours, τ); qb = quantile(theirs, τ)
+            # Plug a Normal at the pooled empirical mean/std into the
+            # quantile-density formula — a crude but consistent surrogate
+            # for f(F⁻¹(τ)) of the actual mixture.
+            d̂ = Normal(mean(vcat(ours, theirs)), σ̂)
+            f_at_q = pdf(d̂, dquantile(d̂, τ))
+            SEq = sqrt(τ * (1 - τ)) / f_at_q * nf
+            Δq  = abs(qa - qb)
+            @info "lp-sample quantile" loc τ Δq SE=SEq ratio=Δq/SEq
+            @test Δq < K * SEq
         end
     end
 end
@@ -81,6 +110,36 @@ end
     # CDF reconstruction differs between distfromq (spline) and our PCHIP,
     # plus both paths have Monte Carlo noise from the n_output_samples step.
     @test maximum(abs.(j.value .- j.value_r)) < 0.5
+end
+
+@testset "Parity — lopensemble::crps_weights" begin
+    in_df = CSV.read(joinpath(REF, "crps_input.csv"), DataFrame)
+    # `lopensemble` uses `model`, `sample_id`, `predicted`, `observed`, `date`.
+    rename!(in_df,
+            :model => :model_id,
+            :sample_id => :output_type_id,
+            :predicted => :value)
+    in_df.output_type = fill(:sample, nrow(in_df))
+    ft = ForecastTable(in_df[:, [:model_id, :output_type, :output_type_id, :date, :value]];
+                       task_id_cols = [:date])
+    obs = unique(in_df[:, [:date, :observed]])
+
+    fitted = fit(CRPSStacking(; dirichlet_alpha = 1.001), ft, obs)
+
+    ref = CSV.read(joinpath(REF, "crps_weights_output.csv"), DataFrame)
+    rename!(ref, :model => :model_id, :weight => :weight_r)
+    j = innerjoin(fitted.weights, ref; on = :model_id)
+    @test nrow(j) == nrow(ref)
+    # Both estimators are MAP optimisers of the same penalised CRPS
+    # objective. Differences come from (a) the optimiser used (Stan's L-BFGS
+    # vs Optim.jl's L-BFGS, both with default tolerances) and (b) Stan's
+    # internal softplus/simplex parameterisation. A 0.05 absolute tolerance
+    # on individual weights is generous; in practice the dominant weight
+    # agrees to 2-3 decimal places.
+    for r in eachrow(j)
+        @info "crps weight" model=r.model_id julia=r.weight stan=r.weight_r diff=abs(r.weight - r.weight_r)
+        @test abs(r.weight - r.weight_r) < 0.05
+    end
 end
 
 @testset "Parity — qrensemble::qra (default)" begin
