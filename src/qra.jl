@@ -59,21 +59,26 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
         gkey = isempty(group_cols) ? () : NamedTuple(c => group_df[1, c] for c in group_cols)
 
         if m.per_quantile_weights
-            for τ in levels
-                gτ = group_df[group_df.output_type_id .== τ, :]
-                X, y = _design_matrix(gτ, models, training.model_id_col)
-                β, β0 = _quantile_regression(X, y, τ; intercept = m.intercept,
-                                                       simplex = m.enforce_normalisation)
-                coefs[(gkey, τ)] = β
-                intercepts[(gkey, τ)] = β0
-            end
             if m.noncross
-                # Project onto monotone-quantile constraints (post-hoc): for
-                # any task, the predicted quantile values must be
-                # non-decreasing in τ. We enforce this at fit time by
-                # increasing intercepts where needed; full LP with
-                # noncross constraints is a TODO.
-                @warn "noncross not yet implemented exactly; ignoring" maxlog=1
+                # Joint LP across τ with cross-τ monotonicity constraints.
+                βs, β0s = _per_quantile_regression_noncross(
+                    group_df, models, levels, training.model_id_col;
+                    intercept = m.intercept,
+                    simplex = m.enforce_normalisation,
+                )
+                for (k, τ) in enumerate(levels)
+                    coefs[(gkey, τ)] = βs[k]
+                    intercepts[(gkey, τ)] = β0s[k]
+                end
+            else
+                for τ in levels
+                    gτ = group_df[group_df.output_type_id .== τ, :]
+                    X, y = _design_matrix(gτ, models, training.model_id_col)
+                    β, β0 = _quantile_regression(X, y, τ; intercept = m.intercept,
+                                                           simplex = m.enforce_normalisation)
+                    coefs[(gkey, τ)] = β
+                    intercepts[(gkey, τ)] = β0
+                end
             end
         else
             # Joint fit: stack rows over τ levels with τ-tilted loss.
@@ -177,6 +182,73 @@ function _quantile_regression(X::AbstractMatrix, y::AbstractVector, τ::Real;
     @objective(model, Min, sum(τ * u[i] + (1 - τ) * v[i] for i in 1:n))
     optimize!(model)
     return value.(β), value(β0)
+end
+
+# Per-τ quantile regression with non-crossing constraints: separate
+# coefficients (β_τ, β0_τ) per τ, but for every training point the predicted
+# quantiles must be non-decreasing in τ. Returns (Vector{Vector{Float64}},
+# Vector{Float64}) keyed in the order of `levels`.
+function _per_quantile_regression_noncross(group_df::AbstractDataFrame,
+                                            models::Vector{<:AbstractString},
+                                            levels::Vector{Float64},
+                                            model_id_col::Symbol;
+                                            intercept::Bool = true,
+                                            simplex::Bool = false)
+    # Build aligned design matrices per τ. Assumes all τ share the same set
+    # of training points (typical when forecasts are produced jointly).
+    Xs = Matrix{Float64}[]
+    ys = Vector{Float64}[]
+    for τ in levels
+        sub = group_df[group_df.output_type_id .== τ, :]
+        X, y = _design_matrix(sub, models, model_id_col)
+        push!(Xs, X)
+        push!(ys, y)
+    end
+    M = size(first(Xs), 2)
+    K = length(levels)
+    n = size(first(Xs), 1)
+    all(size(X, 1) == n for X in Xs) ||
+        throw(ArgumentError("noncross requires same number of training points across τ"))
+
+    model = Model(HiGHS.Optimizer)
+    set_silent(model)
+    @variable(model, β[1:M, 1:K])
+    @variable(model, β0[1:K])
+    if simplex
+        @constraint(model, [j = 1:M, k = 1:K], β[j, k] >= 0)
+        @constraint(model, [k = 1:K], sum(β[:, k]) == 1)
+    end
+    if !intercept
+        @constraint(model, [k = 1:K], β0[k] == 0)
+    end
+
+    obj = AffExpr(0.0)
+    for (k, τ) in enumerate(levels)
+        u = @variable(model, [1:n], lower_bound = 0.0)
+        v = @variable(model, [1:n], lower_bound = 0.0)
+        for i in 1:n
+            @constraint(model, ys[k][i] - β0[k] - sum(Xs[k][i, j] * β[j, k] for j in 1:M) == u[i] - v[i])
+            add_to_expression!(obj, τ, u[i])
+            add_to_expression!(obj, 1 - τ, v[i])
+        end
+    end
+
+    # Non-crossing: predicted quantile at τ_k ≤ predicted at τ_{k+1} for
+    # every training point.
+    for k in 1:(K-1)
+        for i in 1:n
+            @constraint(model,
+                β0[k]   + sum(Xs[k][i, j]   * β[j, k]   for j in 1:M) <=
+                β0[k+1] + sum(Xs[k+1][i, j] * β[j, k+1] for j in 1:M))
+        end
+    end
+
+    @objective(model, Min, obj)
+    optimize!(model)
+
+    βs = [collect(value.(β[:, k])) for k in 1:K]
+    β0s = collect(value.(β0))
+    return βs, β0s
 end
 
 # Joint quantile regression: stack rows for all τ in levels, with τ-tilted

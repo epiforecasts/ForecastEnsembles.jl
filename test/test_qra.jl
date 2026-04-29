@@ -86,3 +86,43 @@ end
     out = combine(train, fitted)
     @test all(DataFrame(out).model_id .== "qra")
 end
+
+@testset "QRA noncross" begin
+    rng = MersenneTwister(99)
+    n_train = 100
+    levels = [0.1, 0.5, 0.9]
+    y = randn(rng, n_train)
+
+    rows = DataFrame[]
+    for (mid, prediction) in (
+        ("m_a", y .+ 0.3 .* randn(rng, n_train)),
+        ("m_b", y .+ 0.3 .* randn(rng, n_train)),
+    )
+        for τ in levels
+            zτ = quantile(Normal(0, 1), τ)
+            push!(rows, DataFrame(
+                model_id = mid,
+                output_type = "quantile",
+                output_type_id = τ,
+                t = 1:n_train,
+                value = prediction .+ zτ,
+            ))
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+    obs = DataFrame(t = 1:n_train, observed = y)
+
+    fitted = fit(QRA(; per_quantile_weights = true,
+                       enforce_normalisation = true,
+                       intercept = false,
+                       noncross = true),
+                 train, obs)
+    out = combine(train, fitted)
+    d = DataFrame(out)
+
+    # Verify per-task monotonicity in τ.
+    for tdf in DataFrames.groupby(d, :t)
+        sorted = sort(tdf, :output_type_id)
+        @test issorted(sorted.value)
+    end
+end

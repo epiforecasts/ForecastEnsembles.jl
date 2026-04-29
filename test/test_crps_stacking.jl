@@ -42,4 +42,9 @@ using Statistics: mean
     d = DataFrame(out)
     @test all(d.output_type .=== :sample)
     @test all(d.model_id .== "hub-ensemble")
+
+    # Strong Dirichlet prior pulls weights toward the simplex centre.
+    fitted_prior = fit(CRPSStacking(; dirichlet_alpha = 50.0), train, obs)
+    centre = 1.0 / nrow(fitted_prior.weights)
+    @test all(abs.(fitted_prior.weights.weight .- centre) .< 0.15)
 end

@@ -29,9 +29,10 @@ F = Σᵢ wᵢ Fᵢ is computed in closed form from the empirical-sample formula
 
 with `aᵢᵗ = mean(|Xᵢₖ − yₜ|)` and `Bᵢⱼᵗ = mean(|Xᵢₖ − Xⱼₗ|)`.
 
-`m.dirichlet_alpha` is currently unused — it is reserved for a Dirichlet log-
-prior penalty matching `lopensemble`. Callers that need the prior should pin
-to the same `dirichlet_alpha` once the penalty is implemented.
+`m.dirichlet_alpha` adds a Dirichlet(α, …, α) log-prior penalty to the loss,
+matching `lopensemble`'s MAP estimator. With `α = 1` (uniform prior) the
+penalty vanishes; with `α > 1` it pushes the optimum toward the interior of
+the simplex.
 """
 function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample ||
@@ -76,14 +77,23 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
         push!(b_list, B)
     end
 
+    α = m.dirichlet_alpha
+    T = length(a_list)
+    # Per-task CRPS is on the order of |y| (~1 in standard units). The
+    # Dirichlet penalty is summed over models without a 1/T factor, so it
+    # competes correctly with the *total* training CRPS rather than its
+    # mean. We minimise the negative log-posterior up to constants:
+    #   loss(z) = mean_t CRPS_t(w) − ((α − 1) / T) · Σᵢ log wᵢ
     function loss(z)
-        w = _softmax(z)
+        m_z = maximum(z)
+        log_w = z .- (m_z + log(sum(exp.(z .- m_z))))
+        w = exp.(log_w)
         s = 0.0
-        for t in eachindex(a_list)
+        @inbounds for t in 1:T
             A = a_list[t]; B = b_list[t]
             s += dot(w, A) - 0.5 * dot(w, B * w)
         end
-        return s / length(a_list)
+        return s / T - ((α - 1) / T) * sum(log_w)
     end
 
     z0 = zeros(M)
