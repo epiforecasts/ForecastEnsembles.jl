@@ -20,6 +20,7 @@ export ForecastTable,
        QRA,
        FittedQRA,
        CRPSStacking,
+       FittedCRPSStacking,
        combine,
        fit
 
@@ -30,6 +31,7 @@ include("simple.jl")
 include("distfromq.jl")
 include("linear_pool.jl")
 include("qra.jl")
+include("crps_stacking.jl")
 include("interop.jl")
 
 end # module

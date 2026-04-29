@@ -9,4 +9,5 @@ using DataFrames
     include("test_distfromq.jl")
     include("test_linear_pool.jl")
     include("test_qra.jl")
+    include("test_crps_stacking.jl")
 end
