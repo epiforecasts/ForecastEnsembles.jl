@@ -1,0 +1,122 @@
+"""
+    EnsembleMethod
+
+Top of the method-type hierarchy. Subtypes split into
+
+- [`UnfittedMethod`](@ref) — can be passed to [`combine`](@ref) directly.
+- [`TrainedMethod`](@ref) — must be passed through [`fit`](@ref) first to
+  obtain a fitted counterpart, which is itself an `UnfittedMethod` and can
+  then be passed to `combine`.
+"""
+abstract type EnsembleMethod end
+abstract type UnfittedMethod <: EnsembleMethod end
+abstract type TrainedMethod <: EnsembleMethod end
+
+"""
+    SimpleEnsemble(agg = :mean; weights = nothing)
+
+Hub-style simple or weighted ensemble. `agg` is `:mean` or `:median`.
+`weights` is either `nothing` (equal weights) or a `DataFrame` with columns
+`model_id` and `weight`.
+"""
+struct SimpleEnsemble <: UnfittedMethod
+    agg::Symbol
+    weights::Union{Nothing,DataFrame}
+end
+
+function SimpleEnsemble(agg::Symbol = :mean; weights = nothing)
+    agg in (:mean, :median) ||
+        throw(ArgumentError("SimpleEnsemble agg must be :mean or :median (got :$agg)"))
+    if weights !== nothing
+        weights = DataFrame(weights)
+        all(c -> c in propertynames(weights), (:model_id, :weight)) ||
+            throw(ArgumentError("weights frame must have :model_id and :weight columns"))
+    end
+    return SimpleEnsemble(agg, weights)
+end
+
+"""
+    LinearPool(; weights = nothing, n_samples = 10_000)
+
+Linear opinion pool: the ensemble distribution is a (weighted) mixture of the
+component distributions. The path through the algorithm depends on the
+forecast `output_type`:
+
+- `:sample`   — weighted resample from per-model samples.
+- `:cdf`      — pointwise weighted average of CDFs.
+- `:quantile` — reconstruct each model's CDF from its quantiles, draw
+  `n_samples`, pool, and re-extract quantiles at the original levels.
+"""
+struct LinearPool <: UnfittedMethod
+    weights::Union{Nothing,DataFrame}
+    n_samples::Int
+end
+
+function LinearPool(; weights = nothing, n_samples::Integer = 10_000)
+    if weights !== nothing
+        weights = DataFrame(weights)
+        all(c -> c in propertynames(weights), (:model_id, :weight)) ||
+            throw(ArgumentError("weights frame must have :model_id and :weight columns"))
+    end
+    n_samples > 0 || throw(ArgumentError("n_samples must be positive"))
+    return LinearPool(weights, Int(n_samples))
+end
+
+"""
+    QRA(; per_quantile_weights = false, intercept = true,
+          enforce_normalisation = false, noncross = false,
+          group = Symbol[])
+
+Quantile Regression Averaging. `group` lists task dimensions over which a
+separate regression is fitted. Mirrors `qrensemble::qra`.
+"""
+struct QRA <: TrainedMethod
+    per_quantile_weights::Bool
+    intercept::Bool
+    enforce_normalisation::Bool
+    noncross::Bool
+    group::Vector{Symbol}
+end
+
+function QRA(;
+    per_quantile_weights::Bool = false,
+    intercept::Bool = true,
+    enforce_normalisation::Bool = false,
+    noncross::Bool = false,
+    group = Symbol[],
+)
+    return QRA(per_quantile_weights, intercept, enforce_normalisation, noncross,
+               Symbol.(collect(group)))
+end
+
+"""
+    CRPSStacking(; dirichlet_alpha = 1.001, lambda = nothing, gamma = nothing)
+
+CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`.
+"""
+struct CRPSStacking <: TrainedMethod
+    dirichlet_alpha::Float64
+    lambda::Union{Nothing,Float64}
+    gamma::Union{Nothing,Float64}
+end
+
+function CRPSStacking(;
+    dirichlet_alpha::Real = 1.001,
+    lambda::Union{Nothing,Real} = nothing,
+    gamma::Union{Nothing,Real} = nothing,
+)
+    return CRPSStacking(
+        Float64(dirichlet_alpha),
+        lambda === nothing ? nothing : Float64(lambda),
+        gamma === nothing ? nothing : Float64(gamma),
+    )
+end
+
+"""
+    fit(method::TrainedMethod, training::ForecastTable, observations) -> UnfittedMethod
+
+Estimate any method-specific parameters (e.g. weights, regression coefficients)
+from `training` paired with `observations`, returning a fitted counterpart that
+can be passed to [`combine`](@ref). Implementations live with each method.
+"""
+function fit end
