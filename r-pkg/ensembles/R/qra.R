@@ -18,6 +18,33 @@
 #'   separate regressions.
 #'
 #' @return A data frame of fitted predictions on `target`.
+#' @examples
+#' \dontrun{
+#' # 50 training points, 1 holdout, 2 component models, 5 quantile levels.
+#' set.seed(1)
+#' taus <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+#' n <- 50
+#' y <- rnorm(n + 1)
+#' make_rows <- function(model_id, predictions) {
+#'   do.call(rbind, lapply(taus, function(q) data.frame(
+#'     model_id = model_id, output_type = "quantile",
+#'     output_type_id = q, t = seq_along(predictions),
+#'     value = predictions + qnorm(q),
+#'     stringsAsFactors = FALSE
+#'   )))
+#' }
+#' rows <- rbind(
+#'   make_rows("m_good",  y + 0.3 * rnorm(n + 1)),
+#'   make_rows("m_noisy", 2 * rnorm(n + 1))
+#' )
+#' train  <- rows[rows$t <= n,  ]
+#' target <- rows[rows$t == n + 1, ]
+#' obs <- data.frame(t = seq_len(n), observed = y[seq_len(n)])
+#'
+#' qra(training = train, target = target, observations = obs,
+#'     task_id_cols = "t", enforce_normalisation = TRUE,
+#'     intercept = FALSE, noncross = TRUE)
+#' }
 #' @export
 qra <- function(training,
                 target,

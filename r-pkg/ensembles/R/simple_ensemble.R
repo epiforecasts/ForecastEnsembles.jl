@@ -10,6 +10,22 @@
 #' @param task_id_cols Character vector of task-id columns.
 #'
 #' @return A data frame, with `model_id = "hub-ensemble"`.
+#' @examples
+#' \dontrun{
+#' df <- data.frame(
+#'   model_id       = rep(c("m1", "m2", "m3"), each = 2),
+#'   output_type    = "quantile",
+#'   output_type_id = rep(c(0.25, 0.75), 3),
+#'   location       = "A",
+#'   value          = c(1.0, 3.0, 2.0, 4.0, 0.5, 2.5)
+#' )
+#' simple_ensemble(df, agg_fun = "mean", task_id_cols = "location")
+#'
+#' # Weighted variant.
+#' w <- data.frame(model_id = c("m1", "m2", "m3"), weight = c(0.5, 0.3, 0.2))
+#' simple_ensemble(df, weights = w, agg_fun = "median",
+#'                 task_id_cols = "location")
+#' }
 #' @export
 simple_ensemble <- function(model_out_tbl,
                             weights = NULL,

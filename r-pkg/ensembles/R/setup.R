@@ -17,6 +17,15 @@
 #'   source instead of the version pinned in the manifest.
 #'
 #' @return Invisible NULL.
+#' @examples
+#' \dontrun{
+#' # Default: pick up the bundled bridge project and a Julia binary from
+#' # the env or PATH.
+#' julia_setup()
+#'
+#' # Develop a local checkout of Ensembles.jl into the bundled project.
+#' julia_setup(ensembles_jl_path = "~/code/ensembles.jl")
+#' }
 #' @export
 julia_setup <- function(julia_bindir = NULL, ensembles_jl_path = NULL) {
   if (isTRUE(.pkg_env$ready)) return(invisible(NULL))

@@ -1,0 +1,73 @@
+# ensembles (R)
+
+Thin R wrapper around the Julia package `Ensembles.jl`. Mirrors the
+user- facing API of `hubEnsembles`, `qrensemble`, and `lopensemble`:
+
+| R wrapper                                                     | Equivalent in R packages                                                                                      |
+|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| [`simple_ensemble()`](reference/simple_ensemble.md)           | [`hubEnsembles::simple_ensemble`](https://hubverse-org.github.io/hubEnsembles/reference/simple_ensemble.html) |
+| [`linear_pool()`](reference/linear_pool.md)                   | [`hubEnsembles::linear_pool`](https://hubverse-org.github.io/hubEnsembles/reference/linear_pool.html)         |
+| [`qra()`](reference/qra.md)                                   | [`qrensemble::qra`](https://rdrr.io/pkg/qrensemble/man/qra.html)                                              |
+| [`crps_weights()`](reference/crps_weights.md)                 | [`lopensemble::crps_weights`](https://rdrr.io/pkg/lopensemble/man/crps_weights.html)                          |
+| [`mixture_from_samples()`](reference/mixture_from_samples.md) | [`lopensemble::mixture_from_samples`](https://rdrr.io/pkg/lopensemble/man/mixture_from_samples.html)          |
+
+## How it works
+
+The wrapper uses
+[JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR) to
+talk to a long-lived Julia process. First call pays Julia + Ensembles.jl
+startup (~10–15 s); subsequent calls are sub-second.
+
+## Requirements
+
+- Julia ≥ 1.10 on `PATH` (or pass `julia_bin` to
+  [`julia_setup()`](reference/julia_setup.md)).
+- A working installation of this package
+  (`R CMD INSTALL r-pkg/ensembles`).
+
+The first call in a session also instantiates the bridge Julia project
+(LBFGS solver, HiGHS LP solver, CSV/JSON IO). This takes a few minutes
+the very first time and then stays cached.
+
+## Quick start
+
+``` r
+library(ensembles)
+
+df <- data.frame(
+  model_id = rep(c("m1", "m2"), each = 4),
+  output_type = "quantile",
+  output_type_id = rep(c(0.1, 0.25, 0.75, 0.9), 2),
+  location = "A",
+  value = c(-1.5, -0.5, 0.5, 1.5,   # m1
+            -1.0,  0.0, 1.0, 2.0)   # m2
+)
+
+simple_ensemble(df, agg_fun = "mean", task_id_cols = "location")
+```
+
+## Future work
+
+- Persistent Julia daemon (DaemonMode.jl) to remove per-call startup
+  cost.
+- Optional in-process binding once JuliaCall is fixed for Julia 1.12+.
+
+# Package index
+
+## Ensemble methods
+
+Drop-in equivalents to the user-facing functions in `hubEnsembles`,
+`qrensemble`, and `lopensemble`. All numerical work runs in Julia.
+
+- [`simple_ensemble()`](simple_ensemble.md) : Hub-style simple/weighted
+  ensemble
+- [`linear_pool()`](linear_pool.md) : Linear opinion pool
+- [`qra()`](qra.md) : Quantile Regression Averaging
+- [`crps_weights()`](crps_weights.md) : CRPS-stacked ensemble weights
+- [`mixture_from_samples()`](mixture_from_samples.md) : Mixture from
+  samples using fitted CRPS weights
+
+## Setup
+
+- [`julia_setup()`](julia_setup.md) : Initialise the Julia bridge
+

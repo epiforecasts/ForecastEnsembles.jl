@@ -1,0 +1,28 @@
+url: ~
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: "Ensemble methods"
+    desc: >
+      Drop-in equivalents to the user-facing functions in `hubEnsembles`,
+      `qrensemble`, and `lopensemble`. All numerical work runs in Julia.
+    contents:
+      - simple_ensemble
+      - linear_pool
+      - qra
+      - crps_weights
+      - mixture_from_samples
+  - title: "Setup"
+    contents:
+      - julia_setup
+
+navbar:
+  structure:
+    left:  [reference, news]
+    right: [github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/sbfnk/ensembles.jl
