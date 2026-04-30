@@ -1,8 +1,7 @@
 #' Hub-style simple/weighted ensemble
 #'
 #' Drop-in equivalent to `hubEnsembles::simple_ensemble`, computed by
-#' Ensembles.jl. Aggregates `value` across `model_id` within each
-#' (task, output_type, output_type_id) group.
+#' Ensembles.jl over a JuliaConnectoR TCP bridge.
 #'
 #' @param model_out_tbl A data frame with columns `model_id`, `output_type`,
 #'   `output_type_id`, `value`, plus task-id columns.
@@ -10,7 +9,7 @@
 #' @param agg_fun One of `"mean"` or `"median"`.
 #' @param task_id_cols Character vector of task-id columns.
 #'
-#' @return A data frame in the same shape, with `model_id = "hub-ensemble"`.
+#' @return A data frame, with `model_id = "hub-ensemble"`.
 #' @export
 simple_ensemble <- function(model_out_tbl,
                             weights = NULL,
@@ -19,19 +18,11 @@ simple_ensemble <- function(model_out_tbl,
   agg_fun <- match.arg(agg_fun)
   if (missing(task_id_cols))
     stop("`task_id_cols` is required.", call. = FALSE)
-
-  .with_tempdir(function(td) {
-    spec <- list(
-      op = "simple_ensemble",
-      input = .write_csv_temp(model_out_tbl, "input", td),
-      task_id_cols = as.list(task_id_cols),
-      agg = agg_fun,
-      output = file.path(td, "out.csv"),
-      .tempdir = td
-    )
-    if (!is.null(weights)) {
-      spec$weights <- .write_csv_temp(weights, "weights", td)
-    }
-    .run_julia(spec)
-  })
+  .ensure_setup()
+  fn <- JuliaConnectoR::juliaFun("_ens_simple")
+  out <- fn(as.data.frame(model_out_tbl),
+            as.list(task_id_cols),
+            agg_fun,
+            if (is.null(weights)) NULL else as.data.frame(weights))
+  .julia_to_df(out)
 }

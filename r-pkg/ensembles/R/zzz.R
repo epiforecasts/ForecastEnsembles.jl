@@ -1,17 +1,15 @@
 .pkg_env <- new.env(parent = emptyenv())
-.pkg_env$julia_bin <- NULL
-.pkg_env$bridge_project <- NULL
-.pkg_env$runner_script <- NULL
+.pkg_env$initialised <- FALSE
 
 .ensure_setup <- function() {
-  if (!is.null(.pkg_env$julia_bin)) return(invisible(NULL))
+  if (.pkg_env$initialised) return(invisible(NULL))
   julia_setup()
   invisible(NULL)
 }
 
-# Resolve where the bridge Project.toml + runner.jl live. After installation
-# they are inside the package's `inst/julia/` directory. During development
-# they sit next to the package source.
+# Resolve where the bridge Project.toml lives. After installation it is
+# inside the package's `inst/julia/`. During development it sits next to
+# the package source.
 .resolve_bridge <- function() {
   candidates <- c(
     system.file("julia", package = "ensembles"),
@@ -19,10 +17,16 @@
     file.path(getwd(), "inst", "julia")
   )
   for (p in candidates) {
-    if (nzchar(p) && file.exists(file.path(p, "runner.jl"))) {
+    if (nzchar(p) && file.exists(file.path(p, "Project.toml"))) {
       return(normalizePath(p, mustWork = TRUE))
     }
   }
-  stop("Could not find inst/julia/runner.jl. Reinstall the ensembles package.",
+  stop("Could not find inst/julia/Project.toml. Reinstall the ensembles package.",
        call. = FALSE)
+}
+
+.onLoad <- function(libname, pkgname) {
+  reg.finalizer(.pkg_env, function(env) {
+    tryCatch(JuliaConnectoR::stopJulia(), error = function(e) NULL)
+  }, onexit = TRUE)
 }

@@ -13,15 +13,19 @@ facing API of `hubEnsembles`, `qrensemble`, and `lopensemble`:
 
 ## How it works
 
-Each public function spawns a short-lived Julia subprocess that runs the
-operation through Ensembles.jl. Inputs go in as CSV, results come back as
-CSV. There is one Julia startup per call (≈10–15 s on first use, ≈5–8 s
-once Ensembles.jl is precompiled in the bridge environment).
+The wrapper uses [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR),
+which talks to a single long-lived Julia process over a local TCP socket.
+First call in a session pays a Julia + Ensembles.jl startup of ~10–15 s;
+subsequent calls in the same session are sub-second.
 
-We started with [JuliaCall](https://github.com/Non-Contradiction/JuliaCall)
-(in-process embedding) but it segfaults on `using Ensembles` with Julia
-1.12 due to native-library loading issues. The subprocess approach adds
-startup cost but is reliable across Julia versions.
+We initially tried [JuliaCall](https://github.com/Non-Contradiction/JuliaCall)
+(in-process embedding via `libjulia`), but it segfaults on `using
+Ensembles` whenever the embedded Julia loads `RCall.jl`. RCall.jl maps R's
+own `R_CStackLimit` symbol via `unsafe_store!`, and inside R-with-embedded-
+Julia the same `libR` is already in the process — the resulting symbol
+collision corrupts the stack-limit pointer and the next allocation
+segfaults. JuliaConnectoR avoids this by keeping Julia and R in separate
+processes.
 
 ## Requirements
 

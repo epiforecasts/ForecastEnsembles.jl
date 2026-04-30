@@ -1,8 +1,7 @@
 #' Quantile Regression Averaging
 #'
-#' Equivalent to `qrensemble::qra`, computed by Ensembles.jl. Fits a
-#' quantile regression on training forecasts and applies the fitted weights
-#' to the target forecasts.
+#' Equivalent to `qrensemble::qra`. Fits a quantile regression on training
+#' forecasts and applies the fitted weights to the target forecasts.
 #'
 #' @param training A data frame with columns `model_id`, `output_type`
 #'   (must be `"quantile"`), `output_type_id`, `value`, plus task-id columns.
@@ -31,22 +30,16 @@ qra <- function(training,
                 group = character(0)) {
   if (missing(task_id_cols))
     stop("`task_id_cols` is required.", call. = FALSE)
-
-  .with_tempdir(function(td) {
-    spec <- list(
-      op = "qra",
-      training     = .write_csv_temp(training, "train", td),
-      target       = .write_csv_temp(target, "target", td),
-      observations = .write_csv_temp(observations, "obs", td),
-      task_id_cols = as.list(task_id_cols),
-      per_quantile_weights = per_quantile_weights,
-      intercept = intercept,
-      enforce_normalisation = enforce_normalisation,
-      noncross = noncross,
-      group = as.list(group),
-      output = file.path(td, "out.csv"),
-      .tempdir = td
-    )
-    .run_julia(spec)
-  })
+  .ensure_setup()
+  fn <- JuliaConnectoR::juliaFun("_ens_qra")
+  out <- fn(as.data.frame(training),
+            as.data.frame(target),
+            as.data.frame(observations),
+            as.list(task_id_cols),
+            isTRUE(per_quantile_weights),
+            isTRUE(intercept),
+            isTRUE(enforce_normalisation),
+            isTRUE(noncross),
+            as.list(group))
+  .julia_to_df(out)
 }
