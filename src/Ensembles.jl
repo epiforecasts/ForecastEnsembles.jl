@@ -22,7 +22,8 @@ export ForecastTable,
        CRPSStacking,
        FittedCRPSStacking,
        combine,
-       fit
+       fit,
+       weights
 
 include("output_types.jl")
 include("forecast_table.jl")

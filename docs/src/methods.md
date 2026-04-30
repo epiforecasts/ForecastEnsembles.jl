@@ -85,12 +85,32 @@ optimiser tolerance — typically a few × 1e-3 on the dominant weight.
 
 ## Composition
 
-Any fitted method is an `UnfittedMethod`, so the output of `fit` plugs
-straight into `combine`. For instance, you can take CRPS-stacked weights
-and feed them to a quantile-input `LinearPool`:
+Composition between trained and untrained methods goes through a single
+accessor:
+
+```julia
+weights(m) -> Union{DataFrame, Nothing}
+```
+
+When `weights(m)` returns a `DataFrame{:model_id, :weight}`, you can pass
+the fitted method itself wherever a weights frame is accepted:
 
 ```julia
 fitted = fit(CRPSStacking(), train_samples, observations)
-lp     = LinearPool(; weights = fitted.weights, n_samples = 10_000)
-combine(test_quantiles, lp)
+
+LinearPool(weights = fitted, n_samples = 10_000)   # equivalent to passing fitted.weights
+SimpleEnsemble(:mean; weights = fitted)
 ```
+
+`weights` is implemented for:
+
+- `FittedCRPSStacking` — always returns the simplex weight vector.
+- `FittedQRA` — returns a `DataFrame` only when the fit corresponds to a
+  single per-model weight vector on the simplex, namely
+  `per_quantile_weights = false`, `enforce_normalisation = true`,
+  `intercept = false`. Otherwise returns `nothing` (per-quantile or
+  unconstrained QRA fits don't reduce to a single weight per model and
+  trying to use them as such is rejected at construction time).
+
+This is the load-bearing path: the type hierarchy alone does *not* make
+a fitted method substitutable everywhere — the `weights` accessor does.

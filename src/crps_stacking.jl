@@ -115,6 +115,10 @@ function combine(ft::ForecastTable, m::FittedCRPSStacking; rng::AbstractRNG = de
     return combine(ft, LinearPool(; weights = m.weights); rng = rng)
 end
 
+# CRPSStacking is by construction a single per-model weight vector on the
+# simplex — directly reusable by any method that accepts `weights`.
+weights(m::FittedCRPSStacking) = m.weights
+
 # ---- helpers ----
 
 function _softmax(z::AbstractVector)

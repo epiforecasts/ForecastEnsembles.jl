@@ -139,6 +139,32 @@ function combine(ft::ForecastTable, m::FittedQRA)
                         model_id_col = ft.model_id_col)
 end
 
+"""
+    weights(m::FittedQRA) -> Union{DataFrame, Nothing}
+
+A QRA fit only has a meaningful per-model weight vector when (a) all
+quantile levels share a single coefficient vector (i.e. the joint fit, not
+`per_quantile_weights`), (b) the fit is on the simplex
+(`enforce_normalisation = true`), (c) there is no intercept, and (d) there
+is at most one task group.
+
+Otherwise, the fitted coefficients are not interpretable as a single
+per-model weight on the simplex and `weights` returns `nothing`. Callers
+that need this composition path should fit QRA with
+`enforce_normalisation = true, intercept = false, per_quantile_weights = false`
+and a single (or no) `group`.
+"""
+function weights(m::FittedQRA)
+    m.per_quantile_weights && return nothing
+    m.enforce_normalisation || return nothing
+    m.has_intercept && return nothing
+    # All keys of m.coefs share the same β when per_quantile_weights == false.
+    βs = unique(values(m.coefs))
+    length(βs) == 1 || return nothing
+    β = first(βs)
+    return DataFrame(model_id = m.models, weight = β)
+end
+
 # ---------- LP helpers ------------------------------------------------------
 
 # Returns (X, y) where X is n×M with one column per model in `models`
