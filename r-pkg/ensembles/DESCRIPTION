@@ -10,16 +10,19 @@ Description: A thin R interface to the Julia package Ensembles.jl, which
     unifies the methods previously spread across hubEnsembles, qrensemble
     and lopensemble under one in-memory representation and one set of
     verbs (combine() and fit()). All numerical work is done in Julia via
-    JuliaCall; data frames are round-tripped at the API boundary.
+    juliaready (which uses JuliaConnectoR under the hood); data frames
+    are round-tripped at the API boundary.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:
     R (>= 4.0.0)
 Imports:
-    JuliaConnectoR (>= 1.1.0)
+    juliaready
 Suggests:
     testthat (>= 3.0.0),
     data.table
+Remotes:
+    sbfnk/juliaready
 Config/testthat/edition: 3
 SystemRequirements: Julia (>= 1.10)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
