@@ -13,19 +13,9 @@ facing API of `hubEnsembles`, `qrensemble`, and `lopensemble`:
 
 ## How it works
 
-The wrapper uses [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR),
-which talks to a single long-lived Julia process over a local TCP socket.
-First call in a session pays a Julia + Ensembles.jl startup of ~10–15 s;
-subsequent calls in the same session are sub-second.
-
-We initially tried [JuliaCall](https://github.com/Non-Contradiction/JuliaCall)
-(in-process embedding via `libjulia`), but it segfaults on `using
-Ensembles` whenever the embedded Julia loads `RCall.jl`. RCall.jl maps R's
-own `R_CStackLimit` symbol via `unsafe_store!`, and inside R-with-embedded-
-Julia the same `libR` is already in the process — the resulting symbol
-collision corrupts the stack-limit pointer and the next allocation
-segfaults. JuliaConnectoR avoids this by keeping Julia and R in separate
-processes.
+The wrapper uses [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR)
+to talk to a long-lived Julia process. First call pays Julia + Ensembles.jl
+startup (~10–15 s); subsequent calls are sub-second.
 
 ## Requirements
 
