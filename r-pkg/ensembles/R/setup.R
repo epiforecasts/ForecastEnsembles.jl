@@ -1,45 +1,58 @@
 #' Initialise the Julia bridge
 #'
-#' Starts a Julia process via JuliaConnectoR (TCP-bridged, out-of-process),
-#' activates the bundled bridge project, and brings Ensembles.jl into the
-#' Julia session. Subsequent calls in the same R session are no-ops.
+#' Activates the bundled `inst/julia/` project (which pins the exact
+#' versions of Ensembles.jl, DataFrames.jl, etc. that this package was
+#' tested against), starts the JuliaConnectoR server with that project
+#' active, and loads the bridge helper functions. Subsequent calls are
+#' no-ops.
+#'
+#' Heavy lifting (binary detection, subprocess instantiate, lazy-init
+#' guard) is delegated to [juliaready::julia_ready()].
 #'
 #' @param julia_bindir Path to the directory containing the `julia`
-#'   executable. Defaults to whatever JuliaConnectoR finds via the
-#'   `JULIA_BINDIR` env var or `PATH`.
+#'   executable. If supplied, sets `JULIACONNECTOR_JULIABIN` so the
+#'   bundled JuliaConnectoR uses that binary.
 #' @param ensembles_jl_path Optional path to a checkout of Ensembles.jl.
-#'   When supplied, the bridge project is reconfigured to develop that
-#'   source instead of the version bundled at install time.
+#'   When supplied, the bundled project is reconfigured to develop that
+#'   source instead of the version pinned in the manifest.
 #'
 #' @return Invisible NULL.
 #' @export
 julia_setup <- function(julia_bindir = NULL, ensembles_jl_path = NULL) {
-  if (.pkg_env$initialised) return(invisible(NULL))
+  if (isTRUE(.pkg_env$ready)) return(invisible(NULL))
 
-  if (!is.null(julia_bindir)) Sys.setenv(JULIA_BINDIR = julia_bindir)
+  if (!is.null(julia_bindir)) {
+    bin <- file.path(julia_bindir,
+                     if (.Platform$OS.type == "windows") "julia.exe" else "julia")
+    Sys.setenv(JULIACONNECTOR_JULIABIN = bin)
+  }
 
   bridge <- .resolve_bridge()
-  bridge_jl <- gsub("\\\\", "/", bridge, fixed = TRUE)
 
-  JuliaConnectoR::juliaEval(sprintf(
-    'using Pkg; Pkg.activate("%s"); nothing', bridge_jl
-  ))
-
+  # If a development checkout of Ensembles.jl was supplied, dev it into
+  # the bundled project before instantiation.
   if (!is.null(ensembles_jl_path)) {
     abs <- normalizePath(ensembles_jl_path, mustWork = TRUE)
-    abs <- gsub("\\\\", "/", abs, fixed = TRUE)
-    JuliaConnectoR::juliaEval(sprintf(
-      'using Pkg; Pkg.develop(path="%s"); nothing', abs
+    abs_jl <- gsub("\\\\", "/", abs, fixed = TRUE)
+    bridge_jl <- gsub("\\\\", "/", bridge, fixed = TRUE)
+    juliaready:::julia_subprocess(sprintf(
+      'import Pkg; Pkg.activate("%s"); Pkg.develop(path="%s")',
+      bridge_jl, abs_jl
     ))
   }
 
-  JuliaConnectoR::juliaEval('using Ensembles, DataFrames; nothing')
+  juliaready::julia_ready(
+    packages  = c("Ensembles", "DataFrames"),
+    state_env = .pkg_env,
+    project   = bridge,
+    install   = FALSE,
+    verbose   = FALSE
+  )
 
   # Define all helper functions in one shot so subsequent calls don't pay
   # the parse cost.
-  JuliaConnectoR::juliaEval(.bridge_helpers_jl())
+  juliaready::eval_julia(.bridge_helpers_jl())
 
-  .pkg_env$initialised <- TRUE
   invisible(NULL)
 }
 
@@ -52,9 +65,6 @@ function _ens_to_string!(df::DataFrame)
     df
 end
 
-# Convert a DataFrame to a NamedTuple of vectors so JuliaConnectoR
-# round-trips it as a proper named list (which R then turns into a
-# data.frame trivially).
 _ens_pack(df::DataFrame) = (; (Symbol(c) => df[!, c] for c in names(df))...)
 
 function _ens_to_symbol!(df::DataFrame)

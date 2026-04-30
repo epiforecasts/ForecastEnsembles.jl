@@ -1,10 +1,7 @@
 .pkg_env <- new.env(parent = emptyenv())
-.pkg_env$initialised <- FALSE
 
 .ensure_setup <- function() {
-  if (.pkg_env$initialised) return(invisible(NULL))
-  julia_setup()
-  invisible(NULL)
+  juliaready::ensure_julia(.pkg_env, julia_setup)
 }
 
 # Resolve where the bridge Project.toml lives. After installation it is
@@ -23,10 +20,4 @@
   }
   stop("Could not find inst/julia/Project.toml. Reinstall the ensembles package.",
        call. = FALSE)
-}
-
-.onLoad <- function(libname, pkgname) {
-  reg.finalizer(.pkg_env, function(env) {
-    tryCatch(JuliaConnectoR::stopJulia(), error = function(e) NULL)
-  }, onexit = TRUE)
 }
