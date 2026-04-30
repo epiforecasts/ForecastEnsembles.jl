@@ -1,8 +1,8 @@
 #' CRPS-stacked ensemble weights
 #'
-#' Equivalent to `lopensemble::crps_weights`. Optimises weights in softmax
-#' space against the empirical mixture-CRPS objective with a Dirichlet
-#' log-prior penalty.
+#' R wrapper that mirrors `lopensemble::crps_weights`. Optimises weights
+#' in softmax space against the empirical mixture-CRPS objective with a
+#' Dirichlet log-prior penalty.
 #'
 #' @param training A data frame with columns `model_id`, `output_type`
 #'   (must be `"sample"`), `output_type_id`, `value`, plus task-id columns.
@@ -52,7 +52,7 @@ crps_weights <- function(training,
 
 #' Mixture from samples using fitted CRPS weights
 #'
-#' Equivalent to `lopensemble::mixture_from_samples`. Wraps a
+#' R wrapper that mirrors `lopensemble::mixture_from_samples`. Wraps a
 #' [linear_pool()] call with the supplied weights.
 #'
 #' @inheritParams linear_pool

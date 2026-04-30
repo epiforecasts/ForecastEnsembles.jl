@@ -1,7 +1,8 @@
 #' Quantile Regression Averaging
 #'
-#' Equivalent to `qrensemble::qra`. Fits a quantile regression on training
-#' forecasts and applies the fitted weights to the target forecasts.
+#' R wrapper that mirrors `qrensemble::qra`. Fits a quantile regression on
+#' training forecasts and applies the fitted weights to the target
+#' forecasts.
 #'
 #' @param training A data frame with columns `model_id`, `output_type`
 #'   (must be `"quantile"`), `output_type_id`, `value`, plus task-id columns.

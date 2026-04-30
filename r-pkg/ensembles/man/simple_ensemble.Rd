@@ -25,8 +25,8 @@ simple_ensemble(
 A data frame, with `model_id = "hub-ensemble"`.
 }
 \description{
-Drop-in equivalent to `hubEnsembles::simple_ensemble`, computed by
-Ensembles.jl over a JuliaConnectoR TCP bridge.
+R wrapper that mirrors `hubEnsembles::simple_ensemble`. The actual
+aggregation runs in Julia.
 }
 \examples{
 \dontrun{

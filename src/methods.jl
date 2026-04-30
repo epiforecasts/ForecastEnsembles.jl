@@ -71,10 +71,22 @@ function _resolve_weights(w::EnsembleMethod)
 end
 function _resolve_weights(w)
     df = DataFrame(w)
-    all(c -> c in propertynames(df), (:model_id, :weight)) ||
-        throw(ArgumentError("weights frame must have :model_id and :weight columns"))
-    return df
+    cols = propertynames(df)
+    if :model_id in cols && :weight in cols
+        return df
+    end
+    throw(ArgumentError(
+        "weights frame must have columns :model_id and :weight " *
+        "(optionally :output_type_id for per-quantile weights)."))
 end
+
+# True when `df` carries a `:output_type_id` column in addition to
+# `:model_id, :weight` — i.e. weights vary by quantile level rather than
+# being a single per-model vector.
+is_per_quantile_weights(::Nothing) = false
+is_per_quantile_weights(df::DataFrame) =
+    :output_type_id in propertynames(df) && :model_id in propertynames(df) &&
+    :weight in propertynames(df)
 
 """
     QRA(; per_quantile_weights = false, intercept = true,

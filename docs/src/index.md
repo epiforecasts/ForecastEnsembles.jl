@@ -1,20 +1,21 @@
 # Ensembles.jl
 
-Unified Julia interface for combining probabilistic forecasts.
+A Julia package for combining probabilistic forecasts.
 
-`Ensembles.jl` brings together the methods spread across three R packages —
+`Ensembles.jl` covers the methods previously split across three R
+packages —
 [`hubEnsembles`](https://github.com/Infectious-Disease-Modeling-Hubs/hubEnsembles)
 (simple/weighted mean & median, linear opinion pool),
 [`qrensemble`](https://github.com/epiforecasts/qrensemble) (quantile
 regression averaging), and
 [`lopensemble`](https://github.com/epiforecasts/lopensemble) (CRPS-stacked
-linear opinion pool) — under one in-memory representation and one set of
-verbs (`fit`, `combine`), with multiple dispatch picking the right
-algorithm per `(output_type, method)` pair.
+linear opinion pool) — under one in-memory representation and two verbs
+(`fit`, `combine`). Multiple dispatch picks the right algorithm for each
+`(output_type, method)` pair.
 
 ## Installation
 
-`Ensembles.jl` is not yet registered. Install from a local checkout:
+`Ensembles.jl` is not yet registered. Add it from a checkout:
 
 ```julia
 ] add https://github.com/sbfnk/ensembles.jl
@@ -42,7 +43,7 @@ combine(ft, SimpleEnsemble(:mean))
 combine(ft, LinearPool(; n_samples = 10_000))
 ```
 
-For the trained methods (QRA, CRPS-stacking) use `fit` first:
+For the trained methods (QRA, CRPS-stacking), use `fit` first:
 
 ```julia
 fitted = fit(QRA(; enforce_normalisation = true), training_ft, observations)
@@ -51,13 +52,14 @@ combine(test_ft, fitted)
 
 ## Why this package?
 
-The three R packages cover non-overlapping methods on what is essentially
-the same object — a tidy table of model forecasts indexed by task and
-output type. They duplicate boilerplate (data validation, task grouping,
-weight handling) and don't compose: you can't, for example, take a
-CRPS-stacked weight vector and feed it to a quantile-input linear pool.
+The three R packages cover different methods on the same underlying object:
+a tidy table of model forecasts indexed by task and output type. Each
+package re-implements the boilerplate (data validation, task grouping,
+weight handling) and the methods don't compose. You can't take a
+CRPS-stacked weight vector and feed it to a quantile-input linear pool,
+even though that's a sensible thing to want.
 
-Multiple dispatch removes that friction:
+In Julia these collapse into a small dispatch surface:
 
 ```julia
 combine(ft, m::SimpleEnsemble)               # always works
@@ -68,15 +70,16 @@ fit(::CRPSStacking, training, observations)  # → FittedCRPSStacking
 combine(ft, ::FittedCRPSStacking)            # delegates to LinearPool
 ```
 
-A fitted method is itself an `UnfittedMethod`, so any method that consumes
-weights consumes them the same way regardless of where they came from.
+A fitted method is itself an `UnfittedMethod`, and a `weights(m)` accessor
+returns the per-model (or per-quantile) weights as a `DataFrame` whenever
+they make sense. Other methods that consume weights then accept a fitted
+method directly. See [Methods](methods.md) for what that buys you.
 
 ## R interface
 
 A thin R wrapper at `r-pkg/ensembles/` mirrors the user-facing API of the
 three R packages while delegating all numerical work to `Ensembles.jl` over
-a JuliaConnectoR bridge. See the package's `pkgdown` site for the R-side
-documentation.
+a JuliaConnectoR bridge. The package's `pkgdown` site has the R-side docs.
 
 ## See also
 

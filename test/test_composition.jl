@@ -64,12 +64,31 @@ using Distributions: Normal, quantile
     @test w_q isa DataFrame
     @test sum(w_q.weight) ≈ 1.0 atol = 1e-6
 
-    # Ineligible: per-quantile weights → no single per-model weight vector.
+    # Per-quantile weights → long-format DataFrame; LinearPool dispatches
+    # on shape and does direct vertical pooling.
     fitted_q_pq = fit(QRA(; per_quantile_weights = true,
                            enforce_normalisation = true,
                            intercept = false),
                       qtrain, qobs)
-    @test weights(fitted_q_pq) === nothing
+    w_pq = weights(fitted_q_pq)
+    @test w_pq isa DataFrame
+    @test sort(propertynames(w_pq)) == [:model_id, :output_type_id, :weight]
+    # Per-τ simplex.
+    for τ in unique(w_pq.output_type_id)
+        @test sum(w_pq[w_pq.output_type_id .== τ, :weight]) ≈ 1.0 atol = 1e-6
+    end
+
+    # End-to-end: per-quantile weights from QRA produce the same predictions
+    # as `combine(ft, fitted_qra_perq)` when applied to the same forecasts.
+    target = qtrain
+    via_qra = DataFrame(combine(target, fitted_q_pq))
+    via_lp  = DataFrame(combine(target, LinearPool(weights = fitted_q_pq)))
+    j = innerjoin(
+        select(via_qra, :t, :output_type_id, :value),
+        rename(select(via_lp, :t, :output_type_id, :value), :value => :v_lp);
+        on = [:t, :output_type_id],
+    )
+    @test maximum(abs.(j.value .- j.v_lp)) < 1e-10
 
     # Ineligible: with intercept.
     fitted_q_int = fit(QRA(; per_quantile_weights = false,
@@ -85,7 +104,6 @@ using Distributions: Normal, quantile
                       qtrain, qobs)
     @test weights(fitted_q_un) === nothing
 
-    # Passing an ineligible fitted QRA to LinearPool must raise (rather
-    # than silently ignoring the user's intent).
-    @test_throws ArgumentError LinearPool(weights = fitted_q_pq)
+    # Passing an ineligible (intercepted) fitted QRA to LinearPool raises.
+    @test_throws ArgumentError LinearPool(weights = fitted_q_int)
 end

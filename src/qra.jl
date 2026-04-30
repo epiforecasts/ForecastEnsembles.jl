@@ -142,27 +142,60 @@ end
 """
     weights(m::FittedQRA) -> Union{DataFrame, Nothing}
 
-A QRA fit only has a meaningful per-model weight vector when (a) all
-quantile levels share a single coefficient vector (i.e. the joint fit, not
-`per_quantile_weights`), (b) the fit is on the simplex
-(`enforce_normalisation = true`), (c) there is no intercept, and (d) there
-is at most one task group.
+Return the fitted weights as a `DataFrame`, or `nothing` if the fit shape
+isn't a clean weight vector. Two shapes are produced:
 
-Otherwise, the fitted coefficients are not interpretable as a single
-per-model weight on the simplex and `weights` returns `nothing`. Callers
-that need this composition path should fit QRA with
-`enforce_normalisation = true, intercept = false, per_quantile_weights = false`
-and a single (or no) `group`.
+- *Per-model* (cols `:model_id, :weight`) — when the fit is joint
+  (`per_quantile_weights = false`), simplex (`enforce_normalisation = true`),
+  no intercept. The same weights apply at every quantile level.
+- *Per-quantile* (cols `:model_id, :output_type_id, :weight`) — when the
+  fit is per-τ (`per_quantile_weights = true`), simplex, no intercept.
+  Weights vary across quantile levels.
+
+Returns `nothing` when the fit has an intercept, isn't simplex-constrained,
+or has more than one task group (different groups give different fits and
+the user has to disambiguate).
 """
 function weights(m::FittedQRA)
-    m.per_quantile_weights && return nothing
     m.enforce_normalisation || return nothing
     m.has_intercept && return nothing
-    # All keys of m.coefs share the same β when per_quantile_weights == false.
-    βs = unique(values(m.coefs))
-    length(βs) == 1 || return nothing
-    β = first(βs)
-    return DataFrame(model_id = m.models, weight = β)
+
+    # If the fit was grouped, there is more than one (gkey, τ) → β. Refuse.
+    isempty(m.group_cols) || _has_single_group(m) || return nothing
+
+    if m.per_quantile_weights
+        # One β per τ, all under the same gkey. Long-format frame.
+        out = DataFrame(model_id = String[], output_type_id = Float64[],
+                        weight = Float64[])
+        for τ in m.levels
+            β = _coefs_for(m, τ)
+            β === nothing && return nothing
+            for (i, mod) in enumerate(m.models)
+                push!(out, (mod, τ, β[i]))
+            end
+        end
+        return out
+    else
+        # Joint fit: every τ shares the same β.
+        βs = unique(values(m.coefs))
+        length(βs) == 1 || return nothing
+        β = first(βs)
+        return DataFrame(model_id = m.models, weight = β)
+    end
+end
+
+# m.coefs keys are (gkey, τ) where gkey is `()` when no group_cols were set.
+function _coefs_for(m::FittedQRA, τ)
+    for (k, β) in m.coefs
+        k[2] == τ && return β
+    end
+    return nothing
+end
+
+# True when m.coefs has only one distinct gkey across its keys.
+function _has_single_group(m::FittedQRA)
+    gkeys = unique(first(k) for k in keys(m.coefs))
+    return length(gkeys) == 1
 end
 
 # ---------- LP helpers ------------------------------------------------------

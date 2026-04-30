@@ -17,7 +17,7 @@ mixture_from_samples(model_out_tbl, weights, n_samples = 10000L, task_id_cols)
 \item{task_id_cols}{Character vector of task-id columns.}
 }
 \description{
-Equivalent to `lopensemble::mixture_from_samples`. Wraps a
+R wrapper that mirrors `lopensemble::mixture_from_samples`. Wraps a
 [linear_pool()] call with the supplied weights.
 }
 \examples{

@@ -15,7 +15,57 @@ Linear opinion pool. The kernel is dispatched on the table's `output_type`:
   levels.
 """
 function combine(ft::ForecastTable, m::LinearPool; rng::AbstractRNG = default_rng())
+    if is_per_quantile_weights(m.weights)
+        ot = output_type(ft)
+        ot === :quantile || throw(ArgumentError(
+            "per-quantile weights only apply to :quantile inputs (got :$ot)."))
+        return _linear_pool_per_quantile(ft, m)
+    end
     return _linear_pool(ft, Val(output_type(ft)), m, rng)
+end
+
+# Direct vertical (Vincentization-style) pooling: at each τ, take a weighted
+# linear combination of per-model quantile values using the τ-specific
+# weights. No CDF reconstruction or sampling.
+function _linear_pool_per_quantile(ft::ForecastTable, m::LinearPool)
+    df = ft.data
+    wdf = m.weights
+    out_groups = DataFrame[]
+
+    for tg in DataFrames.groupby(df, ft.task_id_cols)
+        levels = sort(unique(tg.output_type_id))
+        vals = Float64[]
+        for τ in levels
+            w_τ = wdf[wdf.output_type_id .== τ, :]
+            isempty(w_τ) && throw(ArgumentError(
+                "no per-quantile weights for output_type_id = $τ"))
+            sub = tg[tg.output_type_id .== τ, :]
+            s = 0.0
+            wsum = 0.0
+            for row in eachrow(w_τ)
+                hits = sub[sub[!, ft.model_id_col] .== row.model_id, :value]
+                isempty(hits) && throw(ArgumentError(
+                    "model $(row.model_id) missing at output_type_id = $τ"))
+                s    += row.weight * first(hits)
+                wsum += row.weight
+            end
+            push!(vals, s / wsum)
+        end
+
+        out = DataFrame(tg[1:1, ft.task_id_cols])
+        out = repeat(out, length(levels))
+        out.output_type = fill(:quantile, length(levels))
+        out.output_type_id = levels
+        out.value = vals
+        out[!, ft.model_id_col] .= "hub-ensemble"
+        push!(out_groups, out)
+    end
+    res = reduce(vcat, out_groups)
+    select!(res, ft.model_id_col, :output_type, :output_type_id,
+            ft.task_id_cols..., :value)
+    return ForecastTable(res;
+                        task_id_cols = ft.task_id_cols,
+                        model_id_col = ft.model_id_col)
 end
 
 # ---------- :sample ---------------------------------------------------------
@@ -160,8 +210,10 @@ end
 
 # ---------- weights helper --------------------------------------------------
 
-# Returns a Dict{model_id => weight}. If the user supplied no weights, all
-# present models get equal weight. Validates that every model in `df` has a
+# Returns a Dict{model_id => weight} for the per-model-weights paths. If
+# the user supplied no weights, all present models get equal weight.
+# Per-quantile weights are routed elsewhere (see `combine` above) and never
+# reach this helper. Validates that every model in `df` has a
 # weight.
 function _weights_vector(weights::Union{Nothing,DataFrame}, ft::ForecastTable, df::AbstractDataFrame)
     models = unique(df[!, ft.model_id_col])

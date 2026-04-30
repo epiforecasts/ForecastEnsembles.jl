@@ -1,30 +1,30 @@
 # ensembles (R)
 
-Thin R wrapper around the Julia package `Ensembles.jl`. Mirrors the user-
-facing API of `hubEnsembles`, `qrensemble`, and `lopensemble`:
+A thin R wrapper around the Julia package `Ensembles.jl`. The user-facing
+functions mirror the originals:
 
-| R wrapper                            | Equivalent in R packages                       |
-|--------------------------------------|------------------------------------------------|
-| `simple_ensemble()`                  | `hubEnsembles::simple_ensemble`                |
-| `linear_pool()`                      | `hubEnsembles::linear_pool`                    |
-| `qra()`                              | `qrensemble::qra`                              |
-| `crps_weights()`                     | `lopensemble::crps_weights`                    |
-| `mixture_from_samples()`             | `lopensemble::mixture_from_samples`            |
+| R wrapper                | Original                              |
+|--------------------------|---------------------------------------|
+| `simple_ensemble()`      | `hubEnsembles::simple_ensemble`       |
+| `linear_pool()`          | `hubEnsembles::linear_pool`           |
+| `qra()`                  | `qrensemble::qra`                     |
+| `crps_weights()`         | `lopensemble::crps_weights`           |
+| `mixture_from_samples()` | `lopensemble::mixture_from_samples`   |
 
 ## How it works
 
-The wrapper uses [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR)
-to talk to a long-lived Julia process. First call pays Julia + Ensembles.jl
-startup (~10–15 s); subsequent calls are sub-second.
+The wrapper talks to a long-lived Julia process via
+[JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR). The
+first call in a session takes ~10–15 s while Julia and Ensembles.jl warm
+up; calls after that are sub-second.
 
 ## Requirements
 
 - Julia ≥ 1.10 on `PATH` (or pass `julia_bin` to `julia_setup()`).
-- A working installation of this package (`R CMD INSTALL r-pkg/ensembles`).
+- `R CMD INSTALL r-pkg/ensembles`.
 
-The first call in a session also instantiates the bridge Julia project
-(LBFGS solver, HiGHS LP solver, CSV/JSON IO). This takes a few minutes the
-very first time and then stays cached.
+The first call also instantiates the bridge Julia project (LBFGS, HiGHS,
+CSV/JSON IO). That one's a few minutes, then it stays cached.
 
 ## Quick start
 
@@ -45,5 +45,5 @@ simple_ensemble(df, agg_fun = "mean", task_id_cols = "location")
 
 ## Future work
 
-- Persistent Julia daemon (DaemonMode.jl) to remove per-call startup cost.
-- Optional in-process binding once JuliaCall is fixed for Julia 1.12+.
+- Persistent Julia daemon (DaemonMode.jl) so the first call is cheaper.
+- In-process binding when JuliaCall supports Julia 1.12+.

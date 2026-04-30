@@ -21,9 +21,9 @@ Default 1.001 matches `lopensemble`.}
 A data frame with columns `model_id` and `weight`.
 }
 \description{
-Equivalent to `lopensemble::crps_weights`. Optimises weights in softmax
-space against the empirical mixture-CRPS objective with a Dirichlet
-log-prior penalty.
+R wrapper that mirrors `lopensemble::crps_weights`. Optimises weights
+in softmax space against the empirical mixture-CRPS objective with a
+Dirichlet log-prior penalty.
 }
 \examples{
 \dontrun{

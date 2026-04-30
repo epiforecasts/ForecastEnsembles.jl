@@ -43,8 +43,9 @@ separate regressions.}
 A data frame of fitted predictions on `target`.
 }
 \description{
-Equivalent to `qrensemble::qra`. Fits a quantile regression on training
-forecasts and applies the fitted weights to the target forecasts.
+R wrapper that mirrors `qrensemble::qra`. Fits a quantile regression on
+training forecasts and applies the fitted weights to the target
+forecasts.
 }
 \examples{
 \dontrun{
