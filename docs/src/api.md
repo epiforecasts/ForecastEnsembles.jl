@@ -10,8 +10,8 @@ output_type
 ## Methods
 
 ```@docs
-SimpleEnsemble
-LinearPool
+QuantileEnsemble
+MixtureEnsemble
 QRA
 CRPSStacking
 ```
@@ -19,8 +19,8 @@ CRPSStacking
 ## Verbs
 
 ```@docs
-combine(::ForecastTable, ::SimpleEnsemble)
-combine(::ForecastTable, ::LinearPool)
+combine(::ForecastTable, ::QuantileEnsemble)
+combine(::ForecastTable, ::MixtureEnsemble)
 combine(::ForecastTable, ::Ensembles.FittedQRA)
 combine(::ForecastTable, ::Ensembles.FittedCRPSStacking)
 fit(::QRA, ::ForecastTable, ::AbstractDataFrame)

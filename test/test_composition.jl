@@ -30,13 +30,13 @@ using Distributions: Normal, quantile
     @test sort(propertynames(w_df)) == [:model_id, :weight]
     @test sum(w_df.weight) ≈ 1.0 atol = 1e-8
 
-    # Pass the fitted method directly to LinearPool / SimpleEnsemble.
+    # Pass the fitted method directly to LinearPool / QuantileEnsemble.
     lp = LinearPool(weights = fitted_crps, n_samples = 1000)
     @test lp.weights isa EnsembleWeights
     @test DataFrame(lp.weights).weight ≈ w_df.weight
 
-    se = SimpleEnsemble(:mean; weights = fitted_crps)
-    @test DataFrame(se.weights).weight ≈ w_df.weight
+    qe = QuantileEnsemble(:mean; weights = fitted_crps)
+    @test DataFrame(qe.weights).weight ≈ w_df.weight
 
     # ---- QRA → weights() returns DataFrame only when fit is "simplex-shape"
     n = 100; levels = [0.1, 0.5, 0.9]

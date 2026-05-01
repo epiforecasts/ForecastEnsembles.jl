@@ -14,8 +14,7 @@ The package builds on prior work in
 [`hubEnsembles`](https://github.com/Infectious-Disease-Modeling-Hubs/hubEnsembles)
 (simple/weighted mean & median, linear opinion pool),
 [`qrensemble`](https://github.com/epiforecasts/qrensemble) (quantile
-regression averaging, itself wrapping
-[`quantgen`](https://ryantibs.github.io/quantgen/)), and
+regression averaging), and
 [`lopensemble`](https://github.com/epiforecasts/lopensemble) (CRPS-stacked
 linear opinion pool). The Julia rewrite consolidates these under one
 in-memory representation, two verbs (`fit`, `combine`), and two ensemble

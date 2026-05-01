@@ -88,9 +88,9 @@ function _ens_simple(df_in, task_id_cols::Vector, agg::String, weights_in)
     cols = Symbol.(task_id_cols)
     ft = Ensembles.ForecastTable(df; task_id_cols = cols)
     method = if weights_in === nothing
-        Ensembles.SimpleEnsemble(Symbol(agg))
+        Ensembles.QuantileEnsemble(Symbol(agg))
     else
-        Ensembles.SimpleEnsemble(Symbol(agg); weights = DataFrame(weights_in))
+        Ensembles.QuantileEnsemble(Symbol(agg); weights = DataFrame(weights_in))
     end
     _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
 end

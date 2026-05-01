@@ -18,7 +18,6 @@ export ForecastTable,
        EnsembleWeights,
        QuantileEnsemble,
        MixtureEnsemble,
-       SimpleEnsemble,    # alias for QuantileEnsemble
        LinearPool,        # alias for MixtureEnsemble
        QRA,
        FittedQRA,

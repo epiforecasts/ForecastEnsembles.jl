@@ -17,7 +17,7 @@ end
     on_cols = [:location, :horizon, :output_type_id]
 
     # mean
-    out_df = select(DataFrame(combine(ft, SimpleEnsemble(:mean))),
+    out_df = select(DataFrame(combine(ft, QuantileEnsemble(:mean))),
                     on_cols..., :value)
     ref = select(CSV.read(joinpath(REF, "simple_mean_output.csv"), DataFrame),
                  on_cols..., :value => :value_r)
@@ -26,7 +26,7 @@ end
     @test maximum(abs.(j.value .- j.value_r)) < 1e-10
 
     # median
-    out_med = select(DataFrame(combine(ft, SimpleEnsemble(:median))),
+    out_med = select(DataFrame(combine(ft, QuantileEnsemble(:median))),
                      on_cols..., :value)
     ref_med = select(CSV.read(joinpath(REF, "simple_median_output.csv"), DataFrame),
                      on_cols..., :value => :value_r)
@@ -35,7 +35,7 @@ end
 
     # weighted mean
     weights = CSV.read(joinpath(REF, "simple_weights.csv"), DataFrame)
-    out_w = select(DataFrame(combine(ft, SimpleEnsemble(:mean; weights = weights))),
+    out_w = select(DataFrame(combine(ft, QuantileEnsemble(:mean; weights = weights))),
                    on_cols..., :value)
     ref_w = select(CSV.read(joinpath(REF, "simple_wmean_output.csv"), DataFrame),
                    on_cols..., :value => :value_r)

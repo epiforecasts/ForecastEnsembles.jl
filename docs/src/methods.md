@@ -17,8 +17,7 @@ Two ensemble methods cover the full set of operations:
 | `QuantileEnsemble`  | Per-τ aggregation of quantile values (Vincentization for `:mean`, "median ensemble" for `:median`). |
 | `MixtureEnsemble`   | Mixture of distributions: F = Σᵢ wᵢ Fᵢ. Dispatched on output type. |
 
-(`SimpleEnsemble` is kept as an alias for `QuantileEnsemble`. `LinearPool`
-is kept as an alias for `MixtureEnsemble`.)
+(`LinearPool` is kept as an alias for `MixtureEnsemble`.)
 
 ## QuantileEnsemble
 
@@ -69,8 +68,7 @@ construction time.
 
 ## QRA
 
-Quantile Regression Averaging. Mirrors `qrensemble::qra` (which itself
-wraps `quantgen::quantile_ensemble`).
+Quantile Regression Averaging. Mirrors `qrensemble::qra`.
 
 For each task group (and each quantile level if `per_quantile_weights = true`),
 solve
@@ -85,10 +83,9 @@ where ``\rho_\tau`` is the τ-tilted absolute loss. Optional constraints:
 - `noncross` (only with `per_quantile_weights = true`): for every training
   point, the predicted quantiles at consecutive τ levels are non-decreasing.
 
-The LP runs in HiGHS via JuMP. `qrensemble`'s underlying `quantgen` uses
-the same LP formulation but dispatches to GLPK via `Rglpk`. With the same
-configuration as `qrensemble::qra`'s default, fitted weights and
-predictions agree to about 1e-3.
+The LP runs in HiGHS via JuMP. With the same configuration as
+`qrensemble::qra`'s default, fitted weights and predictions agree to
+about 1e-3.
 
 ## CRPSStacking
 

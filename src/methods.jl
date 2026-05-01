@@ -38,9 +38,6 @@ function QuantileEnsemble(agg::Symbol = :mean; weights = nothing)
     return QuantileEnsemble(agg, _resolve_weights(weights))
 end
 
-# Backwards-compatible name used in earlier releases. Same semantics; the
-# documented type is `QuantileEnsemble`.
-const SimpleEnsemble = QuantileEnsemble
 
 """
     MixtureEnsemble(; weights = nothing, n_samples = 10_000)
@@ -161,7 +158,7 @@ QRA, per-quantile QRA, QRA with a non-zero intercept).
 
 When `weights(m) !== nothing`, `m` can be passed in place of an explicit
 weights frame to any method that accepts one — for example
-`LinearPool(weights = m)` or `SimpleEnsemble(:mean; weights = m)`. This is
+`MixtureEnsemble(weights = m)` or `QuantileEnsemble(:mean; weights = m)`. This is
 the composition path between trained and untrained methods.
 """
 function weights end

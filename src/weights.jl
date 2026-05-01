@@ -11,9 +11,10 @@ and optionally `:output_type_id`. Two shapes are supported:
   vary across quantile levels.
 
 Construct from a DataFrame (shape inferred from columns by default) or by
-calling `weights(m)` on a fitted method. `LinearPool` and `SimpleEnsemble`
-accept any of: a raw DataFrame, an `EnsembleWeights`, or any fitted method
-for which `weights(m)` returns one. The conversion happens at construction
+calling `weights(m)` on a fitted method. `MixtureEnsemble` and
+`QuantileEnsemble` accept any of: a raw DataFrame, an `EnsembleWeights`,
+or any fitted method for which `weights(m)` returns one. The conversion
+happens at construction
 of the method, not at `combine` time, so invalid inputs fail fast.
 """
 struct EnsembleWeights
