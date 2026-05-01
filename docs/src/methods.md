@@ -1,16 +1,15 @@
 # Methods
 
-Every method operates on a [`ForecastTable`](@ref) — a hubverse-aligned
-long-format frame with required columns `model_id`, `output_type`,
-`output_type_id`, `value`, plus task-id columns. Two verbs cover the whole
-surface:
+Every method operates on a [`ForecastTable`](@ref): a hubverse-aligned long
+format frame with required columns `model_id`, `output_type`,
+`output_type_id`, `value`, plus task-id columns. Two verbs cover everything:
 
-- `combine(ft, method)` — apply an `UnfittedMethod` to a `ForecastTable`.
-- `fit(method, training, observations)` — estimate the parameters of a
-  `TrainedMethod` and return a fitted counterpart, which is itself an
-  `UnfittedMethod` and can then be passed to `combine`.
+- `combine(ft, method)` applies an `UnfittedMethod` to a `ForecastTable`.
+- `fit(method, training, observations)` estimates the parameters of a
+  `TrainedMethod` and returns a fitted counterpart, which is itself an
+  `UnfittedMethod` and can then go through `combine`.
 
-Two ensemble methods cover the full set of operations:
+Two ensemble methods cover all the operations:
 
 | Method              | Operation                                              |
 |---------------------|--------------------------------------------------------|
@@ -28,15 +27,14 @@ ensemble" the COVID-19 hub used as its default.
 
 Weights take any of three shapes:
 
-- `nothing` — equal weights.
-- per-model `EnsembleWeights` (cols `:model_id, :weight`) — same weights
-  at every τ.
-- per-quantile `EnsembleWeights` (cols `:model_id, :output_type_id,
-  :weight`) — different weights per τ.
+- `nothing`: equal weights.
+- per-model `EnsembleWeights` (`:model_id, :weight`): same weights at
+  every τ.
+- per-quantile `EnsembleWeights` (`:model_id, :output_type_id, :weight`):
+  different weights per τ.
 
 Per-τ weights typically come from a per-quantile QRA fit; per-model
-weights typically come from a CRPS-stacking fit or a joint QRA fit.
-Either plugs straight in.
+weights from a CRPS-stacking fit or a joint QRA fit. Either plugs in.
 
 ## MixtureEnsemble
 
@@ -57,14 +55,14 @@ The kernel is dispatched on the table's `output_type`:
 
 The quantile path uses the [`Ensembles.QuantileDistribution`](@ref)
 helper. The interior interpolation is Fritsch–Carlson PCHIP (monotone,
-parameter-free) and the tails are Normals fitted to the two outermost
-knots. This matches `distfromq`'s default `tail_dist = "norm"`
-qualitatively; differences from `distfromq`'s spline interior are within
-Monte Carlo noise in the finished pool.
+parameter-free); the tails are Normals fitted to the two outermost knots.
+This matches `distfromq`'s default `tail_dist = "norm"` qualitatively;
+differences from `distfromq`'s spline interior are within Monte Carlo
+noise in the finished pool.
 
 Mixture pooling is inherently a per-model operation. Per-quantile weights
-aren't meaningful for a mixture and `MixtureEnsemble` rejects them at
-construction time.
+are not meaningful for a mixture; `MixtureEnsemble` rejects them at
+construction.
 
 ## QRA
 
@@ -80,12 +78,13 @@ solve
 where ``\rho_\tau`` is the τ-tilted absolute loss. Optional constraints:
 
 - `enforce_normalisation`: ``\beta_m \ge 0`` and ``\sum_m \beta_m = 1``.
-- `noncross` (only with `per_quantile_weights = true`): for every training
-  point, the predicted quantiles at consecutive τ levels are non-decreasing.
+- `noncross` (only with `per_quantile_weights = true`): for every
+  training point, the predicted quantiles at consecutive τ levels are
+  non-decreasing.
 
 The LP runs in HiGHS via JuMP. With the same configuration as
-`qrensemble::qra`'s default, fitted weights and predictions agree to
-about 1e-3.
+`qrensemble::qra`'s default, fitted weights and predictions agree with
+the R package to about 1e-3.
 
 ## CRPSStacking
 
@@ -104,12 +103,12 @@ component samples:
 with ``a_i^t = \overline{|X_i - y_t|}`` and
 ``B_{i,j}^t = \overline{|X_i - X_j'|}`` averaged over the per-model
 samples. The full objective is the mean over tasks plus a Dirichlet log-
-prior penalty controlled by `dirichlet_alpha`. We minimise in softmax
-space with Optim.jl's L-BFGS, so weights stay on the simplex
+prior penalty controlled by `dirichlet_alpha`. Optimisation runs in
+softmax space using Optim.jl's L-BFGS, so weights stay on the simplex
 automatically.
 
 The result agrees with `lopensemble::crps_weights` (Stan MAP) to within
-optimiser tolerance — typically a few × 1e-3 on the dominant weight.
+optimiser tolerance, typically a few × 1e-3 on the dominant weight.
 
 ## Composition: weights from anywhere
 
@@ -132,20 +131,20 @@ QuantileEnsemble(:mean; weights = fitted)
 
 Two shapes appear:
 
-- *Per-model* (`:model_id, :weight`) — single weight vector that applies
-  at every quantile level. Always returned for `FittedCRPSStacking`.
+- *Per-model* (`:model_id, :weight`): single weight vector that applies at
+  every quantile level. Always returned for `FittedCRPSStacking`.
   Returned for `FittedQRA` when the fit is joint, simplex-constrained,
   and has no intercept. Accepted by both `MixtureEnsemble` and
   `QuantileEnsemble`.
-- *Per-quantile* (`:model_id, :output_type_id, :weight`) — weights vary
-  across τ. Returned for `FittedQRA` when the fit is per-τ, simplex-
-  constrained, and has no intercept. Accepted by `QuantileEnsemble` only;
-  `MixtureEnsemble` rejects this shape because mixtures aren't naturally
-  τ-indexed.
+- *Per-quantile* (`:model_id, :output_type_id, :weight`): weights vary
+  across τ. Returned for `FittedQRA` when the fit is per-τ,
+  simplex-constrained, and has no intercept. Accepted by
+  `QuantileEnsemble` only; `MixtureEnsemble` rejects this shape because
+  mixtures are not naturally τ-indexed.
 
-In other cases — fits with an intercept, unconstrained fits, or fits
-across multiple task groups — `weights(m)` returns `nothing` because the
-fit doesn't reduce to a clean weight vector. Passing such a method to
+In other cases — fits with an intercept, unconstrained fits, fits across
+multiple task groups — `weights(m)` returns `nothing` because the fit
+does not reduce to a clean weight vector. Passing such a method to
 `MixtureEnsemble` or `QuantileEnsemble` raises at construction. You can
 still call `combine(ft, fitted)` directly, which applies the fitted
 regression coefficients to produce predicted quantiles.

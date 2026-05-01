@@ -1,24 +1,24 @@
 # Ensembles.jl
 
-A Julia package for combining probabilistic forecasts from multiple
-component models.
+A Julia package for combining probabilistic forecasts from several component
+models.
 
 `Ensembles.jl` computes weighted or unweighted ensembles of forecasts
-represented as quantiles, samples, CDFs, or summary statistics. Weights
-can be supplied by the user, fixed (equal weighting), or estimated from
-past forecast performance (quantile regression averaging, CRPS-stacking).
-Trained and untrained methods compose through a single `EnsembleWeights`
+expressed as quantiles, samples, CDFs, or summary statistics. Weights can be
+supplied by the user, fixed (equal weighting), or estimated from past
+forecast performance via quantile regression averaging or CRPS-stacking.
+Trained and untrained methods are interchangeable through one `EnsembleWeights`
 type.
 
-The package builds on prior work in
+The work builds on three R packages:
 [`hubEnsembles`](https://github.com/Infectious-Disease-Modeling-Hubs/hubEnsembles)
-(simple/weighted mean & median, linear opinion pool),
-[`qrensemble`](https://github.com/epiforecasts/qrensemble) (quantile
-regression averaging), and
+(simple/weighted mean and median, linear opinion pool),
+[`qrensemble`](https://github.com/epiforecasts/qrensemble) (quantile regression
+averaging), and
 [`lopensemble`](https://github.com/epiforecasts/lopensemble) (CRPS-stacked
-linear opinion pool). The Julia rewrite consolidates these under one
-in-memory representation, two verbs (`fit`, `combine`), and two ensemble
-types (`MixtureEnsemble`, `QuantileEnsemble`).
+linear opinion pool). The Julia version pulls all three under one in-memory
+representation, two verbs (`fit`, `combine`), and two ensemble types
+(`MixtureEnsemble`, `QuantileEnsemble`).
 
 ## Installation
 
@@ -53,20 +53,20 @@ fitted = fit(QRA(; enforce_normalisation = true), training_ft, observations)
 combine(test_ft, fitted)
 ```
 
-The [Worked example](example.md) walks through every method on a real
-hubverse flu hospitalisation slice bundled with the package.
+The [Worked example](example.md) runs every method on a real hubverse flu
+hospitalisation slice that ships with the package.
 
 ## Why this package?
 
-The three R packages it builds on cover different methods on the same
+The three R packages it builds on cover different methods over the same
 underlying object: a tidy table of model forecasts indexed by task and
 output type. Each duplicates boilerplate (data validation, task grouping,
-weight handling) and the methods can't be composed — weights and ensemble
-operations live in separate packages with no shared interface, so even
-a basic substitution (e.g. plugging an externally supplied weight vector
-into a Vincentization combination) takes manual glue.
+weight handling) and the methods can't be composed. Weights and ensemble
+operations live in separate packages with no shared interface, so even a
+trivial substitution like plugging an externally supplied weight vector
+into a Vincentization combination ends up needing manual glue.
 
-In Julia these collapse into a small dispatch surface:
+In Julia this collapses to a small dispatch surface:
 
 ```julia
 combine(ft, m::QuantileEnsemble)              # per-τ aggregation
@@ -79,35 +79,31 @@ combine(ft, ::FittedCRPSStacking)
 
 Trained and untrained methods compose through `weights(m)`, which returns
 an `EnsembleWeights` whenever the fit reduces to a per-model or per-τ
-weight vector. Pass any fitted method straight to `MixtureEnsemble` or
-`QuantileEnsemble` and the conversion is automatic. See [Methods](methods.md)
-for the algorithmic story.
+weight vector. Pass any fitted method straight into `MixtureEnsemble` or
+`QuantileEnsemble` and the conversion happens automatically. See
+[Methods](methods.md) for the algorithmic story.
 
-Two further advantages of the Julia rewrite, both unmeasured so far but
-worth noting:
-
-- *Single-language inner loops.* The CDF reconstruction (PCHIP),
-  sampling, weighted aggregation and CRPS evaluation all run as compiled
-  Julia. The R packages drop into C / Fortran / Stan via different
-  bridges per method.
-- *Pluggable optimiser backends.* QRA's LP runs through JuMP, which can
-  dispatch to HiGHS, GLPK, Gurobi, COSMO, or any other LP solver with a
-  one-line change. CRPS-stacking goes through Optim.jl, which can be
-  swapped for NLopt or anything else following the standard Julia
-  optimisation interface. `qrensemble` is pinned to GLPK via `Rglpk`;
-  `lopensemble` is pinned to Stan's MAP optimiser via `cmdstanr`.
+Two side effects of the rewrite, both currently unmeasured. The inner
+loops (CDF reconstruction, sampling, weighted aggregation, CRPS evaluation)
+all run as compiled Julia, where the R packages drop into C / Fortran /
+Stan via different bridges per method. And the optimiser backends are
+pluggable: QRA's LP swaps between HiGHS, GLPK, Gurobi or anything else
+with a JuMP wrapper in one line; CRPS-stacking goes through Optim.jl, one
+call away from NLopt or another Julia optimiser. `qrensemble` is pinned
+to GLPK via `Rglpk`; `lopensemble` is pinned to Stan's MAP optimiser via
+`cmdstanr`.
 
 ## R interface
 
 A thin R wrapper at `r-pkg/ensembles/` mirrors the user-facing API of
-`hubEnsembles`, `qrensemble`, and `lopensemble` while delegating all
-numerical work to `Ensembles.jl` over a JuliaConnectoR bridge. The
-package's `pkgdown` site has the R-side docs.
+`hubEnsembles`, `qrensemble`, and `lopensemble`. Numerical work runs in
+Julia over a JuliaConnectoR bridge. The package's `pkgdown` site has the
+R-side docs.
 
 ## See also
 
-- [Methods](methods.md) — the algorithmic story behind each method.
+- [Methods](methods.md) — what each method does and when to reach for it.
 - [Worked example](example.md) — every method run on a real hub dataset.
 - [Extending](extending.md) — how to plug in your own ensemble operation
-  or weight-estimation method.
+  or weight estimator.
 - [API](api.md) — full docstrings for the public types and functions.

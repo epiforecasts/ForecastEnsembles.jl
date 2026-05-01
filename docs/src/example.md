@@ -1,11 +1,11 @@
 # Worked example: combining three flu hospitalisation forecasts
 
-This page walks through every method on a real hubverse forecast slice
-bundled with the package — three models from the
-[example-complex-forecast-hub](https://github.com/hubverse-org/example-complex-forecast-hub)
-predicting weekly flu hospitalisations on 2022-12-17 at horizon 1, across
-five US locations (national plus CA, FL, NY, TX), with the standard 23
-quantile levels.
+This page runs every method in the package on a real hubverse forecast
+slice bundled with `Ensembles.jl`. Three models from the
+[example-complex-forecast-hub](https://github.com/hubverse-org/example-complex-forecast-hub),
+each predicting weekly flu hospitalisations on 2022-12-17 at horizon 1
+across five US locations (national plus CA, FL, NY, TX), at the standard
+23 quantile levels.
 
 ```julia
 using Ensembles, CSV, DataFrames
@@ -18,7 +18,7 @@ ft = ForecastTable(flu; task_id_cols = [:reference_date, :target_end_date,
                                          :horizon, :location, :target])
 ```
 
-`ft` carries 345 rows (3 models × 5 locations × 23 quantile levels).
+`ft` carries 345 rows: 3 models × 5 locations × 23 quantile levels.
 
 ## Equal-weight quantile mean (Vincentization)
 
@@ -29,7 +29,7 @@ of the three model quantile values.
 combine(ft, QuantileEnsemble(:mean))
 ```
 
-Equivalent for the median ensemble used in the original COVID-19 hub:
+Or the median ensemble used as the default by the COVID-19 hub:
 
 ```julia
 combine(ft, QuantileEnsemble(:median))
@@ -45,8 +45,8 @@ re-extract quantiles at the original levels:
 combine(ft, MixtureEnsemble(; n_samples = 10_000))
 ```
 
-This is a *different* operation from Vincentization in general — averaging
-quantile values gives a different distribution from averaging the CDFs.
+This produces a different distribution from Vincentization in general.
+Averaging quantile values is not the same operation as averaging the CDFs.
 
 ## Hand-supplied weights
 
@@ -65,7 +65,7 @@ combine(ft, MixtureEnsemble(; weights = w, n_samples = 10_000))
 ## Weights from CRPS-stacking on past forecasts
 
 `fit(CRPSStacking(), training_samples, observations)` returns a
-`FittedCRPSStacking` whose `weights(...)` accessor exposes the optimised
+`FittedCRPSStacking` whose `weights(...)` accessor gives the optimised
 per-model weight vector. Plug it directly into either ensemble:
 
 ```julia
@@ -76,8 +76,8 @@ combine(ft, QuantileEnsemble(:mean; weights = fitted))
 ```
 
 (Set up `training_ft` from a sample-shaped slice of past forecasts and
-`training_obs` from the corresponding observations — see the QRA section
-below for an end-to-end shape.)
+`training_obs` from the corresponding observations. The QRA section below
+shows a concrete training shape.)
 
 ## Weights from QRA on past forecasts
 
@@ -101,13 +101,14 @@ fitted = fit(
 combine(ft, QuantileEnsemble(:mean; weights = fitted))
 ```
 
-For configurations that don't reduce to a clean weight vector — fits with
-an intercept, unconstrained fits, or fits across multiple task groups —
+For configurations that do not reduce to a clean weight vector — fits
+with an intercept, unconstrained fits, fits across multiple task groups —
 `weights(::FittedQRA)` returns `nothing`. Calling
 `MixtureEnsemble(weights = fitted)` or
 `QuantileEnsemble(weights = fitted)` with such a fit raises at
-construction. You can still call `combine(ft, fitted)` directly, which
-applies the fitted regression coefficients to produce predicted quantiles.
+construction. You can still call `combine(ft, fitted)` directly: that
+applies the fitted regression coefficients and produces predicted
+quantiles.
 
 ## What's where in the data
 
@@ -120,5 +121,5 @@ flu_summary = combine(
 )
 ```
 
-Three rows per location per model: 23 quantile levels each. The full
-matrix is 3 × 5 × 23 = 345 rows.
+Three rows per location per model, 23 quantile levels each. Total: 345
+rows.

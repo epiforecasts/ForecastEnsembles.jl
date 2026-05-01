@@ -1,8 +1,8 @@
 # Extending: adding your own ensemble or weight estimator
 
-Everything in `Ensembles.jl` hangs off a small contract. If you want to
-plug in a new ensemble operation or a new way of estimating weights, you
-implement (a subset of) the same handful of methods.
+Everything in `Ensembles.jl` hangs off a small contract. To plug in a new
+ensemble operation or a new way of estimating weights, you implement (a
+subset of) the same handful of methods.
 
 ## The two abstract types
 
@@ -24,7 +24,7 @@ You need two definitions:
 ```julia
 struct MyEnsemble <: UnfittedMethod
     weights::Union{Nothing,EnsembleWeights}
-    # any hyperparameters you need
+    # any hyperparameters
 end
 
 function MyEnsemble(; weights = nothing, ...)
@@ -43,8 +43,8 @@ A few conventions worth following:
   behaviour across methods.
 - If your method does not support per-quantile weights, reject them
   explicitly in the constructor (see `MixtureEnsemble` for the pattern).
-- Set `model_id` on the output to a sensible label (the existing methods
-  use `"hub-ensemble"` or the method-name string).
+- Set `model_id` on the output to a sensible label. The existing methods
+  use `"hub-ensemble"` or the method-name string.
 
 ## Adding a trained weight estimator
 
@@ -56,7 +56,7 @@ struct MyMethod <: TrainedMethod
 end
 
 struct FittedMyMethod <: UnfittedMethod
-    # whatever the fit produces — coefficient tables, hyperparameters, ...
+    # whatever the fit produces (coefficient tables, hyperparameters, ...)
 end
 
 function fit(m::MyMethod, training::ForecastTable, observations::AbstractDataFrame)
@@ -64,7 +64,7 @@ function fit(m::MyMethod, training::ForecastTable, observations::AbstractDataFra
 end
 
 function combine(ft::ForecastTable, m::FittedMyMethod; rng = default_rng())
-    # apply the fitted parameters to ft; return a ForecastTable.
+    # apply the fitted parameters; return a ForecastTable.
 end
 ```
 
@@ -84,20 +84,19 @@ end
 
 Once `weights(m)` is defined and returns an `EnsembleWeights`, your
 fitted method can be passed to `MixtureEnsemble(weights = m)` or
-`QuantileEnsemble(weights = m)` automatically — `_resolve_weights`
-handles the conversion. Users who fit your method then do not need to
-manually pull the weight DataFrame out and pass it.
+`QuantileEnsemble(weights = m)` automatically. `_resolve_weights` handles
+the conversion. Users who fit your method then do not need to manually
+pull the weight DataFrame out and pass it.
 
-If your fit can't always be expressed as weights (e.g. it has an
-intercept), return `nothing` in those cases. The method-construction path
-will raise rather than silently constructing something wrong, which is
-the behaviour `FittedQRA` uses for unconstrained or per-`τ`-with-
-intercept fits.
+If your fit cannot always be expressed as weights — say it has an
+intercept — return `nothing` in those cases. Method construction will
+raise rather than silently producing something wrong, which is the
+behaviour `FittedQRA` uses for unconstrained or per-τ-with-intercept fits.
 
 ## Worked sketch: a "trimmed-mean" ensemble
 
 Untrained method, no weight learning. Trims the top and bottom k% of
-model values per (task, τ), then takes the mean.
+model values per (task, τ) before averaging:
 
 ```julia
 struct TrimmedMean <: UnfittedMethod
@@ -131,6 +130,6 @@ function combine(ft::ForecastTable, m::TrimmedMean; rng = default_rng())
 end
 ```
 
-That's the entire surface a new operation has to implement. The same
+That is the entire surface a new operation has to implement. The same
 shape works for log-score stacking, BMA, performance-based inverse-error
 weighting, beta-transformed linear pool, and so on.

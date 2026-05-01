@@ -77,7 +77,7 @@
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
-<p>The wrapper talks to a long-lived Julia process via <a href="https://github.com/stefan-m-lenz/JuliaConnectoR" class="external-link">JuliaConnectoR</a>. The first call in a session takes ~10–15 s while Julia and Ensembles.jl warm up; calls after that are sub-second.</p>
+<p>The wrapper talks to a long-lived Julia process via <a href="https://github.com/stefan-m-lenz/JuliaConnectoR" class="external-link">JuliaConnectoR</a>. The first call in a session takes ~10–15 s while Julia and Ensembles.jl warm up; calls after that run in under a second.</p>
 </div>
 <div class="section level2">
 <h2 id="requirements">Requirements<a class="anchor" aria-label="anchor" href="#requirements"></a>
@@ -87,7 +87,7 @@
 <li>
 <code>R CMD INSTALL r-pkg/ensembles</code>.</li>
 </ul>
-<p>The first call also instantiates the bridge Julia project (LBFGS, HiGHS, CSV/JSON IO). That one’s a few minutes, then it stays cached.</p>
+<p>The first call also instantiates the bridge Julia project (LBFGS, HiGHS, CSV/JSON IO). That takes a few minutes, then it stays cached.</p>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>

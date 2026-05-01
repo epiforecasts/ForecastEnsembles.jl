@@ -16,7 +16,7 @@ functions mirror the originals:
 The wrapper talks to a long-lived Julia process via
 [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR). The
 first call in a session takes ~10–15 s while Julia and Ensembles.jl warm
-up; calls after that are sub-second.
+up; calls after that run in under a second.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ up; calls after that are sub-second.
 - `R CMD INSTALL r-pkg/ensembles`.
 
 The first call also instantiates the bridge Julia project (LBFGS, HiGHS,
-CSV/JSON IO). That one's a few minutes, then it stays cached.
+CSV/JSON IO). That takes a few minutes, then it stays cached.
 
 ## Quick start
 
