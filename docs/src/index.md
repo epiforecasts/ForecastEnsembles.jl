@@ -108,4 +108,6 @@ package's `pkgdown` site has the R-side docs.
 
 - [Methods](methods.md) — the algorithmic story behind each method.
 - [Worked example](example.md) — every method run on a real hub dataset.
+- [Extending](extending.md) — how to plug in your own ensemble operation
+  or weight-estimation method.
 - [API](api.md) — full docstrings for the public types and functions.
