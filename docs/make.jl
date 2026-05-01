@@ -18,6 +18,7 @@ makedocs(;
         "Methods" => "methods.md",
         "Worked example" => "example.md",
         "Extending" => "extending.md",
+        "Roadmap" => "roadmap.md",
         "API"     => "api.md",
     ],
     warnonly = [:missing_docs, :cross_references],

@@ -106,4 +106,5 @@ R-side docs.
 - [Worked example](example.md) — every method run on a real hub dataset.
 - [Extending](extending.md) — how to plug in your own ensemble operation
   or weight estimator.
+- [Roadmap](roadmap.md) — planned methods and recalibration extensions.
 - [API](api.md) — full docstrings for the public types and functions.
