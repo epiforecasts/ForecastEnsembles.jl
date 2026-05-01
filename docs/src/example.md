@@ -9,7 +9,6 @@ quantile levels.
 
 ```julia
 using Ensembles, CSV, DataFrames
-using Random: MersenneTwister
 
 flu = CSV.read(joinpath(pkgdir(Ensembles), "data", "flu_forecasts.csv"),
                DataFrame; types = Dict(:output_type_id => Float64,
@@ -43,7 +42,7 @@ distribution (PCHIP interior, Normal tails), draw samples, pool, and
 re-extract quantiles at the original levels:
 
 ```julia
-combine(ft, MixtureEnsemble(; n_samples = 10_000); rng = MersenneTwister(2026))
+combine(ft, MixtureEnsemble(; n_samples = 10_000))
 ```
 
 This is a *different* operation from Vincentization in general — averaging
@@ -60,7 +59,7 @@ w = EnsembleWeights(DataFrame(
 ))
 
 combine(ft, QuantileEnsemble(:mean; weights = w))
-combine(ft, MixtureEnsemble(; weights = w, n_samples = 10_000); rng = MersenneTwister(2026))
+combine(ft, MixtureEnsemble(; weights = w, n_samples = 10_000))
 ```
 
 ## Weights from CRPS-stacking on past forecasts
