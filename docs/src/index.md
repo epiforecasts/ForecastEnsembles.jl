@@ -50,8 +50,7 @@ For trained weights:
 
 ```julia
 fitted = fit(QRA(; enforce_normalisation = true), training_ft, observations)
-combine(test_ft, fitted)                             # apply the fit directly
-combine(test_ft, QuantileEnsemble(:mean; weights = fitted))   # or via QuantileEnsemble
+combine(test_ft, fitted)
 ```
 
 The [Worked example](example.md) walks through every method on a real
@@ -62,9 +61,10 @@ hubverse flu hospitalisation slice bundled with the package.
 The three R packages it builds on cover different methods on the same
 underlying object: a tidy table of model forecasts indexed by task and
 output type. Each duplicates boilerplate (data validation, task grouping,
-weight handling) and the methods don't compose. You can't take a
-CRPS-stacked weight vector and feed it to a Vincentization-style
-combination, even though that's a sensible thing to want.
+weight handling) and the methods don't compose — weights and ensemble
+operations live in separate packages with no shared interface, so even
+a basic substitution (e.g. plugging an externally supplied weight vector
+into a Vincentization combination) takes manual glue.
 
 In Julia these collapse into a small dispatch surface:
 
