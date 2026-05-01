@@ -83,6 +83,20 @@ weight vector. Pass any fitted method straight to `MixtureEnsemble` or
 `QuantileEnsemble` and the conversion is automatic. See [Methods](methods.md)
 for the algorithmic story.
 
+Two further advantages of the Julia rewrite, both unmeasured so far but
+worth noting:
+
+- *Single-language inner loops.* The CDF reconstruction (PCHIP),
+  sampling, weighted aggregation and CRPS evaluation all run as compiled
+  Julia. The R packages drop into C / Fortran / Stan via different
+  bridges per method.
+- *Pluggable optimiser backends.* QRA's LP runs through JuMP, which can
+  dispatch to HiGHS, GLPK, Gurobi, COSMO, or any other LP solver with a
+  one-line change. CRPS-stacking goes through Optim.jl, which can be
+  swapped for NLopt or anything else following the standard Julia
+  optimisation interface. `qrensemble` is pinned to GLPK via `Rglpk`;
+  `lopensemble` is pinned to Stan's MAP optimiser via `cmdstanr`.
+
 ## R interface
 
 A thin R wrapper at `r-pkg/ensembles/` mirrors the user-facing API of

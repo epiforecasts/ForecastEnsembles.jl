@@ -19,7 +19,11 @@ regression averaging), and
 linear opinion pool). It re-implements them in Julia under one in-memory
 representation, two verbs (`fit`, `combine`), and two ensemble types
 (`MixtureEnsemble`, `QuantileEnsemble`). Multiple dispatch picks the right
-algorithm for each `(output_type, method)` pair.
+algorithm for each `(output_type, method)` pair. Side benefits of the
+Julia rewrite (currently unmeasured): single-language inner loops and
+pluggable optimiser backends — the QRA LP swaps between HiGHS / GLPK /
+Gurobi via JuMP, and CRPS-stacking is one Optim.jl call away from any
+other gradient-based solver in the Julia ecosystem.
 
 ## A small example
 
