@@ -1,5 +1,5 @@
 """
-    combine(ft::ForecastTable, m::SimpleEnsemble) -> ForecastTable
+    combine(ft::ForecastTable, m::QuantileEnsemble) -> ForecastTable
 
 Hub-style simple/weighted ensemble. Aggregates `value` across `model_id`
 within each (task, output_type, output_type_id) group, using `m.agg`
@@ -8,7 +8,7 @@ within each (task, output_type, output_type_id) group, using `m.agg`
 Mirrors `hubEnsembles::simple_ensemble`. The output `model_id` is set to
 `"hub-ensemble"`, matching the R package default.
 """
-function combine(ft::ForecastTable, m::SimpleEnsemble)
+function combine(ft::ForecastTable, m::QuantileEnsemble)
     df = ft.data
     group_cols = vcat([:output_type, :output_type_id], ft.task_id_cols)
 
@@ -19,13 +19,23 @@ function combine(ft::ForecastTable, m::SimpleEnsemble)
             :value => agg_fun => :value,
         )
     else
-        wdf = m.weights
-        # validate that weights cover every model in the data
-        miss = setdiff(unique(df[!, ft.model_id_col]), wdf.model_id)
-        isempty(miss) || throw(ArgumentError(
-            "no weight provided for models: $miss",
-        ))
-        joined = leftjoin(df, wdf; on = ft.model_id_col => :model_id)
+        wdf = DataFrame(m.weights)
+        # Per-quantile weights are joined on (model_id, output_type_id) so
+        # each (task, output_type_id) group gets τ-specific weights;
+        # per-model weights are joined on model_id alone (same weight at
+        # every output_type_id). Both reduce to a weighted aggregation
+        # within `group_cols` afterwards.
+        if is_per_quantile(m.weights)
+            join_cols = [ft.model_id_col => :model_id, :output_type_id => :output_type_id]
+            joined = leftjoin(df, wdf; on = join_cols)
+            any(ismissing, joined.weight) && throw(ArgumentError(
+                "per-quantile weights are missing some (model_id, output_type_id) pairs"))
+        else
+            miss = setdiff(unique(df[!, ft.model_id_col]), wdf.model_id)
+            isempty(miss) || throw(ArgumentError(
+                "no weight provided for models: $miss"))
+            joined = leftjoin(df, wdf; on = ft.model_id_col => :model_id)
+        end
         agg_fun = m.agg === :mean ? _weighted_mean : _weighted_median
         out = DataFrames.combine(
             DataFrames.groupby(joined, group_cols),

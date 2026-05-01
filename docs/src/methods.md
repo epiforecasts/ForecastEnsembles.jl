@@ -10,12 +10,36 @@ surface:
   `TrainedMethod` and return a fitted counterpart, which is itself an
   `UnfittedMethod` and can then be passed to `combine`.
 
-## SimpleEnsemble
+Two ensemble methods cover the full set of operations:
 
-Mean or median across `model_id`, optionally weighted. Mirrors
-`hubEnsembles::simple_ensemble`. No training step.
+| Method              | Operation                                              |
+|---------------------|--------------------------------------------------------|
+| `QuantileEnsemble`  | Per-τ aggregation of quantile values (Vincentization for `:mean`, "median ensemble" for `:median`). |
+| `MixtureEnsemble`   | Mixture of distributions: F = Σᵢ wᵢ Fᵢ. Dispatched on output type. |
 
-## LinearPool
+(`SimpleEnsemble` is kept as an alias for `QuantileEnsemble`. `LinearPool`
+is kept as an alias for `MixtureEnsemble`.)
+
+## QuantileEnsemble
+
+At each task and quantile level τ, take a weighted aggregation of the
+per-model τ-quantile values. With `agg = :mean` this is Vincentization
+(weighted vertical pooling); with `agg = :median` it's the "median
+ensemble" the COVID-19 hub used as its default.
+
+Weights take any of three shapes:
+
+- `nothing` — equal weights.
+- per-model `EnsembleWeights` (cols `:model_id, :weight`) — same weights
+  at every τ.
+- per-quantile `EnsembleWeights` (cols `:model_id, :output_type_id,
+  :weight`) — different weights per τ.
+
+Per-τ weights typically come from a per-quantile QRA fit; per-model
+weights typically come from a CRPS-stacking fit or a joint QRA fit.
+Either plugs straight in.
+
+## MixtureEnsemble
 
 The ensemble distribution is a (weighted) mixture of the per-model
 distributions:
@@ -39,16 +63,14 @@ knots. This matches `distfromq`'s default `tail_dist = "norm"`
 qualitatively; differences from `distfromq`'s spline interior are within
 Monte Carlo noise in the finished pool.
 
-If you pass `LinearPool` per-quantile weights (a long-format frame with
-`:model_id, :output_type_id, :weight`), the quantile path switches to
-direct vertical pooling — at each τ, take a weighted linear combination of
-the per-model quantile values using the τ-specific weights, with no CDF
-reconstruction. The CRPS-stacked weights are per-model; per-quantile QRA
-fits provide per-τ weights, and either plug straight into `LinearPool`.
+Mixture pooling is inherently a per-model operation. Per-quantile weights
+aren't meaningful for a mixture and `MixtureEnsemble` rejects them at
+construction time.
 
 ## QRA
 
-Quantile Regression Averaging. Mirrors `qrensemble::qra`.
+Quantile Regression Averaging. Mirrors `qrensemble::qra` (which itself
+wraps `quantgen::quantile_ensemble`).
 
 For each task group (and each quantile level if `per_quantile_weights = true`),
 solve
@@ -63,9 +85,10 @@ where ``\rho_\tau`` is the τ-tilted absolute loss. Optional constraints:
 - `noncross` (only with `per_quantile_weights = true`): for every training
   point, the predicted quantiles at consecutive τ levels are non-decreasing.
 
-The LP runs in HiGHS via JuMP. With the same configuration as
-`qrensemble::qra`'s default, fitted weights and predictions match the R
-package to about 1e-3.
+The LP runs in HiGHS via JuMP. `qrensemble`'s underlying `quantgen` uses
+the same LP formulation but dispatches to GLPK via `Rglpk`. With the same
+configuration as `qrensemble::qra`'s default, fitted weights and
+predictions agree to about 1e-3.
 
 ## CRPSStacking
 
@@ -91,38 +114,41 @@ automatically.
 The result agrees with `lopensemble::crps_weights` (Stan MAP) to within
 optimiser tolerance — typically a few × 1e-3 on the dominant weight.
 
-## Composition
+## Composition: weights from anywhere
 
 Composition between trained and untrained methods runs through one
 accessor:
 
 ```julia
-weights(m) -> Union{DataFrame, Nothing}
+weights(m) -> Union{EnsembleWeights, Nothing}
 ```
 
-When `weights(m)` returns a `DataFrame`, you can pass the fitted method
-itself wherever a weights frame is accepted:
+When `weights(m)` returns an `EnsembleWeights`, you can pass the fitted
+method itself wherever a weights argument is accepted:
 
 ```julia
 fitted = fit(CRPSStacking(), train_samples, observations)
 
-LinearPool(weights = fitted, n_samples = 10_000)   # same as passing fitted.weights
-SimpleEnsemble(:mean; weights = fitted)
+MixtureEnsemble(weights = fitted, n_samples = 10_000)
+QuantileEnsemble(:mean; weights = fitted)
 ```
 
-`weights` returns two shapes:
+Two shapes appear:
 
-- *Per-model* (`:model_id, :weight`) — single weight vector that applies at
-  every quantile level. Always returned for `FittedCRPSStacking`. Returned
-  for `FittedQRA` when the fit is joint, simplex-constrained, and has no
-  intercept.
+- *Per-model* (`:model_id, :weight`) — single weight vector that applies
+  at every quantile level. Always returned for `FittedCRPSStacking`.
+  Returned for `FittedQRA` when the fit is joint, simplex-constrained,
+  and has no intercept. Accepted by both `MixtureEnsemble` and
+  `QuantileEnsemble`.
 - *Per-quantile* (`:model_id, :output_type_id, :weight`) — weights vary
   across τ. Returned for `FittedQRA` when the fit is per-τ, simplex-
-  constrained, and has no intercept. `LinearPool` dispatches on this shape
-  and does direct vertical pooling instead of the CDF-mix path.
+  constrained, and has no intercept. Accepted by `QuantileEnsemble` only;
+  `MixtureEnsemble` rejects this shape because mixtures aren't naturally
+  τ-indexed.
 
 In other cases — fits with an intercept, unconstrained fits, or fits
-across multiple task groups — `weights` returns `nothing` and passing the
-fitted method to `LinearPool` raises at construction time. This is how the
-type hierarchy carries weight: the accessor is the contract, the type tag
-isn't.
+across multiple task groups — `weights(m)` returns `nothing` because the
+fit doesn't reduce to a clean weight vector. Passing such a method to
+`MixtureEnsemble` or `QuantileEnsemble` raises at construction. You can
+still call `combine(ft, fitted)` directly, which applies the fitted
+regression coefficients to produce predicted quantiles.

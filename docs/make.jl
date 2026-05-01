@@ -16,6 +16,7 @@ makedocs(;
     pages    = [
         "Home"    => "index.md",
         "Methods" => "methods.md",
+        "Worked example" => "example.md",
         "API"     => "api.md",
     ],
     warnonly = [:missing_docs, :cross_references],

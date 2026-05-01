@@ -1,7 +1,7 @@
 # Quantile Regression Averaging
 
-Equivalent to \`qrensemble::qra\`. Fits a quantile regression on
-training forecasts and applies the fitted weights to the target
+R wrapper that mirrors \`qrensemble::qra\`. Fits a quantile regression
+on training forecasts and applies the fitted weights to the target
 forecasts.
 
 ## Usage

@@ -1,8 +1,9 @@
 # Linear opinion pool
 
-Drop-in equivalent to \`hubEnsembles::linear_pool\`. Routes by
-\`output_type\` of \`model_out_tbl\`: samples pooled, CDFs averaged, and
-quantile inputs go through CDF reconstruction (PCHIP + normal tails).
+R wrapper that mirrors \`hubEnsembles::linear_pool\`. Routes by
+\`output_type\` of \`model_out_tbl\`: samples are pooled, CDFs averaged,
+and quantile inputs go through CDF reconstruction (PCHIP + normal
+tails).
 
 ## Usage
 

@@ -117,7 +117,7 @@ end
 
 # CRPSStacking is by construction a single per-model weight vector on the
 # simplex — directly reusable by any method that accepts `weights`.
-weights(m::FittedCRPSStacking) = m.weights
+weights(m::FittedCRPSStacking) = EnsembleWeights(m.weights)
 
 # ---- helpers ----
 

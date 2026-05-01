@@ -15,8 +15,11 @@ export ForecastTable,
        EnsembleMethod,
        UnfittedMethod,
        TrainedMethod,
-       SimpleEnsemble,
-       LinearPool,
+       EnsembleWeights,
+       QuantileEnsemble,
+       MixtureEnsemble,
+       SimpleEnsemble,    # alias for QuantileEnsemble
+       LinearPool,        # alias for MixtureEnsemble
        QRA,
        FittedQRA,
        CRPSStacking,
@@ -27,6 +30,7 @@ export ForecastTable,
 
 include("output_types.jl")
 include("forecast_table.jl")
+include("weights.jl")
 include("methods.jl")
 include("simple.jl")
 include("distfromq.jl")

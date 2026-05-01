@@ -174,13 +174,13 @@ function weights(m::FittedQRA)
                 push!(out, (mod, τ, β[i]))
             end
         end
-        return out
+        return EnsembleWeights(out)
     else
         # Joint fit: every τ shares the same β.
         βs = unique(values(m.coefs))
         length(βs) == 1 || return nothing
         β = first(βs)
-        return DataFrame(model_id = m.models, weight = β)
+        return EnsembleWeights(DataFrame(model_id = m.models, weight = β))
     end
 end
 

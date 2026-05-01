@@ -23,18 +23,20 @@ using Distributions: Normal, quantile
     fitted_crps = fit(CRPSStacking(), train, obs)
 
     # weights() round-trips
-    w_df = weights(fitted_crps)
-    @test w_df isa DataFrame
+    w = weights(fitted_crps)
+    @test w isa EnsembleWeights
+    @test !Ensembles.is_per_quantile(w)
+    w_df = DataFrame(w)
     @test sort(propertynames(w_df)) == [:model_id, :weight]
     @test sum(w_df.weight) ≈ 1.0 atol = 1e-8
 
     # Pass the fitted method directly to LinearPool / SimpleEnsemble.
     lp = LinearPool(weights = fitted_crps, n_samples = 1000)
-    @test lp.weights isa DataFrame
-    @test lp.weights.weight ≈ w_df.weight
+    @test lp.weights isa EnsembleWeights
+    @test DataFrame(lp.weights).weight ≈ w_df.weight
 
     se = SimpleEnsemble(:mean; weights = fitted_crps)
-    @test se.weights.weight ≈ w_df.weight
+    @test DataFrame(se.weights).weight ≈ w_df.weight
 
     # ---- QRA → weights() returns DataFrame only when fit is "simplex-shape"
     n = 100; levels = [0.1, 0.5, 0.9]
@@ -61,8 +63,9 @@ using Distributions: Normal, quantile
                            intercept = false),
                       qtrain, qobs)
     w_q = weights(fitted_q_ok)
-    @test w_q isa DataFrame
-    @test sum(w_q.weight) ≈ 1.0 atol = 1e-6
+    @test w_q isa EnsembleWeights
+    @test !Ensembles.is_per_quantile(w_q)
+    @test sum(DataFrame(w_q).weight) ≈ 1.0 atol = 1e-6
 
     # Per-quantile weights → long-format DataFrame; LinearPool dispatches
     # on shape and does direct vertical pooling.
@@ -71,24 +74,29 @@ using Distributions: Normal, quantile
                            intercept = false),
                       qtrain, qobs)
     w_pq = weights(fitted_q_pq)
-    @test w_pq isa DataFrame
-    @test sort(propertynames(w_pq)) == [:model_id, :output_type_id, :weight]
-    # Per-τ simplex.
-    for τ in unique(w_pq.output_type_id)
-        @test sum(w_pq[w_pq.output_type_id .== τ, :weight]) ≈ 1.0 atol = 1e-6
+    @test w_pq isa EnsembleWeights
+    @test Ensembles.is_per_quantile(w_pq)
+    w_pq_df = DataFrame(w_pq)
+    @test sort(propertynames(w_pq_df)) == [:model_id, :output_type_id, :weight]
+    for τ in unique(w_pq_df.output_type_id)
+        @test sum(w_pq_df[w_pq_df.output_type_id .== τ, :weight]) ≈ 1.0 atol = 1e-6
     end
 
     # End-to-end: per-quantile weights from QRA produce the same predictions
     # as `combine(ft, fitted_qra_perq)` when applied to the same forecasts.
     target = qtrain
     via_qra = DataFrame(combine(target, fitted_q_pq))
-    via_lp  = DataFrame(combine(target, LinearPool(weights = fitted_q_pq)))
+    via_qe  = DataFrame(combine(target, QuantileEnsemble(:mean; weights = fitted_q_pq)))
     j = innerjoin(
         select(via_qra, :t, :output_type_id, :value),
-        rename(select(via_lp, :t, :output_type_id, :value), :value => :v_lp);
+        rename(select(via_qe, :t, :output_type_id, :value), :value => :v_qe);
         on = [:t, :output_type_id],
     )
-    @test maximum(abs.(j.value .- j.v_lp)) < 1e-10
+    @test maximum(abs.(j.value .- j.v_qe)) < 1e-10
+
+    # MixtureEnsemble refuses per-quantile weights — that path is now
+    # explicitly QuantileEnsemble's job.
+    @test_throws ArgumentError MixtureEnsemble(weights = fitted_q_pq)
 
     # Ineligible: with intercept.
     fitted_q_int = fit(QRA(; per_quantile_weights = false,

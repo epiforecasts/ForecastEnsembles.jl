@@ -45,15 +45,11 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="ensembles-r">ensembles (R)<a class="anchor" aria-label="anchor" href="#ensembles-r"></a>
 </h1></div>
-<p>Thin R wrapper around the Julia package <code>Ensembles.jl</code>. Mirrors the user- facing API of <code>hubEnsembles</code>, <code>qrensemble</code>, and <code>lopensemble</code>:</p>
+<p>A thin R wrapper around the Julia package <code>Ensembles.jl</code>. The user-facing functions mirror the originals:</p>
 <table class="table">
-<colgroup>
-<col width="44%">
-<col width="55%">
-</colgroup>
 <thead><tr class="header">
 <th>R wrapper</th>
-<th>Equivalent in R packages</th>
+<th>Original</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
@@ -81,16 +77,17 @@
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
-<p>The wrapper uses <a href="https://github.com/stefan-m-lenz/JuliaConnectoR" class="external-link">JuliaConnectoR</a> to talk to a long-lived Julia process. First call pays Julia + Ensembles.jl startup (~10–15 s); subsequent calls are sub-second.</p>
+<p>The wrapper talks to a long-lived Julia process via <a href="https://github.com/stefan-m-lenz/JuliaConnectoR" class="external-link">JuliaConnectoR</a>. The first call in a session takes ~10–15 s while Julia and Ensembles.jl warm up; calls after that are sub-second.</p>
 </div>
 <div class="section level2">
 <h2 id="requirements">Requirements<a class="anchor" aria-label="anchor" href="#requirements"></a>
 </h2>
 <ul>
 <li>Julia ≥ 1.10 on <code>PATH</code> (or pass <code>julia_bin</code> to <code><a href="reference/julia_setup.html">julia_setup()</a></code>).</li>
-<li>A working installation of this package (<code>R CMD INSTALL r-pkg/ensembles</code>).</li>
+<li>
+<code>R CMD INSTALL r-pkg/ensembles</code>.</li>
 </ul>
-<p>The first call in a session also instantiates the bridge Julia project (LBFGS solver, HiGHS LP solver, CSV/JSON IO). This takes a few minutes the very first time and then stays cached.</p>
+<p>The first call also instantiates the bridge Julia project (LBFGS, HiGHS, CSV/JSON IO). That one’s a few minutes, then it stays cached.</p>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
@@ -113,8 +110,8 @@
 <h2 id="future-work">Future work<a class="anchor" aria-label="anchor" href="#future-work"></a>
 </h2>
 <ul>
-<li>Persistent Julia daemon (DaemonMode.jl) to remove per-call startup cost.</li>
-<li>Optional in-process binding once JuliaCall is fixed for Julia 1.12+.</li>
+<li>Persistent Julia daemon (DaemonMode.jl) so the first call is cheaper.</li>
+<li>In-process binding when JuliaCall supports Julia 1.12+.</li>
 </ul>
 </div>
 </div>

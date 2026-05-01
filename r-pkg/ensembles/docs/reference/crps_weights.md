@@ -1,7 +1,7 @@
 # CRPS-stacked ensemble weights
 
-Equivalent to \`lopensemble::crps_weights\`. Optimises weights in
-softmax space against the empirical mixture-CRPS objective with a
+R wrapper that mirrors \`lopensemble::crps_weights\`. Optimises weights
+in softmax space against the empirical mixture-CRPS objective with a
 Dirichlet log-prior penalty.
 
 ## Usage

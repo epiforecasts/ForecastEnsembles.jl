@@ -13,80 +13,89 @@ abstract type UnfittedMethod <: EnsembleMethod end
 abstract type TrainedMethod <: EnsembleMethod end
 
 """
-    SimpleEnsemble(agg = :mean; weights = nothing)
+    QuantileEnsemble(agg = :mean; weights = nothing)
 
-Hub-style simple or weighted ensemble. `agg` is `:mean` or `:median`.
-`weights` is either `nothing` (equal weights) or a `DataFrame` with columns
-`model_id` and `weight`.
+Per-quantile weighted aggregation of quantile forecasts. At each task and
+quantile level τ, take a weighted mean (`agg = :mean`, also called
+Vincentization) or weighted median (`agg = :median`) of the per-model
+quantile values. `weights` may be:
+
+- `nothing` — equal weights (the "simple ensemble" of the hubverse).
+- a per-model `EnsembleWeights` — same weights at every τ.
+- a per-quantile `EnsembleWeights` — different weights per τ (e.g. from a
+  per-`τ` QRA fit, or supplied externally).
+- any fitted method whose `weights(m)` returns one of the above
+  (`FittedCRPSStacking`, `FittedQRA` in the right configuration, etc.).
 """
-struct SimpleEnsemble <: UnfittedMethod
+struct QuantileEnsemble <: UnfittedMethod
     agg::Symbol
-    weights::Union{Nothing,DataFrame}
+    weights::Union{Nothing,EnsembleWeights}
 end
 
-function SimpleEnsemble(agg::Symbol = :mean; weights = nothing)
+function QuantileEnsemble(agg::Symbol = :mean; weights = nothing)
     agg in (:mean, :median) ||
-        throw(ArgumentError("SimpleEnsemble agg must be :mean or :median (got :$agg)"))
-    weights = _resolve_weights(weights)
-    return SimpleEnsemble(agg, weights)
+        throw(ArgumentError("QuantileEnsemble agg must be :mean or :median (got :$agg)"))
+    return QuantileEnsemble(agg, _resolve_weights(weights))
 end
+
+# Backwards-compatible name used in earlier releases. Same semantics; the
+# documented type is `QuantileEnsemble`.
+const SimpleEnsemble = QuantileEnsemble
 
 """
-    LinearPool(; weights = nothing, n_samples = 10_000)
+    MixtureEnsemble(; weights = nothing, n_samples = 10_000)
 
-Linear opinion pool: the ensemble distribution is a (weighted) mixture of the
-component distributions. The path through the algorithm depends on the
-forecast `output_type`:
+Mixture (linear-opinion-pool) ensemble: the ensemble distribution is the
+(weighted) mixture of the component distributions, F = Σᵢ wᵢ Fᵢ. The
+algorithm path depends on the forecast `output_type`:
 
 - `:sample`   — weighted resample from per-model samples.
 - `:cdf`      — pointwise weighted average of CDFs.
 - `:quantile` — reconstruct each model's CDF from its quantiles, draw
   `n_samples`, pool, and re-extract quantiles at the original levels.
+
+Mixture pooling is fundamentally a per-model operation; per-quantile
+weights aren't meaningful here (use `QuantileEnsemble` for that).
 """
-struct LinearPool <: UnfittedMethod
-    weights::Union{Nothing,DataFrame}
+struct MixtureEnsemble <: UnfittedMethod
+    weights::Union{Nothing,EnsembleWeights}
     n_samples::Int
 end
 
-function LinearPool(; weights = nothing, n_samples::Integer = 10_000)
-    weights = _resolve_weights(weights)
+function MixtureEnsemble(; weights = nothing, n_samples::Integer = 10_000)
+    w = _resolve_weights(weights)
+    if w !== nothing && is_per_quantile(w)
+        throw(ArgumentError(
+            "MixtureEnsemble takes per-model weights only; per-quantile " *
+            "weights belong to QuantileEnsemble."))
+    end
     n_samples > 0 || throw(ArgumentError("n_samples must be positive"))
-    return LinearPool(weights, Int(n_samples))
+    return MixtureEnsemble(w, Int(n_samples))
 end
+
+# Earlier name for what is now MixtureEnsemble; kept for source
+# compatibility.
+const LinearPool = MixtureEnsemble
 
 # Coerce a `weights` argument into the canonical
 # `DataFrame{:model_id, :weight}` form. Accepts:
 #   - `nothing`               (passthrough)
 #   - any DataFrame-like with the two required columns
 #   - an `EnsembleMethod` whose `weights(m)` returns such a frame
-function _resolve_weights(w::Nothing)
-    return nothing
-end
+_resolve_weights(::Nothing) = nothing
+_resolve_weights(w::EnsembleWeights) = w
 function _resolve_weights(w::EnsembleMethod)
     wf = weights(w)
     wf === nothing && throw(ArgumentError(
-        "method $(typeof(w)) does not expose a per-model weight vector " *
+        "method $(typeof(w)) does not expose ensemble weights " *
         "(see `weights(::$(typeof(w)))` for the conditions)."))
     return _resolve_weights(wf)
 end
-function _resolve_weights(w)
-    df = DataFrame(w)
-    cols = propertynames(df)
-    if :model_id in cols && :weight in cols
-        return df
-    end
-    throw(ArgumentError(
-        "weights frame must have columns :model_id and :weight " *
-        "(optionally :output_type_id for per-quantile weights)."))
-end
+_resolve_weights(w) = EnsembleWeights(w)
 
-# True when `df` carries a `:output_type_id` column in addition to
-# `:model_id, :weight` — i.e. weights vary by quantile level rather than
-# being a single per-model vector.
+# Backward-compatible predicate used by the LinearPool dispatch.
 is_per_quantile_weights(::Nothing) = false
-is_per_quantile_weights(df::DataFrame) =
-    :output_type_id in propertynames(df) && :model_id in propertynames(df) &&
-    :weight in propertynames(df)
+is_per_quantile_weights(w::EnsembleWeights) = is_per_quantile(w)
 
 """
     QRA(; per_quantile_weights = false, intercept = true,

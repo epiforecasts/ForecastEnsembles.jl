@@ -1,6 +1,6 @@
 # Mixture from samples using fitted CRPS weights
 
-Equivalent to \`lopensemble::mixture_from_samples\`. Wraps a
+R wrapper that mirrors \`lopensemble::mixture_from_samples\`. Wraps a
 \[linear_pool()\] call with the supplied weights.
 
 ## Usage

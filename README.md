@@ -1,15 +1,25 @@
 # Ensembles.jl
 
-A Julia package for combining probabilistic forecasts.
+A Julia package for combining probabilistic forecasts from multiple
+component models.
 
-This is what you'd get if you took
+`Ensembles.jl` computes weighted or unweighted ensembles of forecasts
+represented as quantiles, samples, CDFs, or summary statistics. Weights
+can be supplied by the user, fixed (equal weighting), or estimated from
+past forecast performance (quantile regression averaging, CRPS-stacking).
+Trained and untrained methods compose through a single `EnsembleWeights`
+type.
+
+The package builds on prior work in the R packages
 [`hubEnsembles`](https://github.com/Infectious-Disease-Modeling-Hubs/hubEnsembles)
 (simple/weighted mean & median, linear opinion pool),
 [`qrensemble`](https://github.com/epiforecasts/qrensemble) (quantile
-regression averaging), and
+regression averaging, itself wrapping
+[`quantgen`](https://ryantibs.github.io/quantgen/)), and
 [`lopensemble`](https://github.com/epiforecasts/lopensemble) (CRPS-stacked
-linear opinion pool), and rewrote them around one in-memory representation
-and two verbs (`fit`, `combine`). Multiple dispatch then picks the right
+linear opinion pool). It re-implements them in Julia under one in-memory
+representation, two verbs (`fit`, `combine`), and two ensemble types
+(`MixtureEnsemble`, `QuantileEnsemble`). Multiple dispatch picks the right
 algorithm for each `(output_type, method)` pair.
 
 ## A small example
@@ -27,7 +37,8 @@ df = DataFrame(
 )
 
 ft = ForecastTable(df; task_id_cols = [:location, :horizon])
-combine(ft, SimpleEnsemble(:mean))
+combine(ft, QuantileEnsemble(:mean))
 ```
 
-See `docs/src/` for the full design and method-by-method docs.
+For an end-to-end walkthrough on real flu-hospitalisation data, see
+`docs/src/example.md`.
