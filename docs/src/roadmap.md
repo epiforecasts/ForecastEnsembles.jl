@@ -31,18 +31,53 @@ prompted them are in parentheses.
 
 ## Recalibration
 
-- **Isotonic Distributional Regression (IDR).** Henzi, Ziegel, Gneiting
-  (2019), [arXiv:1909.03725](https://arxiv.org/abs/1909.03725). Not a
-  combination method. Recalibrates any forecast (single model or
-  ensemble output) by fitting an isotonic conditional CDF on training
-  pairs. The R reference implementation is
-  [`isodisreg`](https://github.com/AlexanderHenzi/isodisreg). Sits
-  cleanly downstream of `combine`: take whatever distribution the
-  ensemble produced and pass it through IDR before scoring.
+Recalibration sits downstream of `combine`: an ensemble (or single-model)
+forecast goes in, a calibrated forecast comes out, both before scoring.
+We'd want a `Recalibrator` abstract type with `fit(m, training_forecasts,
+observations)` and `recalibrate(ft, fitted)` verbs.
 
-  Concretely: a `Recalibrator` abstract type with `fit` and a `recalibrate`
-  verb that takes a `ForecastTable` and returns one. IDR is the first
-  concrete subtype.
+The state of recalibration in Julia today is awkward.
+[PostForecasts.jl](https://lipiecki.github.io/PostForecasts.jl/stable/)
+ships five methods (`Normal`, `CP`, `IDR`, `QR`, `LassoQR`) but they all
+take *point forecasts* as input and produce quantile forecasts. The
+`train`/`predict` flow is point → distributional, not distributional →
+distributional. For our use case (recalibrating an ensemble's quantile
+output) there is no off-the-shelf solution: collapsing to the median
+before recalibration throws away the distributional information we just
+spent the package combining.
+
+Three reasonable paths, in increasing order of effort:
+
+- *Contribute to PostForecasts.jl.* Their IDR implementation could
+  generalise to richer input — Henzi/Ziegel/Gneiting's IDR is in
+  principle distributional regression on arbitrary covariates, not
+  point-only. A PR extending the input type is a natural next step
+  for that package and would benefit everyone using it.
+- *Sibling package, depending on PostForecasts.jl + ours.* Implements
+  quantile-input recalibrators (IDR, BLP, empirical PIT mapping) by
+  composing PostForecasts.jl's machinery where applicable and adding
+  what's missing. Avoids putting recalibration into Ensembles.jl
+  itself.
+- *Implement directly in Ensembles.jl.* IDR specifically has a clean
+  reference implementation in
+  [isodisreg](https://github.com/AlexanderHenzi/isodisreg) (R) that
+  could be ported. Faster start, but duplicates code that already
+  exists elsewhere.
+
+Methods worth covering once one of those paths lands:
+
+- **IDR** for quantile- or sample-input forecasts (Henzi, Ziegel,
+  Gneiting 2019, [arXiv:1909.03725](https://arxiv.org/abs/1909.03725)).
+- **Beta-transformed linear pool (BLP).** Already on the combination
+  list above; really a recalibration on top of the mixture (maps the
+  mixture CDF through a fitted Beta(a, b)). Cures LOP underdispersion.
+- **Empirical PIT mapping.** Map raw forecast quantiles through the
+  empirical PIT histogram of past forecasts. Crude but very general;
+  baseline for everything else.
+- **CRPS-minimising parametric recalibration.** Fit a parametric CDF
+  transform per model that minimises mean CRPS on training pairs. Same
+  optimisation machinery as `CRPSStacking`, applied to one model at a
+  time.
 
 ## Infrastructure
 
