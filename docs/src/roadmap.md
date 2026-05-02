@@ -51,9 +51,6 @@ prompted them are in parentheses.
   `ForecastTable` is already covered by `from_scoringutils`. Going the
   other way for scoring is the missing half. lopensemble#17 references
   this concern via tidymodels' `stacks`.
-- **Persistent Julia daemon for the R wrapper.** First call in an R
-  session pays a Julia startup cost of ~10–15 s. DaemonMode.jl keeps a
-  Julia process alive across R sessions, removing the cost entirely.
 - **Benchmarks vs the R packages.** Right now the speed claim in the
   index page is unmeasured. A small `benchmark/` directory comparing
   throughput on a realistic hubverse `model_out_tbl` would settle it.
