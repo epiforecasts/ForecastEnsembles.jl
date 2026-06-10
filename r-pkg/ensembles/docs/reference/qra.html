@@ -20,6 +20,7 @@ forecasts."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/sbfnk/ensembles.jl"><span class="fa fa-github"></span></a></li>
       </ul></div>
 
@@ -61,20 +62,23 @@ forecasts.</p>
 
 <dl><dt id="arg-training">training<a class="anchor" aria-label="anchor" href="#arg-training"></a></dt>
 <dd><p>A data frame with columns `model_id`, `output_type`
-(must be `"quantile"`), `output_type_id`, `value`, plus task-id columns.</p></dd>
+(must be `"quantile"`), `output_type_id`, `value`, plus task-id
+columns.</p></dd>
 
 
 <dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
-<dd><p>A data frame in the same shape — the forecasts to combine
+<dd><p>A data frame in the same shape: the forecasts to combine
 using the fitted weights.</p></dd>
 
 
 <dt id="arg-observations">observations<a class="anchor" aria-label="anchor" href="#arg-observations"></a></dt>
-<dd><p>A data frame with task-id columns plus `observed`.</p></dd>
+<dd><p>A data frame with the task-id columns plus a column
+named exactly `observed`.</p></dd>
 
 
 <dt id="arg-task-id-cols">task_id_cols<a class="anchor" aria-label="anchor" href="#arg-task-id-cols"></a></dt>
-<dd><p>Character vector of task-id columns.</p></dd>
+<dd><p>Character vector of the column names that identify
+a forecast task, e.g. `c("location", "horizon", "target_date")`.</p></dd>
 
 
 <dt id="arg-per-quantile-weights">per_quantile_weights<a class="anchor" aria-label="anchor" href="#arg-per-quantile-weights"></a></dt>
@@ -90,18 +94,54 @@ using the fitted weights.</p></dd>
 
 
 <dt id="arg-noncross">noncross<a class="anchor" aria-label="anchor" href="#arg-noncross"></a></dt>
-<dd><p>Add cross-quantile monotonicity constraints (only used
-when `per_quantile_weights = TRUE`).</p></dd>
+<dd><p>Add cross-quantile monotonicity constraints. Only takes
+effect when `per_quantile_weights = TRUE`; silently without effect
+otherwise (the joint fit cannot cross by construction when
+`enforce_normalisation = TRUE`).</p></dd>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
 <dd><p>Character vector of task dimensions over which to fit
-separate regressions.</p></dd>
+separate regressions (e.g. `"location"` for per-location weights).
+Leave empty to fit a single global model across all tasks.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame of fitted predictions on `target`.</p>
+    <p>A data frame of fitted predictions on `target`. When the fit
+  reduces to a clean weight vector (the default configuration does),
+  the weights are attached as a data frame in `attr(result, "weights")`,
+  mirroring `qrensemble`.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="migrating-from-qrensemble">Migrating from qrensemble<a class="anchor" aria-label="anchor" href="#migrating-from-qrensemble"></a></h2>
+
+
+<p>`qrensemble::qra` takes a single `forecast_quantile` object containing
+both training and holdout rows plus a `target` filter; this function
+takes three explicit data frames. To convert: rename `model` to
+`model_id`, `quantile_level` to `output_type_id` and `predicted` to
+`value`; add an `output_type = "quantile"` column; split the rows into
+`training` and `target` yourself (e.g. on `target_date`); and put the
+observed values into a separate `observations` frame with the task-id
+columns plus a column named exactly `observed`.</p>
+<p>The defaults (`per_quantile_weights = FALSE`,
+`enforce_normalisation = TRUE`, `intercept = FALSE`, `noncross = TRUE`)
+match `qrensemble::qra`, so a tuned call carries over unchanged.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="startup-time">Startup time<a class="anchor" aria-label="anchor" href="#startup-time"></a></h2>
+
+
+<p>Two distinct delays, easy to conflate:</p><ul><li><p>The very first use on a machine instantiates and precompiles the
+    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    take a few minutes and then stays cached in the Julia depot.</p></li>
+<li><p>Every fresh R session pays a Julia startup of roughly 10–15
+    seconds on the first call to any function in this package. Later
+    calls in the same session run in about a second.</p></li>
+</ul><p>Requires Julia (&gt;= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+not installed, install it via juliaup
+(<a href="https://github.com/JuliaLang/juliaup" class="external-link">https://github.com/JuliaLang/juliaup</a>) before using this package.</p>
     </div>
 
     <div class="section level2">
@@ -124,13 +164,13 @@ separate regressions.</p></dd>
 <span class="r-in"><span>  <span class="fu">make_rows</span><span class="op">(</span><span class="st">"m_good"</span>,  <span class="va">y</span> <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu">make_rows</span><span class="op">(</span><span class="st">"m_noisy"</span>, <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">train</span>  <span class="op">&lt;-</span> <span class="va">rows</span><span class="op">[</span><span class="va">rows</span><span class="op">$</span><span class="va">t</span> <span class="op">&lt;=</span> <span class="va">n</span>,  <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">target</span> <span class="op">&lt;-</span> <span class="va">rows</span><span class="op">[</span><span class="va">rows</span><span class="op">$</span><span class="va">t</span> <span class="op">==</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span>, <span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">train</span>  <span class="op">&lt;-</span> <span class="va">rows</span><span class="op">[</span><span class="va">rows</span><span class="op">$</span><span class="va">t</span> <span class="op">&lt;=</span> <span class="va">n</span>, <span class="op">]</span>    <span class="co"># tasks 1..50 train</span></span></span>
+<span class="r-in"><span><span class="va">target</span> <span class="op">&lt;-</span> <span class="va">rows</span><span class="op">[</span><span class="va">rows</span><span class="op">$</span><span class="va">t</span> <span class="op">==</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span>, <span class="op">]</span> <span class="co"># task 51 is the holdout</span></span></span>
 <span class="r-in"><span><span class="va">obs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>, observed <span class="op">=</span> <span class="va">y</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">qra</span><span class="op">(</span>training <span class="op">=</span> <span class="va">train</span>, target <span class="op">=</span> <span class="va">target</span>, observations <span class="op">=</span> <span class="va">obs</span>,</span></span>
-<span class="r-in"><span>    task_id_cols <span class="op">=</span> <span class="st">"t"</span>, enforce_normalisation <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
-<span class="r-in"><span>    intercept <span class="op">=</span> <span class="cn">FALSE</span>, noncross <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">qra</span><span class="op">(</span>training <span class="op">=</span> <span class="va">train</span>, target <span class="op">=</span> <span class="va">target</span>, observations <span class="op">=</span> <span class="va">obs</span>,</span></span>
+<span class="r-in"><span>              task_id_cols <span class="op">=</span> <span class="st">"t"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span>, <span class="st">"weights"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

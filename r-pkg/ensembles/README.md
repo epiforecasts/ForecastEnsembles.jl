@@ -20,7 +20,7 @@ up; calls after that run in under a second.
 
 ## Requirements
 
-- Julia ≥ 1.10 on `PATH` (or pass `julia_bin` to `julia_setup()`).
+- Julia ≥ 1.10 on `PATH` (or pass `julia_bindir` to `julia_setup()`).
 - `R CMD INSTALL r-pkg/ensembles`.
 
 The first call also instantiates the bridge Julia project (LBFGS, HiGHS,

@@ -10,7 +10,8 @@ simple_ensemble(
   model_out_tbl,
   weights = NULL,
   agg_fun = c("mean", "median"),
-  task_id_cols
+  task_id_cols,
+  model_id = "hub-ensemble"
 )
 ```
 
@@ -23,7 +24,9 @@ simple_ensemble(
 
 - weights:
 
-  Optional data frame with columns \`model_id\` and \`weight\`.
+  Optional data frame with columns \`model_id\` and \`weight\`
+  (optionally \`output_type_id\` for per-quantile weights). Weights need
+  not sum to 1; they are normalised internally.
 
 - agg_fun:
 
@@ -31,11 +34,47 @@ simple_ensemble(
 
 - task_id_cols:
 
-  Character vector of task-id columns.
+  Character vector of the column names that identify a forecast task,
+  e.g. \`c("location", "horizon", "target_date")\`.
+
+- model_id:
+
+  Value for the \`model_id\` column of the output. Defaults to
+  \`"hub-ensemble"\`, matching \`hubEnsembles\`.
 
 ## Value
 
-A data frame, with \`model_id = "hub-ensemble"\`.
+A data frame of class \`model_out_tbl\`, with one row per (task,
+output_type_id) and \`model_id\` set as requested.
+
+## Details
+
+Differences from \`hubEnsembles::simple_ensemble\` to be aware of when
+migrating:
+
+- \`task_id_cols\` is required here; \`hubEnsembles\` infers it from the
+  known hub schema columns.
+
+- \`agg_fun\` is a string choice (\`"mean"\` or \`"median"\`), with
+  \`"mean"\` as the default; \`hubEnsembles\` also accepts arbitrary
+  aggregation functions, which this wrapper does not (the aggregation
+  runs in Julia, so an R function can't cross the bridge).
+
+## Startup time
+
+Two distinct delays, easy to conflate:
+
+- The very first use on a machine instantiates and precompiles the
+  bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+  take a few minutes and then stays cached in the Julia depot.
+
+- Every fresh R session pays a Julia startup of roughly 10–15 seconds on
+  the first call to any function in this package. Later calls in the
+  same session run in about a second.
+
+Requires Julia (\>= 1.10) on the \`PATH\`, or \`julia_bindir\`. If Julia
+is not installed, install it via juliaup
+(<https://github.com/JuliaLang/juliaup>) before using this package.
 
 ## Examples
 

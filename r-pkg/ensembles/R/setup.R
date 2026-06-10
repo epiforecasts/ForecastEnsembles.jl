@@ -16,6 +16,20 @@
 #'   When supplied, the bundled project is reconfigured to develop that
 #'   source instead of the version pinned in the manifest.
 #'
+#' @section Startup time:
+#' Two distinct delays, easy to conflate:
+#' \itemize{
+#'   \item The very first use on a machine instantiates and precompiles the
+#'     bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+#'     take a few minutes and then stays cached in the Julia depot.
+#'   \item Every fresh R session pays a Julia startup of roughly 10--15
+#'     seconds on the first call to any function in this package. Later
+#'     calls in the same session run in about a second.
+#' }
+#' Requires Julia (>= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+#' not installed, install it via juliaup
+#' (\url{https://github.com/JuliaLang/juliaup}) before using this package.
+#'
 #' @return Invisible NULL.
 #' @examples
 #' \dontrun{
@@ -67,6 +81,8 @@ julia_setup <- function(julia_bindir = NULL, ensembles_jl_path = NULL) {
 
 .bridge_helpers_jl <- function() {
 '
+import Random
+
 function _ens_to_string!(df::DataFrame)
     if hasproperty(df, :output_type) && eltype(df.output_type) == Symbol
         df.output_type = String.(df.output_type)
@@ -95,7 +111,8 @@ function _ens_simple(df_in, task_id_cols::Vector, agg::String, weights_in)
     _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
 end
 
-function _ens_linear_pool(df_in, task_id_cols::Vector, n_samples::Int, weights_in)
+function _ens_linear_pool(df_in, task_id_cols::Vector, n_samples::Int, weights_in,
+                          seed)
     df = _ens_to_symbol!(DataFrame(df_in))
     cols = Symbol.(task_id_cols)
     ft = Ensembles.ForecastTable(df; task_id_cols = cols)
@@ -104,7 +121,9 @@ function _ens_linear_pool(df_in, task_id_cols::Vector, n_samples::Int, weights_i
     else
         Ensembles.LinearPool(; n_samples = n_samples, weights = DataFrame(weights_in))
     end
-    _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
+    rng = seed === nothing ? Random.default_rng() :
+                              Random.MersenneTwister(Int(seed))
+    _ens_pack(_ens_to_string!(DataFrame(combine(ft, method; rng = rng))))
 end
 
 function _ens_qra(train_in, target_in, obs_in, task_id_cols::Vector,
@@ -125,7 +144,10 @@ function _ens_qra(train_in, target_in, obs_in, task_id_cols::Vector,
         group = Symbol.(group),
     )
     fitted = fit(method, train_ft, obs_df)
-    _ens_pack(_ens_to_string!(DataFrame(combine(target_ft, fitted))))
+    pred = _ens_pack(_ens_to_string!(DataFrame(combine(target_ft, fitted))))
+    w = Ensembles.weights(fitted)
+    (pred = pred,
+     weights = w === nothing ? nothing : _ens_pack(DataFrame(w)))
 end
 
 function _ens_crps(train_in, obs_in, task_id_cols::Vector, dirichlet_alpha::Float64)

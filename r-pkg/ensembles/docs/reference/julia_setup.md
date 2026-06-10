@@ -35,6 +35,22 @@ Invisible NULL.
 Heavy lifting (binary detection, subprocess instantiate, lazy-init
 guard) is delegated to \[juliaready::julia_ready()\].
 
+## Startup time
+
+Two distinct delays, easy to conflate:
+
+- The very first use on a machine instantiates and precompiles the
+  bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+  take a few minutes and then stays cached in the Julia depot.
+
+- Every fresh R session pays a Julia startup of roughly 10–15 seconds on
+  the first call to any function in this package. Later calls in the
+  same session run in about a second.
+
+Requires Julia (\>= 1.10) on the \`PATH\`, or \`julia_bindir\`. If Julia
+is not installed, install it via juliaup
+(<https://github.com/JuliaLang/juliaup>) before using this package.
+
 ## Examples
 
 ``` r

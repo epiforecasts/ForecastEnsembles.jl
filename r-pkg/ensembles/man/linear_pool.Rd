@@ -4,30 +4,81 @@
 \alias{linear_pool}
 \title{Linear opinion pool}
 \usage{
-linear_pool(model_out_tbl, weights = NULL, n_samples = 10000L, task_id_cols)
+linear_pool(
+  model_out_tbl,
+  weights = NULL,
+  n_samples = 10000L,
+  task_id_cols,
+  model_id = "hub-ensemble",
+  seed = NULL
+)
 }
 \arguments{
 \item{model_out_tbl}{A data frame with columns `model_id`, `output_type`,
-`output_type_id`, `value`, plus task-id columns.}
+`output_type_id`, `value`, plus task-id columns. All rows must share
+the same `output_type`.}
 
-\item{weights}{Optional data frame with columns `model_id` and `weight`.}
+\item{weights}{Optional data frame with columns `model_id` and `weight`.
+Weights need not sum to 1; they are normalised internally.}
 
-\item{n_samples}{Pooled-sample size for the sampling/quantile paths.}
+\item{n_samples}{Pooled-sample size when `output_type` is `"sample"`
+(named `n_output_samples` in `hubEnsembles`).}
 
-\item{task_id_cols}{Character vector of task-id columns.}
+\item{task_id_cols}{Character vector of the column names that identify
+a forecast task, e.g. `c("location", "horizon", "target_date")`.}
+
+\item{model_id}{Value for the `model_id` column of the output. Defaults
+to `"hub-ensemble"`, matching `hubEnsembles`.}
+
+\item{seed}{Optional integer seed for the Julia random number generator,
+used only by the `"sample"` path. Without it, sample-path results are
+not reproducible across sessions (R's `set.seed()` does not reach
+Julia).}
 }
 \value{
-A data frame in the same shape, with `model_id = "hub-ensemble"`.
+A data frame of class `model_out_tbl` in the same shape as the
+  input, with `model_id` set as requested.
 }
 \description{
 R wrapper that mirrors `hubEnsembles::linear_pool`. Routes by
-`output_type` of `model_out_tbl`: samples are pooled, CDFs averaged, and
-quantile inputs go through CDF reconstruction (PCHIP + normal tails).
+`output_type` of `model_out_tbl`: samples are pooled by weighted
+resampling, CDFs averaged pointwise, and quantile inputs go through CDF
+reconstruction (PCHIP + normal tails) followed by exact inversion of
+the mixture CDF.
 }
+\details{
+Differences from `hubEnsembles::linear_pool` to be aware of when
+migrating:
+\itemize{
+  \item The sample-count argument is named `n_samples` here;
+    `hubEnsembles` calls it `n_output_samples`. A call passing
+    `n_output_samples` errors rather than being silently ignored.
+  \item `task_id_cols` is required here.
+  \item For quantile input, the ensemble quantiles are computed exactly
+    (no Monte Carlo step), so `n_samples` only affects the `"sample"`
+    output type and results for quantile input are deterministic.
+}
+}
+\section{Startup time}{
+
+Two distinct delays, easy to conflate:
+\itemize{
+  \item The very first use on a machine instantiates and precompiles the
+    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    take a few minutes and then stays cached in the Julia depot.
+  \item Every fresh R session pays a Julia startup of roughly 10--15
+    seconds on the first call to any function in this package. Later
+    calls in the same session run in about a second.
+}
+Requires Julia (>= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+not installed, install it via juliaup
+(\url{https://github.com/JuliaLang/juliaup}) before using this package.
+}
+
 \examples{
 \dontrun{
 # Quantile-input path: each model contributes a 5-quantile forecast; the
-# linear pool reconstructs each CDF, samples, then re-extracts quantiles.
+# linear pool reconstructs each CDF and inverts the mixture exactly.
 df <- expand.grid(
   model_id       = c("m1", "m2"),
   output_type_id = c(0.1, 0.25, 0.5, 0.75, 0.9),
@@ -38,6 +89,6 @@ df$output_type <- "quantile"
 df$value <- qnorm(df$output_type_id,
                   mean = ifelse(df$model_id == "m1", 0, 2),
                   sd   = 1)
-linear_pool(df, n_samples = 5000, task_id_cols = "location")
+linear_pool(df, task_id_cols = "location")
 }
 }

@@ -18,6 +18,7 @@ aggregation runs in Julia."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/sbfnk/ensembles.jl"><span class="fa fa-github"></span></a></li>
       </ul></div>
 
@@ -43,7 +44,8 @@ aggregation runs in Julia.</p>
 <span>  <span class="va">model_out_tbl</span>,</span>
 <span>  weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  agg_fun <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"median"</span><span class="op">)</span>,</span>
-<span>  <span class="va">task_id_cols</span></span>
+<span>  <span class="va">task_id_cols</span>,</span>
+<span>  model_id <span class="op">=</span> <span class="st">"hub-ensemble"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -57,7 +59,9 @@ aggregation runs in Julia.</p>
 
 
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
-<dd><p>Optional data frame with columns `model_id` and `weight`.</p></dd>
+<dd><p>Optional data frame with columns `model_id` and `weight`
+(optionally `output_type_id` for per-quantile weights). Weights need
+not sum to 1; they are normalised internally.</p></dd>
 
 
 <dt id="arg-agg-fun">agg_fun<a class="anchor" aria-label="anchor" href="#arg-agg-fun"></a></dt>
@@ -65,12 +69,44 @@ aggregation runs in Julia.</p>
 
 
 <dt id="arg-task-id-cols">task_id_cols<a class="anchor" aria-label="anchor" href="#arg-task-id-cols"></a></dt>
-<dd><p>Character vector of task-id columns.</p></dd>
+<dd><p>Character vector of the column names that identify
+a forecast task, e.g. `c("location", "horizon", "target_date")`.</p></dd>
+
+
+<dt id="arg-model-id">model_id<a class="anchor" aria-label="anchor" href="#arg-model-id"></a></dt>
+<dd><p>Value for the `model_id` column of the output. Defaults
+to `"hub-ensemble"`, matching `hubEnsembles`.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame, with `model_id = "hub-ensemble"`.</p>
+    <p>A data frame of class `model_out_tbl`, with one row per
+  (task, output_type_id) and `model_id` set as requested.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Differences from `hubEnsembles::simple_ensemble` to be aware of when
+migrating:</p><ul><li><p>`task_id_cols` is required here; `hubEnsembles` infers it from
+    the known hub schema columns.</p></li>
+<li><p>`agg_fun` is a string choice (`"mean"` or `"median"`), with
+    `"mean"` as the default; `hubEnsembles` also accepts arbitrary
+    aggregation functions, which this wrapper does not (the
+    aggregation runs in Julia, so an R function can't cross the
+    bridge).</p></li>
+</ul></div>
+    <div class="section level2">
+    <h2 id="startup-time">Startup time<a class="anchor" aria-label="anchor" href="#startup-time"></a></h2>
+
+
+<p>Two distinct delays, easy to conflate:</p><ul><li><p>The very first use on a machine instantiates and precompiles the
+    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    take a few minutes and then stays cached in the Julia depot.</p></li>
+<li><p>Every fresh R session pays a Julia startup of roughly 10–15
+    seconds on the first call to any function in this package. Later
+    calls in the same session run in about a second.</p></li>
+</ul><p>Requires Julia (&gt;= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+not installed, install it via juliaup
+(<a href="https://github.com/JuliaLang/juliaup" class="external-link">https://github.com/JuliaLang/juliaup</a>) before using this package.</p>
     </div>
 
     <div class="section level2">

@@ -4,28 +4,58 @@
 \alias{mixture_from_samples}
 \title{Mixture from samples using fitted CRPS weights}
 \usage{
-mixture_from_samples(model_out_tbl, weights, n_samples = 10000L, task_id_cols)
+mixture_from_samples(
+  model_out_tbl,
+  weights,
+  n_samples = 10000L,
+  task_id_cols,
+  seed = NULL
+)
 }
 \arguments{
-\item{model_out_tbl}{A data frame with columns `model_id`, `output_type`,
-`output_type_id`, `value`, plus task-id columns.}
+\item{model_out_tbl}{Sample-typed data frame in the usual shape
+(`model_id`, `output_type = "sample"`, `output_type_id`, `value`,
+plus task-id columns).}
 
-\item{weights}{Optional data frame with columns `model_id` and `weight`.}
+\item{weights}{Data frame with columns `model_id` and `weight`,
+typically the output of [crps_weights()]. Required.}
 
-\item{n_samples}{Pooled-sample size for the sampling/quantile paths.}
+\item{n_samples}{Pooled-sample size.}
 
-\item{task_id_cols}{Character vector of task-id columns.}
+\item{task_id_cols}{Character vector of the column names that identify
+a forecast task.}
+
+\item{seed}{Optional integer seed for the Julia random number generator
+(the sample path is stochastic; R's `set.seed()` does not reach
+Julia).}
+}
+\value{
+A pooled-sample data frame of class `model_out_tbl`.
 }
 \description{
 R wrapper that mirrors `lopensemble::mixture_from_samples`. Wraps a
-[linear_pool()] call with the supplied weights.
+[linear_pool()] call with the supplied weights; use it when you want
+the migration-friendly name, and `linear_pool()` directly otherwise.
 }
+\section{Startup time}{
+
+Two distinct delays, easy to conflate:
+\itemize{
+  \item The very first use on a machine instantiates and precompiles the
+    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    take a few minutes and then stays cached in the Julia depot.
+  \item Every fresh R session pays a Julia startup of roughly 10--15
+    seconds on the first call to any function in this package. Later
+    calls in the same session run in about a second.
+}
+Requires Julia (>= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+not installed, install it via juliaup
+(\url{https://github.com/JuliaLang/juliaup}) before using this package.
+}
+
 \examples{
 \dontrun{
-# Combine sample-typed forecasts using weights estimated by crps_weights.
-weights <- data.frame(model_id = c("m_good", "m_noisy"),
-                      weight   = c(0.95, 0.05))
-mixture_from_samples(train, weights = weights, n_samples = 5000,
-                     task_id_cols = "t")
+w <- crps_weights(train, obs, task_id_cols = "t")
+mixture_from_samples(train, weights = w, task_id_cols = "t", seed = 42)
 }
 }

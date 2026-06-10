@@ -8,26 +8,63 @@ simple_ensemble(
   model_out_tbl,
   weights = NULL,
   agg_fun = c("mean", "median"),
-  task_id_cols
+  task_id_cols,
+  model_id = "hub-ensemble"
 )
 }
 \arguments{
 \item{model_out_tbl}{A data frame with columns `model_id`, `output_type`,
 `output_type_id`, `value`, plus task-id columns.}
 
-\item{weights}{Optional data frame with columns `model_id` and `weight`.}
+\item{weights}{Optional data frame with columns `model_id` and `weight`
+(optionally `output_type_id` for per-quantile weights). Weights need
+not sum to 1; they are normalised internally.}
 
 \item{agg_fun}{One of `"mean"` or `"median"`.}
 
-\item{task_id_cols}{Character vector of task-id columns.}
+\item{task_id_cols}{Character vector of the column names that identify
+a forecast task, e.g. `c("location", "horizon", "target_date")`.}
+
+\item{model_id}{Value for the `model_id` column of the output. Defaults
+to `"hub-ensemble"`, matching `hubEnsembles`.}
 }
 \value{
-A data frame, with `model_id = "hub-ensemble"`.
+A data frame of class `model_out_tbl`, with one row per
+  (task, output_type_id) and `model_id` set as requested.
 }
 \description{
 R wrapper that mirrors `hubEnsembles::simple_ensemble`. The actual
 aggregation runs in Julia.
 }
+\details{
+Differences from `hubEnsembles::simple_ensemble` to be aware of when
+migrating:
+\itemize{
+  \item `task_id_cols` is required here; `hubEnsembles` infers it from
+    the known hub schema columns.
+  \item `agg_fun` is a string choice (`"mean"` or `"median"`), with
+    `"mean"` as the default; `hubEnsembles` also accepts arbitrary
+    aggregation functions, which this wrapper does not (the
+    aggregation runs in Julia, so an R function can't cross the
+    bridge).
+}
+}
+\section{Startup time}{
+
+Two distinct delays, easy to conflate:
+\itemize{
+  \item The very first use on a machine instantiates and precompiles the
+    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    take a few minutes and then stays cached in the Julia depot.
+  \item Every fresh R session pays a Julia startup of roughly 10--15
+    seconds on the first call to any function in this package. Later
+    calls in the same session run in about a second.
+}
+Requires Julia (>= 1.10) on the `PATH`, or `julia_bindir`. If Julia is
+not installed, install it via juliaup
+(\url{https://github.com/JuliaLang/juliaup}) before using this package.
+}
+
 \examples{
 \dontrun{
 df <- data.frame(

@@ -20,7 +20,7 @@ up; calls after that run in under a second.
 
 ## Requirements
 
-- Julia ≥ 1.10 on `PATH` (or pass `julia_bin` to
+- Julia ≥ 1.10 on `PATH` (or pass `julia_bindir` to
   [`julia_setup()`](reference/julia_setup.md)).
 - `R CMD INSTALL r-pkg/ensembles`.
 
