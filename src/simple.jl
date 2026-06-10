@@ -28,12 +28,21 @@ function combine(ft::ForecastTable, m::QuantileEnsemble)
         if is_per_quantile(m.weights)
             join_cols = [ft.model_id_col => :model_id, :output_type_id => :output_type_id]
             joined = leftjoin(df, wdf; on = join_cols)
-            any(ismissing, joined.weight) && throw(ArgumentError(
-                "per-quantile weights are missing some (model_id, output_type_id) pairs"))
+            any(ismissing, joined.weight) && throw(
+                ArgumentError(
+                    "per-quantile weights are missing some (model_id, output_type_id) pairs",
+                ),
+            )
         else
-            miss = setdiff(unique(df[!, ft.model_id_col]), wdf.model_id)
-            isempty(miss) || throw(ArgumentError(
-                "no weight provided for models: $miss"))
+            models_present = unique(df[!, ft.model_id_col])
+            miss = setdiff(models_present, wdf.model_id)
+            isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
+            extra = setdiff(wdf.model_id, models_present)
+            isempty(extra) || @warn(
+                "weights provided for models not present in the data " *
+                "(possible typo in model_id): $extra",
+                maxlog = 1,
+            )
             joined = leftjoin(df, wdf; on = ft.model_id_col => :model_id)
         end
         agg_fun = m.agg === :mean ? _weighted_mean : _weighted_median
@@ -45,13 +54,14 @@ function combine(ft::ForecastTable, m::QuantileEnsemble)
 
     out[!, ft.model_id_col] .= "hub-ensemble"
     select!(out, ft.model_id_col, :output_type, :output_type_id, ft.task_id_cols..., :value)
-    return ForecastTable(out;
-                        task_id_cols = ft.task_id_cols,
-                        model_id_col = ft.model_id_col)
+    return ForecastTable(
+        out;
+        task_id_cols = ft.task_id_cols,
+        model_id_col = ft.model_id_col,
+    )
 end
 
-_weighted_mean(v::AbstractVector, w::AbstractVector) =
-    sum(v .* w) / sum(w)
+_weighted_mean(v::AbstractVector, w::AbstractVector) = dot(v, w) / sum(w)
 
 # Weighted median: smallest x_i such that the cumulative normalised weight
 # of values ≤ x_i is ≥ 0.5. Matches matrixStats::weightedMedian default

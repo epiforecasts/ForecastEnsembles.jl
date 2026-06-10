@@ -38,15 +38,22 @@ function ForecastTable(
 )
     df = DataFrame(df) # defensive copy / materialise
     _validate_columns!(df, model_id_col)
+    nrow(df) > 0 ||
+        throw(ArgumentError("ForecastTable must contain at least one row"))
+    if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)
+        throw(ArgumentError(
+            "ForecastTable :value column contains missing or NaN entries; " *
+            "filter or impute before constructing."))
+    end
 
-    inferred_task = setdiff(
-        Symbol.(propertynames(df)),
-        [model_id_col, REQUIRED_NON_TASK_COLS...],
-    )
+    inferred_task =
+        setdiff(Symbol.(propertynames(df)), [model_id_col, REQUIRED_NON_TASK_COLS...])
     chosen_task = task_id_cols === nothing ? inferred_task : Symbol.(task_id_cols)
-    isempty(chosen_task) && throw(ArgumentError(
-        "ForecastTable needs at least one task-id column; none could be inferred.",
-    ))
+    isempty(chosen_task) && throw(
+        ArgumentError(
+            "ForecastTable needs at least one task-id column; none could be inferred.",
+        ),
+    )
     for c in chosen_task
         hasproperty(df, c) || throw(ArgumentError("task_id_col $c not present in data"))
     end
@@ -56,9 +63,8 @@ function ForecastTable(
         df.output_type = Symbol.(df.output_type)
     end
     for ot in unique(df.output_type)
-        is_known_output_type(ot) || throw(ArgumentError(
-            "unknown output_type :$ot; allowed: $(KNOWN_OUTPUT_TYPES)",
-        ))
+        is_known_output_type(ot) ||
+            throw(ArgumentError("unknown output_type :$ot; allowed: $(KNOWN_OUTPUT_TYPES)"))
     end
 
     return ForecastTable(df, collect(chosen_task), model_id_col)
@@ -69,9 +75,8 @@ ForecastTable(t; kwargs...) = ForecastTable(DataFrame(t); kwargs...)
 function _validate_columns!(df::DataFrame, model_id_col::Symbol)
     required = (model_id_col, REQUIRED_NON_TASK_COLS...)
     missing_cols = [c for c in required if !hasproperty(df, c)]
-    isempty(missing_cols) || throw(ArgumentError(
-        "ForecastTable is missing required columns: $(missing_cols)",
-    ))
+    isempty(missing_cols) ||
+        throw(ArgumentError("ForecastTable is missing required columns: $(missing_cols)"))
 end
 
 # ---- accessors ----
@@ -88,9 +93,11 @@ since most ensemble methods are defined on a single type at a time.
 """
 function output_type(ft::ForecastTable)
     types = unique(ft.data.output_type)
-    length(types) == 1 || throw(ArgumentError(
-        "ForecastTable contains mixed output_types $types; split before combining.",
-    ))
+    length(types) == 1 || throw(
+        ArgumentError(
+            "ForecastTable contains mixed output_types $types; split before combining.",
+        ),
+    )
     return types[1]
 end
 

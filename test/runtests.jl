@@ -11,5 +11,6 @@ using DataFrames
     include("test_qra.jl")
     include("test_crps_stacking.jl")
     include("test_composition.jl")
+    include("test_review_fixes.jl")
     include("test_parity.jl")
 end

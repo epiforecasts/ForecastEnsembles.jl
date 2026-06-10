@@ -20,8 +20,8 @@ using Statistics: mean, std, quantile
 
     # 80/20 weights toward m1: pooled mean ≈ 2.0
     w = DataFrame(model_id = ["m1", "m2"], weight = [0.8, 0.2])
-    out_w = combine(ft, LinearPool(; n_samples = 5000, weights = w);
-                    rng = MersenneTwister(1))
+    out_w =
+        combine(ft, LinearPool(; n_samples = 5000, weights = w); rng = MersenneTwister(1))
     pooled_w = DataFrame(out_w).value
     @test mean(pooled_w) ≈ 2.0 atol = 0.5
 end
@@ -35,13 +35,16 @@ end
     probs = collect(0.05:0.05:0.95)
     rows = DataFrame[]
     for (mid, dist) in (("m1", Normal(0, 1)), ("m2", Normal(5, 1)))
-        push!(rows, DataFrame(
-            model_id = mid,
-            output_type = "quantile",
-            output_type_id = probs,
-            location = "A",
-            value = quantile.(Ref(dist), probs),
-        ))
+        push!(
+            rows,
+            DataFrame(
+                model_id = mid,
+                output_type = "quantile",
+                output_type_id = probs,
+                location = "A",
+                value = quantile.(Ref(dist), probs),
+            ),
+        )
     end
     df = reduce(vcat, rows)
     ft = ForecastTable(df; task_id_cols = [:location])
@@ -76,9 +79,5 @@ end
     w = DataFrame(model_id = ["m1", "m2"], weight = [0.75, 0.25])
     out_w = combine(ft, LinearPool(; weights = w))
     d_w = sort(DataFrame(out_w), :output_type_id)
-    @test d_w.value ≈ [
-        0.75*0.1 + 0.25*0.3,
-        0.75*0.5 + 0.25*0.7,
-        0.75*0.9 + 0.25*0.95,
-    ]
+    @test d_w.value ≈ [0.75*0.1 + 0.25*0.3, 0.75*0.5 + 0.25*0.7, 0.75*0.9 + 0.25*0.95]
 end

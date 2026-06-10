@@ -26,11 +26,21 @@ function EnsembleWeights(df; shape::Symbol = :auto)
     df = DataFrame(df)
     cols = propertynames(df)
     has_model_id = :model_id in cols
-    has_weight   = :weight   in cols
-    has_oti      = :output_type_id in cols
-    (has_model_id && has_weight) || throw(ArgumentError(
-        "EnsembleWeights requires :model_id and :weight columns " *
-        "(got $(collect(cols)))."))
+    has_weight = :weight in cols
+    has_oti = :output_type_id in cols
+    (has_model_id && has_weight) || throw(
+        ArgumentError(
+            "EnsembleWeights requires :model_id and :weight columns " *
+            "(got $(collect(cols))).",
+        ),
+    )
+
+    all(w -> !ismissing(w) && w >= 0, df.weight) || throw(
+        ArgumentError(
+            "EnsembleWeights requires non-negative, non-missing weights; " *
+            "mixing operations are undefined for negative weights.",
+        ),
+    )
 
     inferred = has_oti ? :per_quantile : :per_model
     if shape === :auto
@@ -38,7 +48,11 @@ function EnsembleWeights(df; shape::Symbol = :auto)
     elseif shape == :per_quantile && !has_oti
         throw(ArgumentError("shape = :per_quantile requires an :output_type_id column"))
     elseif shape == :per_model && has_oti
-        throw(ArgumentError("shape = :per_model is incompatible with an :output_type_id column"))
+        throw(
+            ArgumentError(
+                "shape = :per_model is incompatible with an :output_type_id column",
+            ),
+        )
     elseif shape ∉ (:per_model, :per_quantile)
         throw(ArgumentError("shape must be :per_model, :per_quantile, or :auto"))
     end

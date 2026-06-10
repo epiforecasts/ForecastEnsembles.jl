@@ -27,16 +27,38 @@ F = Σᵢ wᵢ Fᵢ is computed in closed form from the empirical-sample formula
 
     CRPS_t(w) = Σᵢ wᵢ aᵢᵗ − ½ Σᵢⱼ wᵢ wⱼ Bᵢⱼᵗ
 
-with `aᵢᵗ = mean(|Xᵢₖ − yₜ|)` and `Bᵢⱼᵗ = mean(|Xᵢₖ − Xⱼₗ|)`.
+with `aᵢᵗ = mean(|Xᵢₖ − yₜ|)`, `Bᵢⱼᵗ = mean(|Xᵢₖ − Xⱼₗ|)` for i ≠ j, and the
+within-model term `Bᵢᵢᵗ` averaged over distinct sample pairs k ≠ l only (the
+k = l pairs are identically zero and would bias the diagonal downward by
+O(1/K) otherwise).
 
-`m.dirichlet_alpha` adds a Dirichlet(α, …, α) log-prior penalty to the loss,
-matching `lopensemble`'s MAP estimator. With `α = 1` (uniform prior) the
-penalty vanishes; with `α > 1` it pushes the optimum toward the interior of
-the simplex.
+The objective is a concave quadratic in w minimised over the simplex, so the
+optimum can sit at a vertex (all weight on one model). A single L-BFGS run
+from uniform weights can stall in nearly flat landscapes, so the optimiser is
+restarted from each vertex-leaning start as well and the best minimum is kept.
+
+`m.dirichlet_alpha` adds a Dirichlet(α, …, α) log-prior penalty,
+`−((α−1)/T) Σᵢ log wᵢ`, matching the scale of the mean per-task CRPS. With
+`α = 1` the penalty vanishes exactly; the default 1.001 is a weak
+regularisation that keeps the optimum off the simplex boundary (and matches
+`lopensemble`'s default).
+
+`lambda` (time weighting) and `gamma` (region weighting) from `lopensemble`
+are not yet implemented; passing either raises an error rather than silently
+ignoring it.
 """
 function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDataFrame)
-    output_type(training) === :sample ||
-        throw(ArgumentError("CRPSStacking expects sample forecasts; got $(output_type(training))"))
+    output_type(training) === :sample || throw(
+        ArgumentError(
+            "CRPSStacking expects sample forecasts; got $(output_type(training))",
+        ),
+    )
+    m.lambda === nothing || throw(ArgumentError(
+        "CRPSStacking: `lambda` (time weighting) is not yet implemented; " *
+        "passing it would be silently ignored, so it raises instead."))
+    m.gamma === nothing || throw(ArgumentError(
+        "CRPSStacking: `gamma` (region weighting) is not yet implemented; " *
+        "passing it would be silently ignored, so it raises instead."))
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
         throw(ArgumentError("observations frame must have an :observed column"))
@@ -57,20 +79,27 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
         B = zeros(M, M)
         samples_per_model = Vector{Vector{Float64}}(undef, M)
         for (i, mod) in enumerate(models)
-            samples_per_model[i] = Float64.(tg[tg[!, training.model_id_col] .== mod, :value])
+            samples_per_model[i] =
+                Float64.(tg[tg[!, training.model_id_col] .== mod, :value])
         end
-        for i in 1:M
+        for i = 1:M
             si = samples_per_model[i]
             isempty(si) && continue
             A[i] = mean(abs.(si .- y))
-            for j in i:M
+            for j = i:M
                 sj = samples_per_model[j]
                 isempty(sj) && continue
-                # mean over (i,k) × (j,l) of |X_ik - X_jl|
-                # vector-vector outer absolute mean
-                bval = mean(abs.(si .- reshape(sj, 1, :)))
-                B[i, j] = bval
-                B[j, i] = bval
+                total = sum(abs.(si .- reshape(sj, 1, :)))
+                if i == j
+                    # Within-model: the k = l pairs are identically zero, so
+                    # the unbiased estimator of E|X − X′| averages over the
+                    # K(K−1) distinct pairs only.
+                    K = length(si)
+                    B[i, i] = K > 1 ? total / (K * (K - 1)) : 0.0
+                else
+                    B[i, j] = total / (length(si) * length(sj))
+                    B[j, i] = B[i, j]
+                end
             end
         end
         push!(a_list, A)
@@ -79,27 +108,57 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
 
     α = m.dirichlet_alpha
     T = length(a_list)
-    # Per-task CRPS is on the order of |y| (~1 in standard units). The
-    # Dirichlet penalty is summed over models without a 1/T factor, so it
-    # competes correctly with the *total* training CRPS rather than its
-    # mean. We minimise the negative log-posterior up to constants:
-    #   loss(z) = mean_t CRPS_t(w) − ((α − 1) / T) · Σᵢ log wᵢ
-    function loss(z)
+    # The objective only depends on the task-mean A and B, so collapse them
+    # once: loss(w) = w·Ā − ½ w'B̄w − ((α−1)/T) Σ log wᵢ. The (α−1)/T scaling
+    # is the Dirichlet log-prior divided by T along with the rest of the
+    # negative log-posterior, so the prior's influence decays with sample
+    # size as it should.
+    Ā = reduce(+, a_list) ./ T
+    B̄ = reduce(+, b_list) ./ T
+    prior_scale = (α - 1) / T
+
+    function _logsoftmax(z)
         m_z = maximum(z)
-        log_w = z .- (m_z + log(sum(exp.(z .- m_z))))
-        w = exp.(log_w)
-        s = 0.0
-        @inbounds for t in 1:T
-            A = a_list[t]; B = b_list[t]
-            s += dot(w, A) - 0.5 * dot(w, B * w)
-        end
-        return s / T - ((α - 1) / T) * sum(log_w)
+        return z .- (m_z + log(sum(exp.(z .- m_z))))
     end
 
-    z0 = zeros(M)
-    res = optimize(loss, z0, LBFGS())
-    w_hat = _softmax(Optim.minimizer(res))
-    crps_hat = Optim.minimum(res)
+    function loss(z)
+        log_w = _logsoftmax(z)
+        w = exp.(log_w)
+        return dot(w, Ā) - 0.5 * dot(w, B̄ * w) - prior_scale * sum(log_w)
+    end
+
+    # ∂L/∂w, then the softmax Jacobian: ∂L/∂zⱼ = wⱼ(gⱼ − Σₖ wₖ gₖ).
+    function grad!(G, z)
+        w = exp.(_logsoftmax(z))
+        g_w = Ā .- B̄ * w .- prior_scale ./ w
+        wg = dot(w, g_w)
+        @. G = w * (g_w - wg)
+        return G
+    end
+
+    # Multi-start: uniform weights plus one vertex-leaning start per model.
+    starts = [zeros(M)]
+    for i = 1:M
+        z = zeros(M)
+        z[i] = 4.0
+        push!(starts, z)
+    end
+
+    best_res = nothing
+    for z0 in starts
+        res = optimize(loss, grad!, z0, LBFGS())
+        if best_res === nothing || Optim.minimum(res) < Optim.minimum(best_res)
+            best_res = res
+        end
+    end
+    Optim.converged(best_res) || @warn(
+        "CRPSStacking: L-BFGS did not converge " *
+        "($(Optim.iterations(best_res)) iterations); weights are the best " *
+        "iterate found.")
+
+    w_hat = _softmax(Optim.minimizer(best_res))
+    crps_hat = Optim.minimum(best_res)
 
     weights_df = DataFrame(model_id = models, weight = w_hat)
     return FittedCRPSStacking(weights_df, String.(models), crps_hat)
@@ -126,7 +185,3 @@ function _softmax(z::AbstractVector)
     e = exp.(z .- m)
     return e ./ sum(e)
 end
-
-# `dot` from LinearAlgebra is needed for the CRPS expression; pulled in via
-# Optim's transitive dependency.
-using LinearAlgebra: dot

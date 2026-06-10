@@ -10,7 +10,12 @@ Convert a `scoringutils::forecast_quantile`-shaped frame
 """
 function from_scoringutils(df; task_id_cols = nothing)
     out = DataFrame(df)
-    rename!(out, :model => :model_id, :quantile_level => :output_type_id, :predicted => :value)
+    rename!(
+        out,
+        :model => :model_id,
+        :quantile_level => :output_type_id,
+        :predicted => :value,
+    )
     out.output_type = fill(:quantile, nrow(out))
     # observed is metadata for scoring, not part of the forecast — drop it
     if hasproperty(out, :observed)
@@ -28,11 +33,13 @@ Convert a sample-shaped frame (one row per draw) to a `ForecastTable` with
 `output_type = :sample`. Mirrors the input expected by
 `lopensemble::mixture_from_samples`.
 """
-function from_samples(df;
-                      task_id_cols = nothing,
-                      model_col::Symbol = :model,
-                      sample_col::Symbol = :sample,
-                      value_col::Symbol = :predicted)
+function from_samples(
+    df;
+    task_id_cols = nothing,
+    model_col::Symbol = :model,
+    sample_col::Symbol = :sample,
+    value_col::Symbol = :predicted,
+)
     out = DataFrame(df)
     rename!(out, model_col => :model_id, sample_col => :output_type_id, value_col => :value)
     out.output_type = fill(:sample, nrow(out))

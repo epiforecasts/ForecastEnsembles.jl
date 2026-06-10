@@ -1,6 +1,7 @@
 module Ensembles
 
 using DataFrames
+using LinearAlgebra: dot
 using Statistics
 using StatsBase
 using Tables
@@ -9,23 +10,23 @@ import DataFrames: combine
 import StatsBase: fit
 
 export ForecastTable,
-       output_type,
-       task_id_cols,
-       model_ids,
-       EnsembleMethod,
-       UnfittedMethod,
-       TrainedMethod,
-       EnsembleWeights,
-       QuantileEnsemble,
-       MixtureEnsemble,
-       LinearPool,        # alias for MixtureEnsemble
-       QRA,
-       FittedQRA,
-       CRPSStacking,
-       FittedCRPSStacking,
-       combine,
-       fit,
-       weights
+    output_type,
+    task_id_cols,
+    model_ids,
+    EnsembleMethod,
+    UnfittedMethod,
+    TrainedMethod,
+    EnsembleWeights,
+    QuantileEnsemble,
+    MixtureEnsemble,
+    LinearPool,        # alias for MixtureEnsemble
+    QRA,
+    FittedQRA,
+    CRPSStacking,
+    FittedCRPSStacking,
+    combine,
+    fit,
+    weights
 
 include("output_types.jl")
 include("forecast_table.jl")

@@ -7,12 +7,12 @@ import Statistics: quantile
 Linear opinion pool. The kernel is dispatched on the table's `output_type`:
 
 - `:sample`   → weighted resampling of per-model samples to give a single
-  pooled sample set per task.
+  pooled sample set per task (the only path that uses `rng`).
 - `:cdf`      → weighted pointwise average of CDFs.
 - `:quantile` → reconstruct a continuous distribution per model via
-  `QuantileDistribution`, draw `m.n_samples` per task (split across models
-  proportionally to their weights), then re-extract quantiles at the input
-  levels.
+  `QuantileDistribution`, then invert the mixture CDF Σᵢ wᵢ Fᵢ exactly by
+  bisection at each input level. Deterministic — no Monte Carlo error,
+  which matters for the extreme levels (τ = 0.01, 0.99) hubs request.
 """
 function combine(ft::ForecastTable, m::MixtureEnsemble; rng::AbstractRNG = default_rng())
     return _linear_pool(ft, Val(output_type(ft)), m, rng)
@@ -20,7 +20,12 @@ end
 
 # ---------- :sample ---------------------------------------------------------
 
-function _linear_pool(ft::ForecastTable, ::Val{:sample}, m::MixtureEnsemble, rng::AbstractRNG)
+function _linear_pool(
+    ft::ForecastTable,
+    ::Val{:sample},
+    m::MixtureEnsemble,
+    rng::AbstractRNG,
+)
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
 
@@ -32,7 +37,7 @@ function _linear_pool(ft::ForecastTable, ::Val{:sample}, m::MixtureEnsemble, rng
         ws = [weights[mod] for mod in models]
         ws ./= sum(ws)
 
-        samples_per_model = Dict{Any,Vector{Float64}}()
+        samples_per_model = Dict{eltype(models),Vector{Float64}}()
         for sub in DataFrames.groupby(tg, ft.model_id_col)
             samples_per_model[sub[1, ft.model_id_col]] = Float64.(sub.value)
         end
@@ -58,9 +63,11 @@ function _linear_pool(ft::ForecastTable, ::Val{:sample}, m::MixtureEnsemble, rng
     end
     out = reduce(vcat, out_groups)
     select!(out, ft.model_id_col, :output_type, :output_type_id, ft.task_id_cols..., :value)
-    return ForecastTable(out;
-                        task_id_cols = ft.task_id_cols,
-                        model_id_col = ft.model_id_col)
+    return ForecastTable(
+        out;
+        task_id_cols = ft.task_id_cols,
+        model_id_col = ft.model_id_col,
+    )
 end
 
 # Multinomial-like rounding: produce nonneg integers k_i summing to N with
@@ -71,15 +78,13 @@ function _ints_summing_to(rng::AbstractRNG, weights::AbstractVector{<:Real}, N::
     base = floor.(Int, targets)
     frac = targets .- base
     remaining = N - sum(base)
-    if remaining > 0
-        # Sample without replacement proportionally to fractional parts.
-        idx = collect(1:length(weights))
-        for _ in 1:remaining
-            tot = sum(frac)
-            tot <= 0 && break
+    for _ = 1:remaining
+        tot = sum(frac)
+        if tot > 0
+            # Sample without replacement proportionally to fractional parts.
             r = rand(rng) * tot
             cum = 0.0
-            chosen = lastindex(idx)
+            chosen = lastindex(frac)
             for (j, p) in enumerate(frac)
                 cum += p
                 if r <= cum
@@ -89,6 +94,11 @@ function _ints_summing_to(rng::AbstractRNG, weights::AbstractVector{<:Real}, N::
             end
             base[chosen] += 1
             frac[chosen] = 0.0
+        else
+            # Floating-point rounding exhausted the fractional parts before
+            # the deficit; top up the largest weight so the counts always
+            # sum to exactly N.
+            base[argmax(weights)] += 1
         end
     end
     return base
@@ -109,14 +119,21 @@ function _linear_pool(ft::ForecastTable, ::Val{:cdf}, m::MixtureEnsemble, ::Abst
     )
     out[!, ft.model_id_col] .= "hub-ensemble"
     select!(out, ft.model_id_col, :output_type, :output_type_id, ft.task_id_cols..., :value)
-    return ForecastTable(out;
-                        task_id_cols = ft.task_id_cols,
-                        model_id_col = ft.model_id_col)
+    return ForecastTable(
+        out;
+        task_id_cols = ft.task_id_cols,
+        model_id_col = ft.model_id_col,
+    )
 end
 
 # ---------- :quantile -------------------------------------------------------
 
-function _linear_pool(ft::ForecastTable, ::Val{:quantile}, m::MixtureEnsemble, rng::AbstractRNG)
+function _linear_pool(
+    ft::ForecastTable,
+    ::Val{:quantile},
+    m::MixtureEnsemble,
+    ::AbstractRNG,
+)
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
 
@@ -128,34 +145,54 @@ function _linear_pool(ft::ForecastTable, ::Val{:quantile}, m::MixtureEnsemble, r
         ws ./= sum(ws)
 
         # Build a QuantileDistribution per model.
-        qdists = Dict{Any,QuantileDistribution}()
+        dists = Vector{QuantileDistribution}(undef, length(models))
         for sub in DataFrames.groupby(tg, ft.model_id_col)
             s = sort(sub, :output_type_id)
-            qdists[s[1, ft.model_id_col]] = QuantileDistribution(s.output_type_id, s.value)
+            i = findfirst(==(s[1, ft.model_id_col]), models)
+            dists[i] = QuantileDistribution(s.output_type_id, s.value)
         end
 
-        # Draw samples per model in proportion to weights.
-        ks = _ints_summing_to(rng, ws, m.n_samples)
-        pooled = Float64[]
-        for (mod, k) in zip(models, ks)
-            k == 0 && continue
-            append!(pooled, rand(rng, qdists[mod], k))
-        end
-
-        # Re-extract quantiles at the requested levels.
+        # Invert the mixture CDF exactly at each requested level.
         out = DataFrame(tg[1:1, ft.task_id_cols])
         out = repeat(out, length(levels))
         out.output_type = fill(:quantile, length(levels))
         out.output_type_id = levels
-        out.value = [quantile(pooled, τ) for τ in levels]
+        out.value = [_mixture_quantile(dists, ws, τ) for τ in levels]
         out[!, ft.model_id_col] .= "hub-ensemble"
         push!(out_groups, out)
     end
     out = reduce(vcat, out_groups)
     select!(out, ft.model_id_col, :output_type, :output_type_id, ft.task_id_cols..., :value)
-    return ForecastTable(out;
-                        task_id_cols = ft.task_id_cols,
-                        model_id_col = ft.model_id_col)
+    return ForecastTable(
+        out;
+        task_id_cols = ft.task_id_cols,
+        model_id_col = ft.model_id_col,
+    )
+end
+
+# Exact τ-quantile of the mixture Σᵢ wᵢ Fᵢ by bisection. The root is
+# bracketed by the component τ-quantiles: at x = minᵢ Fᵢ⁻¹(τ) every
+# component CDF is ≤ τ so the mixture CDF is ≤ τ, and symmetrically at the
+# max. ~50 bisection steps reach machine precision on the bracket width.
+function _mixture_quantile(
+    dists::Vector{QuantileDistribution},
+    ws::AbstractVector{<:Real},
+    τ::Real,
+)
+    lo = minimum(quantile(d, τ) for d in dists)
+    hi = maximum(quantile(d, τ) for d in dists)
+    lo == hi && return lo
+    mixture_cdf(x) = sum(w * cdf(d, x) for (w, d) in zip(ws, dists))
+    for _ = 1:200
+        mid = 0.5 * (lo + hi)
+        if mixture_cdf(mid) < τ
+            lo = mid
+        else
+            hi = mid
+        end
+        (hi - lo) <= 1e-12 * max(1.0, abs(lo), abs(hi)) && break
+    end
+    return 0.5 * (lo + hi)
 end
 
 # ---------- weights helper --------------------------------------------------
@@ -165,7 +202,11 @@ end
 # Per-quantile weights are routed elsewhere (see `combine` above) and never
 # reach this helper. Validates that every model in `df` has a
 # weight.
-function _weights_vector(weights::Union{Nothing,EnsembleWeights}, ft::ForecastTable, df::AbstractDataFrame)
+function _weights_vector(
+    weights::Union{Nothing,EnsembleWeights},
+    ft::ForecastTable,
+    df::AbstractDataFrame,
+)
     models = unique(df[!, ft.model_id_col])
     if weights === nothing
         return Dict(m => 1.0 / length(models) for m in models)
@@ -173,6 +214,12 @@ function _weights_vector(weights::Union{Nothing,EnsembleWeights}, ft::ForecastTa
     wdf = DataFrame(weights)
     miss = setdiff(models, wdf.model_id)
     isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
+    extra = setdiff(wdf.model_id, models)
+    isempty(extra) || @warn(
+        "weights provided for models not present in the data " *
+        "(possible typo in model_id): $extra",
+        maxlog = 1,
+    )
     return Dict(row.model_id => Float64(row.weight) for row in eachrow(wdf))
 end
 

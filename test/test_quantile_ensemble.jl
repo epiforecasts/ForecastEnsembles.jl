@@ -24,10 +24,8 @@
     w = DataFrame(model_id = ["m1", "m2", "m3"], weight = [0.5, 0.25, 0.25])
     out_w = combine(ft, QuantileEnsemble(:mean; weights = w))
     d_w = sort(DataFrame(out_w), :output_type_id)
-    @test d_w.value ≈ [
-        0.5 * 1.0 + 0.25 * 2.0 + 0.25 * 0.5,
-        0.5 * 3.0 + 0.25 * 4.0 + 0.25 * 2.5,
-    ]
+    @test d_w.value ≈
+          [0.5 * 1.0 + 0.25 * 2.0 + 0.25 * 0.5, 0.5 * 3.0 + 0.25 * 4.0 + 0.25 * 2.5]
 
     # weighted median: lower 50% of cumulative weight at 0.25 quantile
     # values sorted: m3 (0.5), m1 (1.0), m2 (2.0); weights 0.25, 0.5, 0.25

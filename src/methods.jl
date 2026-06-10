@@ -62,9 +62,12 @@ end
 function MixtureEnsemble(; weights = nothing, n_samples::Integer = 10_000)
     w = _resolve_weights(weights)
     if w !== nothing && is_per_quantile(w)
-        throw(ArgumentError(
-            "MixtureEnsemble takes per-model weights only; per-quantile " *
-            "weights belong to QuantileEnsemble."))
+        throw(
+            ArgumentError(
+                "MixtureEnsemble takes per-model weights only; per-quantile " *
+                "weights belong to QuantileEnsemble.",
+            ),
+        )
     end
     n_samples > 0 || throw(ArgumentError("n_samples must be positive"))
     return MixtureEnsemble(w, Int(n_samples))
@@ -83,9 +86,12 @@ _resolve_weights(::Nothing) = nothing
 _resolve_weights(w::EnsembleWeights) = w
 function _resolve_weights(w::EnsembleMethod)
     wf = weights(w)
-    wf === nothing && throw(ArgumentError(
-        "method $(typeof(w)) does not expose ensemble weights " *
-        "(see `weights(::$(typeof(w)))` for the conditions)."))
+    wf === nothing && throw(
+        ArgumentError(
+            "method $(typeof(w)) does not expose ensemble weights " *
+            "(see `weights(::$(typeof(w)))` for the conditions).",
+        ),
+    )
     return _resolve_weights(wf)
 end
 _resolve_weights(w) = EnsembleWeights(w)
@@ -117,8 +123,13 @@ function QRA(;
     noncross::Bool = false,
     group = Symbol[],
 )
-    return QRA(per_quantile_weights, intercept, enforce_normalisation, noncross,
-               Symbol.(collect(group)))
+    return QRA(
+        per_quantile_weights,
+        intercept,
+        enforce_normalisation,
+        noncross,
+        Symbol.(collect(group)),
+    )
 end
 
 """

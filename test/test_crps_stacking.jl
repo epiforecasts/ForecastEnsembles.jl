@@ -15,18 +15,21 @@ using Statistics: mean
 
     rows = DataFrame[]
     for (mid, sampler) in (
-        ("m_good",  (y, rng) -> y .+ randn(rng, K)),
+        ("m_good", (y, rng) -> y .+ randn(rng, K)),
         ("m_noisy", (y, rng) -> 5.0 .* randn(rng, K)),
     )
-        for t in 1:T
+        for t = 1:T
             samples = sampler(obs.observed[t], rng)
-            push!(rows, DataFrame(
-                model_id = mid,
-                output_type = "sample",
-                output_type_id = 1:K,
-                t = t,
-                value = samples,
-            ))
+            push!(
+                rows,
+                DataFrame(
+                    model_id = mid,
+                    output_type = "sample",
+                    output_type_id = 1:K,
+                    t = t,
+                    value = samples,
+                ),
+            )
         end
     end
     train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])

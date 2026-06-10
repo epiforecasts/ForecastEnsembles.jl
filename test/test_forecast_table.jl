@@ -21,13 +21,21 @@
     @test_throws ArgumentError ForecastTable(bad; task_id_cols = [:location])
 
     # unknown output_type
-    bad2 = copy(df); bad2.output_type .= "weird"
+    bad2 = copy(df);
+    bad2.output_type .= "weird"
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 
     # mixed output_types accepted at construction, rejected by `output_type`
-    mixed = vcat(df, DataFrame(
-        model_id = ["m3"], output_type = ["mean"],
-        output_type_id = [missing], location = ["A"], value = [2.5]))
+    mixed = vcat(
+        df,
+        DataFrame(
+            model_id = ["m3"],
+            output_type = ["mean"],
+            output_type_id = [missing],
+            location = ["A"],
+            value = [2.5],
+        ),
+    )
     ft3 = ForecastTable(mixed; task_id_cols = [:location])
     @test_throws ArgumentError Ensembles.output_type(ft3)
 end

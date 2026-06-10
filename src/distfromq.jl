@@ -43,7 +43,8 @@ function QuantileDistribution(probs::AbstractVector, vals::AbstractVector)
     v = collect(Float64.(vals))
     length(p) == length(v) || throw(ArgumentError("probs and vals must be the same length"))
     length(p) >= 2 || throw(ArgumentError("need at least two quantile pairs"))
-    issorted(p) || throw(ArgumentError("probs must be increasing"))
+    (issorted(p) && allunique(p)) ||
+        throw(ArgumentError("probs must be strictly increasing"))
     all(0 .< p .< 1) || throw(ArgumentError("probs must lie strictly in (0,1)"))
     issorted(v) || throw(ArgumentError("vals must be non-decreasing"))
 
@@ -77,6 +78,17 @@ function _pchip_slopes(x::AbstractVector, y::AbstractVector)
     s = diff(y) ./ h
     d = zeros(Float64, n)
 
+    # With only two knots there is a single secant; the monotone Hermite
+    # interpolant with d = s at both ends is the straight line through the
+    # knots. (The three-point endpoint formulae below need n >= 3.) Both
+    # tails are then fitted from the same two pairs, so the distribution is
+    # a single Normal with a matching linear mid-section.
+    if n == 2
+        d[1] = s[1]
+        d[2] = s[1]
+        return d
+    end
+
     # Endpoints (one-sided three-point estimate, then enforce monotonicity).
     d[1] = ((2h[1] + h[2]) * s[1] - h[1] * s[2]) / (h[1] + h[2])
     if sign(d[1]) != sign(s[1])
@@ -94,7 +106,7 @@ function _pchip_slopes(x::AbstractVector, y::AbstractVector)
 
     # Interior: weighted harmonic-mean of neighbouring secants when they
     # share sign; zero otherwise.
-    for i in 2:n-1
+    for i = 2:(n-1)
         if s[i-1] * s[i] <= 0
             d[i] = 0.0
         else
@@ -106,14 +118,14 @@ function _pchip_slopes(x::AbstractVector, y::AbstractVector)
 
     # Final monotonicity pass (region-of-monotonicity test): rescale
     # so that (d_i / s_i)^2 + (d_{i+1} / s_i)^2 ≤ 9.
-    for i in 1:n-1
+    for i = 1:(n-1)
         s[i] == 0 && continue
         α = d[i] / s[i]
         β = d[i+1] / s[i]
         r = α^2 + β^2
         if r > 9
             τ = 3 / sqrt(r)
-            d[i]   = τ * α * s[i]
+            d[i] = τ * α * s[i]
             d[i+1] = τ * β * s[i]
         end
     end
@@ -138,7 +150,8 @@ end
 Return the value of `d` at probability `u ∈ (0,1)`.
 """
 function quantile(d::QuantileDistribution, u::Real)
-    p = d.probs; v = d.vals
+    p = d.probs;
+    v = d.vals
     if u <= p[1]
         return quantile(d.left_tail, u)
     elseif u >= p[end]
@@ -156,7 +169,8 @@ end
 Return P(X ≤ x).
 """
 function cdf(d::QuantileDistribution, x::Real)
-    p = d.probs; v = d.vals
+    p = d.probs;
+    v = d.vals
     if x <= v[1]
         return cdf(d.left_tail, x)
     elseif x >= v[end]
@@ -174,7 +188,7 @@ end
 Draw `n` samples from `d` by inverse-CDF sampling.
 """
 function Base.rand(rng::AbstractRNG, d::QuantileDistribution, n::Integer)
-    return [quantile(d, rand(rng)) for _ in 1:n]
+    return [quantile(d, rand(rng)) for _ = 1:n]
 end
 
 Base.rand(d::QuantileDistribution, n::Integer) = rand(default_rng(), d, n)
