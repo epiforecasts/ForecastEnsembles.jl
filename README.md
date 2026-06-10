@@ -21,12 +21,9 @@ representation, two verbs (`fit`, `combine`), and two ensemble types
 (`MixtureEnsemble`, `QuantileEnsemble`). Multiple dispatch picks the right
 algorithm for each `(output_type, method)` pair.
 
-Two side effects of the Julia version, currently unmeasured: the inner loops
-all run as compiled Julia (CDF reconstruction, sampling, weighted aggregation,
-CRPS evaluation), and the optimiser backends are pluggable. QRA's LP runs
-through JuMP, so HiGHS, GLPK, Gurobi or anything else with a JuMP wrapper
-is one line away. CRPS-stacking goes through Optim.jl, swappable for NLopt
-or any other Julia optimiser.
+The optimiser backends are pluggable: QRA's LP runs through JuMP, so
+HiGHS, GLPK, Gurobi or anything else with a JuMP wrapper is one line
+away, and CRPS-stacking goes through Optim.jl.
 
 ## A small example
 

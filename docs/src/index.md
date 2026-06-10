@@ -83,15 +83,10 @@ weight vector. Pass any fitted method straight into `MixtureEnsemble` or
 `QuantileEnsemble` and the conversion happens automatically. See
 [Methods](methods.md) for the algorithmic story.
 
-Two side effects of the rewrite, both currently unmeasured. The inner
-loops (CDF reconstruction, sampling, weighted aggregation, CRPS evaluation)
-all run as compiled Julia, where the R packages drop into C / Fortran /
-Stan via different bridges per method. And the optimiser backends are
-pluggable: QRA's LP swaps between HiGHS, GLPK, Gurobi or anything else
-with a JuMP wrapper in one line; CRPS-stacking goes through Optim.jl, one
-call away from NLopt or another Julia optimiser. `qrensemble` is pinned
-to GLPK via `Rglpk`; `lopensemble` is pinned to Stan's MAP optimiser via
-`cmdstanr`.
+The optimiser backends are also pluggable: QRA's LP swaps between HiGHS,
+GLPK, Gurobi or anything else with a JuMP wrapper in one line, and
+CRPS-stacking goes through Optim.jl. `qrensemble` is pinned to GLPK via
+`Rglpk`; `lopensemble` is pinned to Stan's MAP optimiser via `cmdstanr`.
 
 ## R interface
 

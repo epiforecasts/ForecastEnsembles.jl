@@ -8,11 +8,13 @@ prompted them are in parentheses.
 - **Log-score stacking.** Mirror `CRPSStacking` but minimise mean negative
   log predictive density. Standard for sample/density forecasts; not in
   `lopensemble`.
-- **WIS-based optimisation.** Quantile-forecast analogue of
-  CRPS-stacking: minimise the mean Weighted Interval Score over training
-  points to pick mixture weights. Mentioned as a planned direction in
-  the original `qra` README and in
-  [lopensemble#10](https://github.com/epiforecasts/lopensemble/issues/10).
+- **WIS-based optimisation.** For *Vincentized* (vertical) combination,
+  this already exists: WIS is proportional to the mean pinball loss
+  across the submitted levels, so joint QRA with the simplex constraint
+  and no intercept is exactly WIS-optimal weight estimation (see the
+  Methods page). What remains open is WIS-optimal weights for the
+  *mixture* (the harder, non-convex case mentioned in
+  [lopensemble#10](https://github.com/epiforecasts/lopensemble/issues/10)).
 - **Generic scoringutils-score stacking.** Same shape as the above two,
   for any proper scoring rule available in `scoringutils`. Open question
   whether it's worth doing in the general case (the simplex constraint
@@ -73,7 +75,8 @@ Methods worth covering once one of those paths lands:
   mixture CDF through a fitted Beta(a, b)). Cures LOP underdispersion.
 - **Empirical PIT mapping.** Map raw forecast quantiles through the
   empirical PIT histogram of past forecasts. Crude but very general;
-  baseline for everything else.
+  baseline for everything else. Simple enough (~50 lines) that it need
+  not wait for any upstream package — a good first `Recalibrator`.
 - **CRPS-minimising parametric recalibration.** Fit a parametric CDF
   transform per model that minimises mean CRPS on training pairs. Same
   optimisation machinery as `CRPSStacking`, applied to one model at a
@@ -86,9 +89,13 @@ Methods worth covering once one of those paths lands:
   `ForecastTable` is already covered by `from_scoringutils`. Going the
   other way for scoring is the missing half. lopensemble#17 references
   this concern via tidymodels' `stacks`.
-- **Benchmarks vs the R packages.** Right now the speed claim in the
-  index page is unmeasured. A small `benchmark/` directory comparing
-  throughput on a realistic hubverse `model_out_tbl` would settle it.
+- **Benchmarks vs the R packages.** A small `benchmark/` directory
+  comparing throughput on a realistic hubverse `model_out_tbl`. Until it
+  exists, the docs make no performance claims.
+- **Recency weighting for CRPSStacking.** The `lambda` argument from
+  `lopensemble` (down-weighting older training tasks) is accepted for
+  signature compatibility but raises until implemented. Non-stationary
+  model skill across epidemic waves makes this genuinely useful.
 
 ## Out of scope (for now)
 
