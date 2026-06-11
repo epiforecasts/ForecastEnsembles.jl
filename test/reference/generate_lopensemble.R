@@ -48,5 +48,12 @@ w <- crps_weights(df, lambda = "equal", dirichlet_alpha = 1.001)
 out <- data.table(model = names(w), weight = as.numeric(w))
 fwrite(out, file.path(out_dir, "crps_weights_output.csv"))
 
-cat("CRPS fixture written\n")
+# Default lambda (NULL) is lopensemble's quadratic recency ramp
+# 2 - (1 - t/T)^2 over the ordered dates.
+w_ramp <- crps_weights(df, dirichlet_alpha = 1.001)
+out_ramp <- data.table(model = names(w_ramp), weight = as.numeric(w_ramp))
+fwrite(out_ramp, file.path(out_dir, "crps_weights_ramp_output.csv"))
+
+cat("CRPS fixtures written\n")
 print(out)
+print(out_ramp)

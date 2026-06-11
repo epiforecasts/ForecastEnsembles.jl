@@ -4,7 +4,15 @@
 \alias{crps_weights}
 \title{CRPS-stacked ensemble weights}
 \usage{
-crps_weights(training, observations, task_id_cols, dirichlet_alpha = 1.001)
+crps_weights(
+  training,
+  observations,
+  task_id_cols,
+  dirichlet_alpha = 1.001,
+  lambda = NULL,
+  time_col = NULL,
+  task_weights = NULL
+)
 }
 \arguments{
 \item{training}{A data frame with columns `model_id`, `output_type`
@@ -23,6 +31,22 @@ on the weights. Values just above 1 (the default 1.001, matching
 the optimum off the simplex boundary; larger values pull the weights
 toward uniformity, with strength decaying as the number of training
 tasks grows.}
+
+\item{lambda}{Optional recency weighting over the time values in
+`time_col`. One of: a scalar in (0, 1] for exponential decay (weight
+`lambda^(T - t)` for the t-th of T ordered time values; 1 = equal),
+the string `"lopensemble"` for that package's default quadratic ramp,
+or a numeric vector with one weight per ordered unique time value.
+Default `NULL` weights all tasks equally.}
+
+\item{time_col}{Name of the task column that orders tasks in time
+(e.g. `"date"`). Required when `lambda` is set.}
+
+\item{task_weights}{Optional data frame with the task-id columns plus a
+`weight` column, giving an arbitrary non-negative weight per training
+task (the general mechanism behind `lambda`; also covers
+`lopensemble`'s `gamma` region weighting). Mutually exclusive with
+`lambda`.}
 }
 \value{
 A data frame with columns `model_id` and `weight`.
@@ -40,8 +64,10 @@ Dirichlet log-prior penalty.
 `output_type_id` and `predicted` to `value`; add an
 `output_type = "sample"` column; and move the observations into a
 separate frame with the task-id columns plus a column named exactly
-`observed`. The `lambda` time-weighting argument of `lopensemble` is
-not yet supported.
+`observed`. One default differs: `lopensemble`'s default `lambda` is its
+quadratic recency ramp, whereas this function defaults to equal task
+weighting; pass `lambda = "lopensemble"` (with `time_col`) to reproduce
+the lopensemble default exactly.
 }
 
 \section{Startup time}{
@@ -81,5 +107,9 @@ train <- rbind(
 )
 obs <- data.frame(t = seq_len(n_task), observed = y)
 crps_weights(train, obs, task_id_cols = "t")
+
+# Recency weighting: halve the influence of tasks ~7 time steps back.
+crps_weights(train, obs, task_id_cols = "t",
+             lambda = 0.9, time_col = "t")
 }
 }

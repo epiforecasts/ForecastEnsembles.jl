@@ -133,26 +133,88 @@ function QRA(;
 end
 
 """
-    CRPSStacking(; dirichlet_alpha = 1.001, lambda = nothing, gamma = nothing)
+    CRPSStacking(; dirichlet_alpha = 1.001,
+                   lambda = nothing, time_col = nothing,
+                   task_weights = nothing)
 
-CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`.
+CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`,
+including its time weighting.
+
+By default every training task contributes equally to the objective. Two
+ways to change that:
+
+- `task_weights`: a `DataFrame` with the training table's task-id columns
+  plus a `:weight` column — one non-negative weight per task. The general
+  mechanism; covers recency, per-region weighting (`lopensemble`'s
+  `gamma`), down-weighting anomalous reporting weeks, and so on.
+- `lambda` with `time_col`: convenience for recency weighting. `time_col`
+  names the task column that orders tasks in time; `lambda` is one of
+  - a scalar `φ ∈ (0, 1]`: exponential decay, weight `φ^(T − t)` for the
+    t-th of T ordered unique time values (the common forecasting-
+    literature choice; `φ = 1` recovers equal weights),
+  - `:lopensemble`: the quadratic ramp `2 − (1 − t/T)²` that
+    `lopensemble::crps_weights` uses by default (oldest ≈ 1, newest 2),
+  - a `Vector{Float64}` with one weight per ordered unique time value
+    (lopensemble's vector form),
+  - a function of the normalised time rank `t/T ∈ (0, 1]` returning a
+    weight.
+
+`lambda` and `task_weights` are mutually exclusive. The Dirichlet prior
+strength scales with the effective sample size `(Σλ)²/Σλ²` rather than
+the raw task count, so heavy down-weighting of history does not quietly
+strengthen the prior relative to the data.
 """
 struct CRPSStacking <: TrainedMethod
     dirichlet_alpha::Float64
-    lambda::Union{Nothing,Float64}
-    gamma::Union{Nothing,Float64}
+    lambda::Union{Nothing,Symbol,Function,Float64,Vector{Float64}}
+    time_col::Union{Nothing,Symbol}
+    task_weights::Union{Nothing,DataFrame}
 end
 
 function CRPSStacking(;
     dirichlet_alpha::Real = 1.001,
-    lambda::Union{Nothing,Real} = nothing,
-    gamma::Union{Nothing,Real} = nothing,
+    lambda = nothing,
+    time_col::Union{Nothing,Symbol} = nothing,
+    task_weights = nothing,
+    gamma = nothing,
 )
-    return CRPSStacking(
-        Float64(dirichlet_alpha),
-        lambda === nothing ? nothing : Float64(lambda),
-        gamma === nothing ? nothing : Float64(gamma),
-    )
+    gamma === nothing || throw(ArgumentError(
+        "`gamma` (lopensemble's region weighting) has been replaced by the " *
+        "more general `task_weights`; supply a frame with the task-id " *
+        "columns plus :weight."))
+    if lambda !== nothing && task_weights !== nothing
+        throw(ArgumentError("specify either `lambda` or `task_weights`, not both"))
+    end
+    if lambda !== nothing
+        time_col === nothing && throw(ArgumentError(
+            "`lambda` requires `time_col`: the task column that orders " *
+            "tasks in time, e.g. time_col = :target_date."))
+        if lambda isa Real && !(lambda isa Bool)
+            0 < lambda <= 1 || throw(ArgumentError(
+                "scalar `lambda` is an exponential decay factor and must " *
+                "lie in (0, 1]"))
+            lambda = Float64(lambda)
+        elseif lambda isa Symbol
+            lambda in (:lopensemble, :equal) || throw(ArgumentError(
+                "symbol `lambda` must be :lopensemble or :equal"))
+        elseif lambda isa AbstractVector
+            lambda = Float64.(collect(lambda))
+            all(>=(0), lambda) || throw(ArgumentError(
+                "`lambda` weights must be non-negative"))
+        elseif !(lambda isa Function)
+            throw(ArgumentError(
+                "`lambda` must be a scalar in (0,1], :lopensemble, :equal, " *
+                "a vector, or a function of the normalised time rank"))
+        end
+    end
+    if task_weights !== nothing
+        task_weights = DataFrame(task_weights)
+        :weight in propertynames(task_weights) || throw(ArgumentError(
+            "`task_weights` must have a :weight column"))
+        all(w -> !ismissing(w) && w >= 0, task_weights.weight) ||
+            throw(ArgumentError("`task_weights` must be non-negative and non-missing"))
+    end
+    return CRPSStacking(Float64(dirichlet_alpha), lambda, time_col, task_weights)
 end
 
 # `fit` is `StatsBase.fit` (imported in src/Ensembles.jl). Method

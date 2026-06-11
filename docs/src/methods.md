@@ -143,10 +143,8 @@ predictions agree with the R package to about 1e-3.
 
 ## CRPSStacking
 
-CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`.
-The `lambda` (time weighting) and `gamma` (region weighting) arguments
-are accepted for signature compatibility but raise an error if set —
-silently ignoring them would be worse.
+CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`,
+including its time weighting.
 
 For sample-based forecasts, the per-task CRPS for a mixture
 ``F = \sum_i w_i F_i`` has a closed-form unbiased estimator from the
@@ -175,10 +173,32 @@ so the optimum can sit at a vertex of the simplex (all weight on one
 model); the optimiser therefore restarts from each vertex-leaning start
 in addition to uniform weights and keeps the best minimum.
 
+Model skill in epidemic forecasting is non-stationary — a model
+well-calibrated in one wave can be badly off in the next — so the
+objective supports per-task weighting:
+
+- `task_weights`: a frame with the task-id columns plus `:weight`, one
+  non-negative weight per training task. The general mechanism; covers
+  recency, region weighting (`lopensemble`'s `gamma`), or down-weighting
+  anomalous reporting weeks.
+- `lambda` with `time_col`: recency sugar on top. A scalar
+  ``\varphi \in (0, 1]`` gives exponential decay ``\varphi^{T-t}`` over
+  the ordered unique time values (the usual forecasting-literature
+  choice; 1 recovers equal weights); `:lopensemble` gives that package's
+  default quadratic ramp ``2 - (1 - t/T)^2``; a vector or a function of
+  the normalised time rank are also accepted.
+
+The Dirichlet prior scale then uses the effective sample size
+``(\sum_t \lambda_t)^2 / \sum_t \lambda_t^2`` in place of the raw task
+count, so concentrating weight on recent tasks does not quietly
+strengthen the prior relative to the data.
+
 The result agrees with `lopensemble::crps_weights` (Stan MAP) to within
-optimiser tolerance, typically a few × 1e-3 on the dominant weight. The
-residual difference reflects Stan's log-simplex parameterisation versus
-our softmax — the two behave differently near the simplex boundary.
+optimiser tolerance, typically a few × 1e-3 on the dominant weight — both
+for equal weighting and for the recency ramp, each parity-tested against
+fixtures. The residual difference reflects Stan's log-simplex
+parameterisation versus our softmax — the two behave differently near
+the simplex boundary.
 
 ## Composition: weights from anywhere
 

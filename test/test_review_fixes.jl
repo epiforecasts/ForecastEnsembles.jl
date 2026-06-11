@@ -155,10 +155,14 @@ end
     ft = ForecastTable(df; task_id_cols = [:t])
     obs = DataFrame(t = [1], observed = [0.0])
 
-    # lambda / gamma are not implemented — passing them must raise, not be
-    # silently ignored.
-    @test_throws ArgumentError fit(CRPSStacking(; lambda = 0.95), ft, obs)
-    @test_throws ArgumentError fit(CRPSStacking(; gamma = 0.5), ft, obs)
+    # lambda without a time column is a user error, and gamma has been
+    # replaced by task_weights.
+    @test_throws ArgumentError CRPSStacking(; lambda = 0.95)
+    @test_throws ArgumentError CRPSStacking(; gamma = 0.5)
+    @test_throws ArgumentError CRPSStacking(; lambda = 1.5, time_col = :t)
+    @test_throws ArgumentError CRPSStacking(;
+        lambda = 0.9, time_col = :t,
+        task_weights = DataFrame(t = [1], weight = [1.0]))
 
     # Tiny per-model sample counts no longer produce a biased/NaN diagonal.
     small = DataFrame(

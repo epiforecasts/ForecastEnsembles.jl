@@ -43,9 +43,10 @@ restarted from each vertex-leaning start as well and the best minimum is kept.
 regularisation that keeps the optimum off the simplex boundary (and matches
 `lopensemble`'s default).
 
-`lambda` (time weighting) and `gamma` (region weighting) from `lopensemble`
-are not yet implemented; passing either raises an error rather than silently
-ignoring it.
+Per-task weights (recency weighting via `lambda`/`time_col`, or arbitrary
+weights via `task_weights`) reweight the task-mean objective; see
+[`CRPSStacking`](@ref) for the options. The Dirichlet prior scale uses the
+effective sample size of the weights.
 """
 function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample || throw(
@@ -53,12 +54,6 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
             "CRPSStacking expects sample forecasts; got $(output_type(training))",
         ),
     )
-    m.lambda === nothing || throw(ArgumentError(
-        "CRPSStacking: `lambda` (time weighting) is not yet implemented; " *
-        "passing it would be silently ignored, so it raises instead."))
-    m.gamma === nothing || throw(ArgumentError(
-        "CRPSStacking: `gamma` (region weighting) is not yet implemented; " *
-        "passing it would be silently ignored, so it raises instead."))
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
         throw(ArgumentError("observations frame must have an :observed column"))
@@ -70,10 +65,13 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
     models = sort(unique(df[!, training.model_id_col]))
     M = length(models)
 
-    # Per task t: A_t (length M) and B_t (M×M).
+    # Per task t: A_t (length M) and B_t (M×M), plus the task identifiers
+    # (aligned with a_list/b_list) for task weighting.
     a_list = Vector{Float64}[]
     b_list = Matrix{Float64}[]
+    task_rows = DataFrame[]
     for tg in DataFrames.groupby(df, join_cols)
+        push!(task_rows, DataFrame(tg[1:1, join_cols]))
         y = first(tg.observed)
         A = zeros(M)
         B = zeros(M, M)
@@ -108,14 +106,20 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
 
     α = m.dirichlet_alpha
     T = length(a_list)
-    # The objective only depends on the task-mean A and B, so collapse them
-    # once: loss(w) = w·Ā − ½ w'B̄w − ((α−1)/T) Σ log wᵢ. The (α−1)/T scaling
-    # is the Dirichlet log-prior divided by T along with the rest of the
-    # negative log-posterior, so the prior's influence decays with sample
-    # size as it should.
-    Ā = reduce(+, a_list) ./ T
-    B̄ = reduce(+, b_list) ./ T
-    prior_scale = (α - 1) / T
+    tasks = reduce(vcat, task_rows)
+    λ = _task_lambda(m, tasks, join_cols)
+    sum(λ) > 0 || throw(ArgumentError("task weights sum to zero"))
+    λ̃ = λ ./ sum(λ)
+
+    # The objective only depends on the (weighted) task-mean A and B, so
+    # collapse them once: loss(w) = w·Ā − ½ w'B̄w − ((α−1)/T_eff) Σ log wᵢ.
+    # The prior scales with the effective sample size (Σλ)²/Σλ², so
+    # down-weighting history does not quietly strengthen the prior; with
+    # equal weights T_eff = T and this reduces to the unweighted case.
+    Ā = sum(λ̃[t] .* a_list[t] for t = 1:T)
+    B̄ = sum(λ̃[t] .* b_list[t] for t = 1:T)
+    T_eff = sum(λ)^2 / sum(abs2, λ)
+    prior_scale = (α - 1) / T_eff
 
     function _logsoftmax(z)
         m_z = maximum(z)
@@ -179,6 +183,54 @@ end
 weights(m::FittedCRPSStacking) = EnsembleWeights(m.weights)
 
 # ---- helpers ----
+
+# Resolve the per-task weight vector (unnormalised), aligned with the rows
+# of `tasks` (one row per training task, in a_list order).
+function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
+    T = nrow(tasks)
+
+    if m.task_weights !== nothing
+        wdf = m.task_weights
+        absent = setdiff(join_cols, propertynames(wdf))
+        isempty(absent) || throw(ArgumentError(
+            "`task_weights` is missing task-id column(s): $absent"))
+        tasks_idx = copy(tasks)
+        tasks_idx.__row__ = 1:T
+        joined = leftjoin(tasks_idx, wdf[:, [join_cols..., :weight]];
+                          on = join_cols)
+        sort!(joined, :__row__)
+        any(ismissing, joined.weight) && throw(ArgumentError(
+            "`task_weights` is missing a weight for at least one training task"))
+        return Float64.(joined.weight)
+    end
+
+    m.lambda === nothing && return ones(T)
+
+    m.time_col in join_cols || throw(ArgumentError(
+        "time_col $(m.time_col) is not one of the task-id columns $join_cols"))
+    tvals = tasks[!, m.time_col]
+    ut = sort(unique(tvals))
+    Tt = length(ut)
+    per_time = if m.lambda isa Float64
+        [m.lambda^(Tt - i) for i = 1:Tt]
+    elseif m.lambda === :lopensemble
+        [2 - (1 - i / Tt)^2 for i = 1:Tt]
+    elseif m.lambda === :equal
+        ones(Tt)
+    elseif m.lambda isa Vector{Float64}
+        length(m.lambda) == Tt || throw(ArgumentError(
+            "`lambda` has length $(length(m.lambda)) but the training data " *
+            "has $Tt unique values of $(m.time_col)"))
+        m.lambda
+    else # Function of the normalised time rank
+        w = [Float64(m.lambda(i / Tt)) for i = 1:Tt]
+        all(>=(0), w) || throw(ArgumentError(
+            "`lambda` function returned a negative weight"))
+        w
+    end
+    rank = Dict(v => i for (i, v) in enumerate(ut))
+    return [per_time[rank[v]] for v in tvals]
+end
 
 function _softmax(z::AbstractVector)
     m = maximum(z)

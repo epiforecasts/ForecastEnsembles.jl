@@ -150,12 +150,20 @@ function _ens_qra(train_in, target_in, obs_in, task_id_cols::Vector,
      weights = w === nothing ? nothing : _ens_pack(DataFrame(w)))
 end
 
-function _ens_crps(train_in, obs_in, task_id_cols::Vector, dirichlet_alpha::Float64)
+function _ens_crps(train_in, obs_in, task_id_cols::Vector, dirichlet_alpha::Float64,
+                   lambda, time_col, task_weights_in)
     cols = Symbol.(task_id_cols)
     train_ft = Ensembles.ForecastTable(_ens_to_symbol!(DataFrame(train_in));
                                         task_id_cols = cols)
     obs_df   = DataFrame(obs_in)
-    method = Ensembles.CRPSStacking(; dirichlet_alpha = dirichlet_alpha)
+    lam = lambda isa AbstractString ? Symbol(lambda) : lambda
+    method = Ensembles.CRPSStacking(;
+        dirichlet_alpha = dirichlet_alpha,
+        lambda = lam,
+        time_col = time_col === nothing ? nothing : Symbol(time_col),
+        task_weights = task_weights_in === nothing ? nothing :
+                       DataFrame(task_weights_in),
+    )
     fitted = fit(method, train_ft, obs_df)
     _ens_pack(DataFrame(fitted.weights))
 end

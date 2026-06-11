@@ -92,10 +92,6 @@ Methods worth covering once one of those paths lands:
 - **Benchmarks vs the R packages.** A small `benchmark/` directory
   comparing throughput on a realistic hubverse `model_out_tbl`. Until it
   exists, the docs make no performance claims.
-- **Recency weighting for CRPSStacking.** The `lambda` argument from
-  `lopensemble` (down-weighting older training tasks) is accepted for
-  signature compatibility but raises until implemented. Non-stationary
-  model skill across epidemic waves makes this genuinely useful.
 
 ## Out of scope (for now)
 
