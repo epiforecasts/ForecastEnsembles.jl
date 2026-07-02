@@ -1,5 +1,11 @@
 # Ensembles.jl
 
+<!-- badges: start -->
+[![CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/sbfnk/ensembles.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sbfnk/ensembles.jl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<!-- badges: end -->
+
 A Julia package for combining probabilistic forecasts from several component
 models.
 

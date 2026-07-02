@@ -139,17 +139,26 @@ function combine(ft::ForecastTable, m::FittedQRA)
         levels_present = sort(unique(Float64.(tg.output_type_id)))
 
         unseen = setdiff(levels_present, m.levels)
-        isempty(unseen) || throw(ArgumentError(
-            "FittedQRA was not trained on quantile levels $unseen " *
-            "(trained levels: $(m.levels))."))
-        haskey(m.coefs, (gkey, first(levels_present))) || throw(ArgumentError(
-            "FittedQRA was not trained on group $gkey " *
-            "(group columns: $(m.group_cols))."))
+        isempty(unseen) || throw(
+            ArgumentError(
+                "FittedQRA was not trained on quantile levels $unseen " *
+                "(trained levels: $(m.levels)).",
+            ),
+        )
+        haskey(m.coefs, (gkey, first(levels_present))) || throw(
+            ArgumentError(
+                "FittedQRA was not trained on group $gkey " *
+                "(group columns: $(m.group_cols)).",
+            ),
+        )
 
         models_present = unique(tg[!, ft.model_id_col])
         missing_models = setdiff(m.models, models_present)
-        isempty(missing_models) || throw(ArgumentError(
-            "FittedQRA models $missing_models are absent from the input table."))
+        isempty(missing_models) || throw(
+            ArgumentError(
+                "FittedQRA models $missing_models are absent from the input table.",
+            ),
+        )
 
         values = Float64[]
         for τ in levels_present
@@ -253,7 +262,8 @@ function _check_lp_solution(model, context::String)
     st == MOI.OPTIMAL || error(
         "QRA $context LP did not solve to optimality (status: $st). " *
         "Check the training data for degeneracy (e.g. collinear forecasts " *
-        "with enforce_normalisation = true).")
+        "with enforce_normalisation = true).",
+    )
 end
 
 # Returns (X, y) where X is n×M with one column per model in `models`

@@ -178,39 +178,51 @@ function CRPSStacking(;
     task_weights = nothing,
     gamma = nothing,
 )
-    gamma === nothing || throw(ArgumentError(
-        "`gamma` (lopensemble's region weighting) has been replaced by the " *
-        "more general `task_weights`; supply a frame with the task-id " *
-        "columns plus :weight."))
+    gamma === nothing || throw(
+        ArgumentError(
+            "`gamma` (lopensemble's region weighting) has been replaced by the " *
+            "more general `task_weights`; supply a frame with the task-id " *
+            "columns plus :weight.",
+        ),
+    )
     if lambda !== nothing && task_weights !== nothing
         throw(ArgumentError("specify either `lambda` or `task_weights`, not both"))
     end
     if lambda !== nothing
-        time_col === nothing && throw(ArgumentError(
-            "`lambda` requires `time_col`: the task column that orders " *
-            "tasks in time, e.g. time_col = :target_date."))
+        time_col === nothing && throw(
+            ArgumentError(
+                "`lambda` requires `time_col`: the task column that orders " *
+                "tasks in time, e.g. time_col = :target_date.",
+            ),
+        )
         if lambda isa Real && !(lambda isa Bool)
-            0 < lambda <= 1 || throw(ArgumentError(
-                "scalar `lambda` is an exponential decay factor and must " *
-                "lie in (0, 1]"))
+            0 < lambda <= 1 || throw(
+                ArgumentError(
+                    "scalar `lambda` is an exponential decay factor and must " *
+                    "lie in (0, 1]",
+                ),
+            )
             lambda = Float64(lambda)
         elseif lambda isa Symbol
-            lambda in (:lopensemble, :equal) || throw(ArgumentError(
-                "symbol `lambda` must be :lopensemble or :equal"))
+            lambda in (:lopensemble, :equal) ||
+                throw(ArgumentError("symbol `lambda` must be :lopensemble or :equal"))
         elseif lambda isa AbstractVector
             lambda = Float64.(collect(lambda))
-            all(>=(0), lambda) || throw(ArgumentError(
-                "`lambda` weights must be non-negative"))
+            all(>=(0), lambda) ||
+                throw(ArgumentError("`lambda` weights must be non-negative"))
         elseif !(lambda isa Function)
-            throw(ArgumentError(
-                "`lambda` must be a scalar in (0,1], :lopensemble, :equal, " *
-                "a vector, or a function of the normalised time rank"))
+            throw(
+                ArgumentError(
+                    "`lambda` must be a scalar in (0,1], :lopensemble, :equal, " *
+                    "a vector, or a function of the normalised time rank",
+                ),
+            )
         end
     end
     if task_weights !== nothing
         task_weights = DataFrame(task_weights)
-        :weight in propertynames(task_weights) || throw(ArgumentError(
-            "`task_weights` must have a :weight column"))
+        :weight in propertynames(task_weights) ||
+            throw(ArgumentError("`task_weights` must have a :weight column"))
         all(w -> !ismissing(w) && w >= 0, task_weights.weight) ||
             throw(ArgumentError("`task_weights` must be non-negative and non-missing"))
     end

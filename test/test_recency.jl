@@ -13,11 +13,16 @@ function _regime_data(; T = 40, K = 80, seed = 17)
         good_a = t <= T ÷ 2
         for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
             sd = sharp ? 0.3 : 4.0
-            push!(rows, DataFrame(
-                model_id = mid, output_type = "sample",
-                output_type_id = 1:K, t = t,
-                value = y .+ sd .* randn(rng, K),
-            ))
+            push!(
+                rows,
+                DataFrame(
+                    model_id = mid,
+                    output_type = "sample",
+                    output_type_id = 1:K,
+                    t = t,
+                    value = y .+ sd .* randn(rng, K),
+                ),
+            )
         end
     end
     ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
@@ -26,8 +31,7 @@ end
 @testset "CRPSStacking recency weighting" begin
     train, obs = _regime_data()
 
-    w_b(fitted) =
-        fitted.weights[fitted.weights.model_id .== "m_b", :weight][1]
+    w_b(fitted) = fitted.weights[fitted.weights.model_id .== "m_b", :weight][1]
 
     # Symmetric regimes, equal weighting → roughly balanced weights.
     equal = fit(CRPSStacking(), train, obs)
@@ -51,8 +55,7 @@ end
     @test w_b(equal) < w_b(ramp) < w_b(recent)
 
     # Function form: quadratic ramp expressed directly matches :lopensemble.
-    fn = fit(CRPSStacking(; lambda = u -> 2 - (1 - u)^2, time_col = :t),
-             train, obs)
+    fn = fit(CRPSStacking(; lambda = u -> 2 - (1 - u)^2, time_col = :t), train, obs)
     @test fn.weights.weight ≈ ramp.weights.weight atol = 1e-8
 
     # Vector form: explicit per-time weights (one per unique t).
@@ -62,7 +65,10 @@ end
     @test w_b(late_only) > 0.95
     # Wrong length raises.
     @test_throws ArgumentError fit(
-        CRPSStacking(; lambda = ones(T + 1), time_col = :t), train, obs)
+        CRPSStacking(; lambda = ones(T + 1), time_col = :t),
+        train,
+        obs,
+    )
 end
 
 @testset "CRPSStacking task_weights" begin
@@ -83,10 +89,14 @@ end
 
     # Missing a task raises.
     @test_throws ArgumentError fit(
-        CRPSStacking(; task_weights = uniform[1:(T-1), :]), train, obs)
+        CRPSStacking(; task_weights = uniform[1:(T-1), :]),
+        train,
+        obs,
+    )
     # Negative weights rejected at construction.
     @test_throws ArgumentError CRPSStacking(;
-        task_weights = DataFrame(t = [1], weight = [-1.0]))
+        task_weights = DataFrame(t = [1], weight = [-1.0]),
+    )
 end
 
 @testset "Parity — lopensemble ramp" begin
@@ -97,18 +107,20 @@ end
         @warn "ramp fixture missing; run test/reference/generate_lopensemble.R"
     else
         in_df = CSV.read(joinpath(ref_dir, "crps_input.csv"), DataFrame)
-        rename!(in_df,
-                :model => :model_id,
-                :sample_id => :output_type_id,
-                :predicted => :value)
+        rename!(
+            in_df,
+            :model => :model_id,
+            :sample_id => :output_type_id,
+            :predicted => :value,
+        )
         in_df.output_type = fill(:sample, nrow(in_df))
         ft = ForecastTable(
             in_df[:, [:model_id, :output_type, :output_type_id, :date, :value]];
-            task_id_cols = [:date])
+            task_id_cols = [:date],
+        )
         obs = unique(in_df[:, [:date, :observed]])
 
-        fitted = fit(CRPSStacking(; lambda = :lopensemble, time_col = :date),
-                     ft, obs)
+        fitted = fit(CRPSStacking(; lambda = :lopensemble, time_col = :date), ft, obs)
         ref = CSV.read(ramp_path, DataFrame)
         rename!(ref, :model => :model_id, :weight => :weight_r)
         j = innerjoin(fitted.weights, ref; on = :model_id)

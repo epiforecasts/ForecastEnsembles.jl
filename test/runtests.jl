@@ -3,6 +3,7 @@ using Ensembles
 using DataFrames
 
 @testset "Ensembles.jl" begin
+    include("test_quality.jl")
     include("test_forecast_table.jl")
     include("test_quantile_ensemble.jl")
     include("test_interop.jl")

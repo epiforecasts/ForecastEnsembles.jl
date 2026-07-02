@@ -159,7 +159,8 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
     Optim.converged(best_res) || @warn(
         "CRPSStacking: L-BFGS did not converge " *
         "($(Optim.iterations(best_res)) iterations); weights are the best " *
-        "iterate found.")
+        "iterate found."
+    )
 
     w_hat = _softmax(Optim.minimizer(best_res))
     crps_hat = Optim.minimum(best_res)
@@ -192,22 +193,27 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
     if m.task_weights !== nothing
         wdf = m.task_weights
         absent = setdiff(join_cols, propertynames(wdf))
-        isempty(absent) || throw(ArgumentError(
-            "`task_weights` is missing task-id column(s): $absent"))
+        isempty(absent) ||
+            throw(ArgumentError("`task_weights` is missing task-id column(s): $absent"))
         tasks_idx = copy(tasks)
         tasks_idx.__row__ = 1:T
-        joined = leftjoin(tasks_idx, wdf[:, [join_cols..., :weight]];
-                          on = join_cols)
+        joined = leftjoin(tasks_idx, wdf[:, [join_cols..., :weight]]; on = join_cols)
         sort!(joined, :__row__)
-        any(ismissing, joined.weight) && throw(ArgumentError(
-            "`task_weights` is missing a weight for at least one training task"))
+        any(ismissing, joined.weight) && throw(
+            ArgumentError(
+                "`task_weights` is missing a weight for at least one training task",
+            ),
+        )
         return Float64.(joined.weight)
     end
 
     m.lambda === nothing && return ones(T)
 
-    m.time_col in join_cols || throw(ArgumentError(
-        "time_col $(m.time_col) is not one of the task-id columns $join_cols"))
+    m.time_col in join_cols || throw(
+        ArgumentError(
+            "time_col $(m.time_col) is not one of the task-id columns $join_cols",
+        ),
+    )
     tvals = tasks[!, m.time_col]
     ut = sort(unique(tvals))
     Tt = length(ut)
@@ -218,14 +224,17 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
     elseif m.lambda === :equal
         ones(Tt)
     elseif m.lambda isa Vector{Float64}
-        length(m.lambda) == Tt || throw(ArgumentError(
-            "`lambda` has length $(length(m.lambda)) but the training data " *
-            "has $Tt unique values of $(m.time_col)"))
+        length(m.lambda) == Tt || throw(
+            ArgumentError(
+                "`lambda` has length $(length(m.lambda)) but the training data " *
+                "has $Tt unique values of $(m.time_col)",
+            ),
+        )
         m.lambda
     else # Function of the normalised time rank
         w = [Float64(m.lambda(i / Tt)) for i = 1:Tt]
-        all(>=(0), w) || throw(ArgumentError(
-            "`lambda` function returned a negative weight"))
+        all(>=(0), w) ||
+            throw(ArgumentError("`lambda` function returned a negative weight"))
         w
     end
     rank = Dict(v => i for (i, v) in enumerate(ut))

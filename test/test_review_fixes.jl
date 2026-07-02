@@ -16,7 +16,9 @@ using Statistics: mean
     # Duplicate probabilities previously passed `issorted` and produced NaN
     # slopes silently.
     @test_throws ArgumentError Ensembles.QuantileDistribution(
-        [0.1, 0.1, 0.5], [1.0, 1.0, 2.0])
+        [0.1, 0.1, 0.5],
+        [1.0, 1.0, 2.0],
+    )
 end
 
 @testset "ForecastTable validation" begin
@@ -32,19 +34,23 @@ end
     @test_throws ArgumentError ForecastTable(df[1:0, :]; task_id_cols = [:location])
 
     # NaN values rejected.
-    bad = copy(df); bad.value = [1.0, NaN]
+    bad = copy(df);
+    bad.value = [1.0, NaN]
     @test_throws ArgumentError ForecastTable(bad; task_id_cols = [:location])
 
     # missing values rejected.
-    bad2 = copy(df); bad2.value = [1.0, missing]
+    bad2 = copy(df);
+    bad2.value = [1.0, missing]
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 end
 
 @testset "EnsembleWeights validation" begin
     @test_throws ArgumentError EnsembleWeights(
-        DataFrame(model_id = ["m1", "m2"], weight = [1.5, -0.5]))
+        DataFrame(model_id = ["m1", "m2"], weight = [1.5, -0.5]),
+    )
     @test_throws ArgumentError EnsembleWeights(
-        DataFrame(model_id = ["m1", "m2"], weight = [1.0, missing]))
+        DataFrame(model_id = ["m1", "m2"], weight = [1.0, missing]),
+    )
 end
 
 @testset "Extra weights warn" begin
@@ -96,13 +102,16 @@ end
     probs = collect(0.05:0.05:0.95)
     rows = DataFrame[]
     for (mid, dist) in (("m1", Normal(0, 1)), ("m2", Normal(5, 1)))
-        push!(rows, DataFrame(
-            model_id = mid,
-            output_type = "quantile",
-            output_type_id = probs,
-            location = "A",
-            value = dquantile.(Ref(dist), probs),
-        ))
+        push!(
+            rows,
+            DataFrame(
+                model_id = mid,
+                output_type = "quantile",
+                output_type_id = probs,
+                location = "A",
+                value = dquantile.(Ref(dist), probs),
+            ),
+        )
     end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])
     out = sort(DataFrame(combine(ft, MixtureEnsemble())), :output_type_id)
@@ -118,7 +127,7 @@ end
     for τ in (0.1, 0.25, 0.75, 0.9)
         truth_fn(x) = 0.5 * (dcdf(Normal(0, 1), x) + dcdf(Normal(5, 1), x)) - τ
         lo, hi = -10.0, 15.0
-        for _ in 1:100
+        for _ = 1:100
             mid = 0.5 * (lo + hi)
             truth_fn(mid) < 0 ? (lo = mid) : (hi = mid)
         end
@@ -130,7 +139,7 @@ end
 
 @testset "_ints_summing_to always sums to N" begin
     rng = MersenneTwister(7)
-    for _ in 1:50
+    for _ = 1:50
         M = rand(rng, 1:8)
         w = rand(rng, M)
         w ./= sum(w)
@@ -161,8 +170,10 @@ end
     @test_throws ArgumentError CRPSStacking(; gamma = 0.5)
     @test_throws ArgumentError CRPSStacking(; lambda = 1.5, time_col = :t)
     @test_throws ArgumentError CRPSStacking(;
-        lambda = 0.9, time_col = :t,
-        task_weights = DataFrame(t = [1], weight = [1.0]))
+        lambda = 0.9,
+        time_col = :t,
+        task_weights = DataFrame(t = [1], weight = [1.0]),
+    )
 
     # Tiny per-model sample counts no longer produce a biased/NaN diagonal.
     small = DataFrame(
@@ -184,14 +195,19 @@ end
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in (("m_a", y .+ 0.3 .* randn(rng, n)),
-                        ("m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, pred) in
+        (("m_a", y .+ 0.3 .* randn(rng, n)), ("m_b", y .+ 0.3 .* randn(rng, n)))
         for τ in levels
-            push!(rows, DataFrame(
-                model_id = mid, output_type = "quantile",
-                output_type_id = τ, t = 1:n,
-                value = pred .+ dquantile(Normal(0, 1), τ),
-            ))
+            push!(
+                rows,
+                DataFrame(
+                    model_id = mid,
+                    output_type = "quantile",
+                    output_type_id = τ,
+                    t = 1:n,
+                    value = pred .+ dquantile(Normal(0, 1), τ),
+                ),
+            )
         end
     end
     train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
@@ -200,19 +216,29 @@ end
 
     # Unseen quantile level → checked error, not KeyError.
     bad_level = DataFrame(
-        model_id = ["m_a", "m_b"], output_type = "quantile",
-        output_type_id = [0.33, 0.33], t = [1, 1], value = [0.0, 0.1],
+        model_id = ["m_a", "m_b"],
+        output_type = "quantile",
+        output_type_id = [0.33, 0.33],
+        t = [1, 1],
+        value = [0.0, 0.1],
     )
     @test_throws ArgumentError combine(
-        ForecastTable(bad_level; task_id_cols = [:t]), fitted)
+        ForecastTable(bad_level; task_id_cols = [:t]),
+        fitted,
+    )
 
     # Missing model → checked error, not BoundsError.
     one_model = DataFrame(
-        model_id = "m_a", output_type = "quantile",
-        output_type_id = levels, t = 1, value = [-0.5, 0.0, 0.5],
+        model_id = "m_a",
+        output_type = "quantile",
+        output_type_id = levels,
+        t = 1,
+        value = [-0.5, 0.0, 0.5],
     )
     @test_throws ArgumentError combine(
-        ForecastTable(one_model; task_id_cols = [:t]), fitted)
+        ForecastTable(one_model; task_id_cols = [:t]),
+        fitted,
+    )
 end
 
 @testset "QRA noncross holds out of sample" begin
@@ -221,14 +247,19 @@ end
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in (("m_a", y .+ 0.4 .* randn(rng, n)),
-                        ("m_b", y .+ 0.4 .* randn(rng, n)))
+    for (mid, pred) in
+        (("m_a", y .+ 0.4 .* randn(rng, n)), ("m_b", y .+ 0.4 .* randn(rng, n)))
         for τ in levels
-            push!(rows, DataFrame(
-                model_id = mid, output_type = "quantile",
-                output_type_id = τ, t = 1:n,
-                value = pred .+ dquantile(Normal(0, 1), τ),
-            ))
+            push!(
+                rows,
+                DataFrame(
+                    model_id = mid,
+                    output_type = "quantile",
+                    output_type_id = τ,
+                    t = 1:n,
+                    value = pred .+ dquantile(Normal(0, 1), τ),
+                ),
+            )
         end
     end
     all_df = reduce(vcat, rows)
@@ -236,9 +267,16 @@ end
     test_ft = ForecastTable(all_df[all_df.t .> 60, :]; task_id_cols = [:t])
     obs = DataFrame(t = 1:60, observed = y[1:60])
 
-    fitted = fit(QRA(; per_quantile_weights = true, noncross = true,
-                       enforce_normalisation = true, intercept = false),
-                 train, obs)
+    fitted = fit(
+        QRA(;
+            per_quantile_weights = true,
+            noncross = true,
+            enforce_normalisation = true,
+            intercept = false,
+        ),
+        train,
+        obs,
+    )
     out = DataFrame(combine(test_ft, fitted))
     for tdf in DataFrames.groupby(out, :t)
         @test issorted(sort(tdf, :output_type_id).value)
@@ -254,14 +292,21 @@ end
     test_df = in_df[in_df.target_date .== target_date, :]
 
     train_ft = Ensembles.from_scoringutils(
-        train_df, task_id_cols = [:location, :horizon, :target_date])
+        train_df,
+        task_id_cols = [:location, :horizon, :target_date],
+    )
     obs = unique(train_df[:, [:location, :horizon, :target_date, :observed]])
 
-    fitted = fit(QRA(; per_quantile_weights = true,
-                       enforce_normalisation = false,
-                       intercept = true,
-                       noncross = false),
-                 train_ft, obs)
+    fitted = fit(
+        QRA(;
+            per_quantile_weights = true,
+            enforce_normalisation = false,
+            intercept = true,
+            noncross = false,
+        ),
+        train_ft,
+        obs,
+    )
 
     ref_w = CSV.read(joinpath(ref_dir, "qra_perq_weights.csv"), DataFrame)
     for τ in fitted.levels
@@ -274,15 +319,24 @@ end
     end
 
     test_ft = Ensembles.from_scoringutils(
-        test_df, task_id_cols = [:location, :horizon, :target_date])
-    out = select(DataFrame(combine(test_ft, fitted)),
-                 :location, :horizon, :target_date, :output_type_id, :value)
+        test_df,
+        task_id_cols = [:location, :horizon, :target_date],
+    )
+    out = select(
+        DataFrame(combine(test_ft, fitted)),
+        :location,
+        :horizon,
+        :target_date,
+        :output_type_id,
+        :value,
+    )
     ref_pred = CSV.read(joinpath(ref_dir, "qra_perq_output.csv"), DataFrame)
     rename!(ref_pred, :predicted => :predicted_r, :quantile_level => :output_type_id)
-    j = innerjoin(out,
-                  select(ref_pred, :location, :horizon, :target_date,
-                         :output_type_id, :predicted_r);
-                  on = [:location, :horizon, :target_date, :output_type_id])
+    j = innerjoin(
+        out,
+        select(ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r);
+        on = [:location, :horizon, :target_date, :output_type_id],
+    )
     @test nrow(j) == nrow(out)
     @test maximum(abs.(j.value .- j.predicted_r)) < 1e-3
 end
