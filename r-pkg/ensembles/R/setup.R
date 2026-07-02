@@ -14,7 +14,10 @@
 #'   bundled JuliaConnectoR uses that binary.
 #' @param ensembles_jl_path Optional path to a checkout of Ensembles.jl.
 #'   When supplied, the bundled project is reconfigured to develop that
-#'   source instead of the version pinned in the manifest.
+#'   source instead of the version pinned in the manifest. Defaults to
+#'   `getOption("ensembles.jl_path")`, so a session-wide
+#'   `options(ensembles.jl_path = "...")` (e.g. set by the test helper or
+#'   in CI) is picked up automatically.
 #'
 #' @section Startup time:
 #' Two distinct delays, easy to conflate:
@@ -41,7 +44,8 @@
 #' julia_setup(ensembles_jl_path = "~/code/ensembles.jl")
 #' }
 #' @export
-julia_setup <- function(julia_bindir = NULL, ensembles_jl_path = NULL) {
+julia_setup <- function(julia_bindir = NULL,
+                        ensembles_jl_path = getOption("ensembles.jl_path")) {
   if (isTRUE(.pkg_env$ready)) return(invisible(NULL))
 
   if (!is.null(julia_bindir)) {

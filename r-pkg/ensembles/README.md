@@ -1,5 +1,9 @@
 # ensembles (R)
 
+<!-- badges: start -->
+[![R-CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml)
+<!-- badges: end -->
+
 A thin R wrapper around the Julia package `Ensembles.jl`. The user-facing
 functions mirror the originals:
 

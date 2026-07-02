@@ -4,7 +4,10 @@
 \alias{julia_setup}
 \title{Initialise the Julia bridge}
 \usage{
-julia_setup(julia_bindir = NULL, ensembles_jl_path = NULL)
+julia_setup(
+  julia_bindir = NULL,
+  ensembles_jl_path = getOption("ensembles.jl_path")
+)
 }
 \arguments{
 \item{julia_bindir}{Path to the directory containing the `julia`
@@ -13,7 +16,10 @@ bundled JuliaConnectoR uses that binary.}
 
 \item{ensembles_jl_path}{Optional path to a checkout of Ensembles.jl.
 When supplied, the bundled project is reconfigured to develop that
-source instead of the version pinned in the manifest.}
+source instead of the version pinned in the manifest. Defaults to
+`getOption("ensembles.jl_path")`, so a session-wide
+`options(ensembles.jl_path = "...")` (e.g. set by the test helper or
+in CI) is picked up automatically.}
 }
 \value{
 Invisible NULL.
