@@ -7,3 +7,6 @@ docs/site/
 .DS_Store
 .vscode/
 .idea/
+
+# Internal design notes / unsent drafts — kept local, not published
+/design/
