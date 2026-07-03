@@ -9,7 +9,7 @@
 # the package source.
 .resolve_bridge <- function() {
   candidates <- c(
-    system.file("julia", package = "ensembles"),
+    system.file("julia", package = "ForecastEnsembles"),
     file.path(getwd(), "..", "inst", "julia"),
     file.path(getwd(), "inst", "julia")
   )
@@ -18,6 +18,6 @@
       return(normalizePath(p, mustWork = TRUE))
     }
   }
-  stop("Could not find inst/julia/Project.toml. Reinstall the ensembles package.",
+  stop("Could not find inst/julia/Project.toml. Reinstall the ForecastEnsembles package.",
        call. = FALSE)
 }

@@ -1,11 +1,11 @@
-# ensembles (R)
+# ForecastEnsembles (R)
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![R-CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml)
+[![R-CI](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/R-CI.yml)
 <!-- badges: end -->
 
-A thin R wrapper around the Julia package `Ensembles.jl`. The user-facing
+A thin R wrapper around the Julia package `ForecastEnsembles.jl`. The user-facing
 functions mirror the originals:
 
 | R wrapper                | Original                              |
@@ -20,13 +20,13 @@ functions mirror the originals:
 
 The wrapper talks to a long-lived Julia process via
 [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR). The
-first call in a session takes ~10–15 s while Julia and Ensembles.jl warm
+first call in a session takes ~10–15 s while Julia and ForecastEnsembles.jl warm
 up; calls after that run in under a second.
 
 ## Requirements
 
 - Julia ≥ 1.10 on `PATH` (or pass `julia_bindir` to `julia_setup()`).
-- `R CMD INSTALL r-pkg/ensembles`.
+- `R CMD INSTALL r-pkg/ForecastEnsembles`.
 
 The first call also instantiates the bridge Julia project (LBFGS, HiGHS,
 CSV/JSON IO). That takes a few minutes, then it stays cached.
@@ -34,7 +34,7 @@ CSV/JSON IO). That takes a few minutes, then it stays cached.
 ## Quick start
 
 ```r
-library(ensembles)
+library(ForecastEnsembles)
 
 df <- data.frame(
   model_id = rep(c("m1", "m2"), each = 4),

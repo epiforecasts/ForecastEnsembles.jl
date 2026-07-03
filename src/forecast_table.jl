@@ -8,7 +8,7 @@ Required columns
 ----------------
 
 - the model identifier column (default `:model_id`)
-- `:output_type`            — symbol, one of `Ensembles.KNOWN_OUTPUT_TYPES`
+- `:output_type`            — symbol, one of `ForecastEnsembles.KNOWN_OUTPUT_TYPES`
 - `:output_type_id`         — quantile level, sample index, threshold, …
 - `:value`                  — the forecast value
 - one or more task-id columns (e.g. `:location`, `:horizon`, `:target_date`)

@@ -64,7 +64,7 @@ migrating:
 Two distinct delays, easy to conflate:
 \itemize{
   \item The very first use on a machine instantiates and precompiles the
-    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    bundled Julia project (LP solver, optimiser, ForecastEnsembles.jl). This can
     take a few minutes and then stays cached in the Julia depot.
   \item Every fresh R session pays a Julia startup of roughly 10--15
     seconds on the first call to any function in this package. Later

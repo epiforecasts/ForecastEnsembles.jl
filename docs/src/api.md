@@ -21,8 +21,8 @@ CRPSStacking
 ```@docs
 combine(::ForecastTable, ::QuantileEnsemble)
 combine(::ForecastTable, ::MixtureEnsemble)
-combine(::ForecastTable, ::Ensembles.FittedQRA)
-combine(::ForecastTable, ::Ensembles.FittedCRPSStacking)
+combine(::ForecastTable, ::ForecastEnsembles.FittedQRA)
+combine(::ForecastTable, ::ForecastEnsembles.FittedCRPSStacking)
 fit(::QRA, ::ForecastTable, ::AbstractDataFrame)
 fit(::CRPSStacking, ::ForecastTable, ::AbstractDataFrame)
 ```
@@ -30,7 +30,7 @@ fit(::CRPSStacking, ::ForecastTable, ::AbstractDataFrame)
 ## Internals
 
 ```@docs
-Ensembles.QuantileDistribution
-Ensembles.FittedQRA
-Ensembles.FittedCRPSStacking
+ForecastEnsembles.QuantileDistribution
+ForecastEnsembles.FittedQRA
+ForecastEnsembles.FittedCRPSStacking
 ```

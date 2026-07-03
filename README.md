@@ -1,9 +1,9 @@
-# Ensembles.jl
+# ForecastEnsembles.jl
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/sbfnk/ensembles.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sbfnk/ensembles.jl)
+[![CI](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <!-- badges: end -->
 
@@ -14,7 +14,7 @@
 A Julia package for combining probabilistic forecasts from several component
 models.
 
-`Ensembles.jl` computes weighted or unweighted ensembles of forecasts
+`ForecastEnsembles.jl` computes weighted or unweighted ensembles of forecasts
 expressed as quantiles, samples, CDFs, or summary statistics. Weights can be
 supplied by the user, fixed (equal weighting), or estimated from past
 forecast performance via quantile regression averaging or CRPS-stacking.
@@ -39,7 +39,7 @@ away, and CRPS-stacking goes through Optim.jl.
 ## A small example
 
 ```julia
-using Ensembles, DataFrames
+using ForecastEnsembles, DataFrames
 
 df = DataFrame(
     location       = "A",

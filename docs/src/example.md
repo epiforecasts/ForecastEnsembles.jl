@@ -1,16 +1,16 @@
 # Worked example: combining three flu hospitalisation forecasts
 
 This page runs every method in the package on a real hubverse forecast
-slice bundled with `Ensembles.jl`. Three models from the
+slice bundled with `ForecastEnsembles.jl`. Three models from the
 [example-complex-forecast-hub](https://github.com/hubverse-org/example-complex-forecast-hub),
 each predicting weekly flu hospitalisations on 2022-12-17 at horizon 1
 across five US locations (national plus CA, FL, NY, TX), at the standard
 23 quantile levels.
 
 ```julia
-using Ensembles, CSV, DataFrames
+using ForecastEnsembles, CSV, DataFrames
 
-flu = CSV.read(joinpath(pkgdir(Ensembles), "data", "flu_forecasts.csv"),
+flu = CSV.read(joinpath(pkgdir(ForecastEnsembles), "data", "flu_forecasts.csv"),
                DataFrame; types = Dict(:output_type_id => Float64,
                                         :location => String))
 

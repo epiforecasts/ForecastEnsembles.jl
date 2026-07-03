@@ -1,12 +1,12 @@
-Package: ensembles
-Title: Probabilistic Forecast Ensembling via Ensembles.jl
+Package: ForecastEnsembles
+Title: Probabilistic Forecast Ensembling via ForecastEnsembles.jl
 Version: 0.1.0
 Authors@R:
     person("Sebastian", "Funk",
            email = "sebastian.funk@lshtm.ac.uk",
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2842-3406"))
-Description: A thin R interface to the Julia package Ensembles.jl, which
+Description: A thin R interface to the Julia package ForecastEnsembles.jl, which
     unifies the methods previously spread across hubEnsembles, qrensemble
     and lopensemble under one in-memory representation and one set of
     verbs (combine() and fit()). All numerical work is done in Julia via

@@ -6,7 +6,7 @@
 \usage{
 julia_setup(
   julia_bindir = NULL,
-  ensembles_jl_path = getOption("ensembles.jl_path")
+  ensembles_jl_path = getOption("ForecastEnsembles.jl_path")
 )
 }
 \arguments{
@@ -14,11 +14,11 @@ julia_setup(
 executable. If supplied, sets `JULIACONNECTOR_JULIABIN` so the
 bundled JuliaConnectoR uses that binary.}
 
-\item{ensembles_jl_path}{Optional path to a checkout of Ensembles.jl.
+\item{ensembles_jl_path}{Optional path to a checkout of ForecastEnsembles.jl.
 When supplied, the bundled project is reconfigured to develop that
 source instead of the version pinned in the manifest. Defaults to
-`getOption("ensembles.jl_path")`, so a session-wide
-`options(ensembles.jl_path = "...")` (e.g. set by the test helper or
+`getOption("ForecastEnsembles.jl_path")`, so a session-wide
+`options(ForecastEnsembles.jl_path = "...")` (e.g. set by the test helper or
 in CI) is picked up automatically.}
 }
 \value{
@@ -26,7 +26,7 @@ Invisible NULL.
 }
 \description{
 Activates the bundled `inst/julia/` project (which pins the exact
-versions of Ensembles.jl, DataFrames.jl, etc. that this package was
+versions of ForecastEnsembles.jl, DataFrames.jl, etc. that this package was
 tested against), starts the JuliaConnectoR server with that project
 active, and loads the bridge helper functions. Subsequent calls are
 no-ops.
@@ -40,7 +40,7 @@ guard) is delegated to [juliaready::julia_ready()].
 Two distinct delays, easy to conflate:
 \itemize{
   \item The very first use on a machine instantiates and precompiles the
-    bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+    bundled Julia project (LP solver, optimiser, ForecastEnsembles.jl). This can
     take a few minutes and then stays cached in the Julia depot.
   \item Every fresh R session pays a Julia startup of roughly 10--15
     seconds on the first call to any function in this package. Later
@@ -57,7 +57,7 @@ not installed, install it via juliaup
 # the env or PATH.
 julia_setup()
 
-# Develop a local checkout of Ensembles.jl into the bundled project.
-julia_setup(ensembles_jl_path = "~/code/ensembles.jl")
+# Develop a local checkout of ForecastEnsembles.jl into the bundled project.
+julia_setup(ensembles_jl_path = "~/code/ForecastEnsembles.jl")
 }
 }

@@ -7,7 +7,7 @@
         observed = [2.0, 2.0, 2.0, 2.0],
         location = ["A", "A", "A", "A"],
     )
-    ft = Ensembles.from_scoringutils(su; task_id_cols = [:location])
+    ft = ForecastEnsembles.from_scoringutils(su; task_id_cols = [:location])
     d = DataFrame(ft)
     @test :model_id in propertynames(d)
     @test :output_type_id in propertynames(d)
@@ -22,7 +22,7 @@
         predicted = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
         location = "A",
     )
-    ft2 = Ensembles.from_samples(smp; task_id_cols = [:location])
+    ft2 = ForecastEnsembles.from_samples(smp; task_id_cols = [:location])
     d2 = DataFrame(ft2)
     @test all(d2.output_type .=== :sample)
     @test Set(unique(d2.model_id)) == Set(["m1", "m2"])

@@ -85,7 +85,7 @@ The kernel is dispatched on the table's `output_type`:
 | `:cdf`        | Pointwise weighted average of CDFs.                                           |
 | `:quantile`   | Reconstruct each model's CDF (PCHIP + normal tails), invert the mixture CDF exactly. |
 
-The quantile path uses the [`Ensembles.QuantileDistribution`](@ref)
+The quantile path uses the [`ForecastEnsembles.QuantileDistribution`](@ref)
 helper. The interior interpolation is Fritsch–Carlson PCHIP (monotone,
 parameter-free); the tails are Normals fitted to the two outermost knots.
 This matches `distfromq`'s default `tail_dist = "norm"` qualitatively;

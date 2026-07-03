@@ -1,6 +1,6 @@
 name: R-CI
-# Tests the R wrapper (r-pkg/ensembles). Heavier than the Julia CI: it
-# stands up the JuliaConnectoR bridge, which precompiles the Ensembles.jl
+# Tests the R wrapper (r-pkg/ForecastEnsembles). Heavier than the Julia CI: it
+# stands up the JuliaConnectoR bridge, which precompiles the ForecastEnsembles.jl
 # bridge project (HiGHS, JuMP, Optim) on the first run. The Julia depot is
 # cached, so subsequent runs are fast. Coupled to the Julia source because
 # the R tests exercise it through the bridge.
@@ -35,16 +35,16 @@ jobs:
         with:
           # juliaready comes from DESCRIPTION Remotes (public repo).
           extra-packages: any::testthat, any::devtools
-          working-directory: r-pkg/ensembles
+          working-directory: r-pkg/ForecastEnsembles
 
       - name: Instantiate the Julia bridge
-        # Devs the repo-root Ensembles.jl into the bundled bridge project
+        # Devs the repo-root ForecastEnsembles.jl into the bundled bridge project
         # (unregistered, so it must come from source) and precompiles it.
         # julia_ready() in the R package runs with install = FALSE, so the
         # depot must be warm before the tests call into it. This step also
         # populates the cache saved by julia-actions/cache.
         run: |
-          julia --project=r-pkg/ensembles/inst/julia -e '
+          julia --project=r-pkg/ForecastEnsembles/inst/julia -e '
             using Pkg
             Pkg.develop(path = pwd())
             Pkg.instantiate()
@@ -52,8 +52,8 @@ jobs:
 
       - name: Run testthat
         # devtools::test() runs against the source tree; the test helper sets
-        # options(ensembles.jl_path = <repo root>), which julia_setup() now
+        # options(ForecastEnsembles.jl_path = <repo root>), which julia_setup() now
         # reads by default, so the bridge finds the checked-out source.
-        working-directory: r-pkg/ensembles
+        working-directory: r-pkg/ForecastEnsembles
         run: |
           Rscript -e 'devtools::test(stop_on_failure = TRUE)'

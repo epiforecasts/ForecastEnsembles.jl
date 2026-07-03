@@ -170,7 +170,7 @@ end
     train_df = in_df[in_df.target_date .!= target_date, :]
     test_df = in_df[in_df.target_date .== target_date, :]
 
-    train_ft = Ensembles.from_scoringutils(
+    train_ft = ForecastEnsembles.from_scoringutils(
         rename(train_df, :predicted => :predicted, :model => :model),
         task_id_cols = [:location, :horizon, :target_date],
     )
@@ -201,7 +201,7 @@ end
     end
 
     # Compare predicted values on the holdout target.
-    test_ft = Ensembles.from_scoringutils(
+    test_ft = ForecastEnsembles.from_scoringutils(
         test_df,
         task_id_cols = [:location, :horizon, :target_date],
     )

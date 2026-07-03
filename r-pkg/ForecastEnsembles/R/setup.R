@@ -1,7 +1,7 @@
 #' Initialise the Julia bridge
 #'
 #' Activates the bundled `inst/julia/` project (which pins the exact
-#' versions of Ensembles.jl, DataFrames.jl, etc. that this package was
+#' versions of ForecastEnsembles.jl, DataFrames.jl, etc. that this package was
 #' tested against), starts the JuliaConnectoR server with that project
 #' active, and loads the bridge helper functions. Subsequent calls are
 #' no-ops.
@@ -12,18 +12,18 @@
 #' @param julia_bindir Path to the directory containing the `julia`
 #'   executable. If supplied, sets `JULIACONNECTOR_JULIABIN` so the
 #'   bundled JuliaConnectoR uses that binary.
-#' @param ensembles_jl_path Optional path to a checkout of Ensembles.jl.
+#' @param ensembles_jl_path Optional path to a checkout of ForecastEnsembles.jl.
 #'   When supplied, the bundled project is reconfigured to develop that
 #'   source instead of the version pinned in the manifest. Defaults to
-#'   `getOption("ensembles.jl_path")`, so a session-wide
-#'   `options(ensembles.jl_path = "...")` (e.g. set by the test helper or
+#'   `getOption("ForecastEnsembles.jl_path")`, so a session-wide
+#'   `options(ForecastEnsembles.jl_path = "...")` (e.g. set by the test helper or
 #'   in CI) is picked up automatically.
 #'
 #' @section Startup time:
 #' Two distinct delays, easy to conflate:
 #' \itemize{
 #'   \item The very first use on a machine instantiates and precompiles the
-#'     bundled Julia project (LP solver, optimiser, Ensembles.jl). This can
+#'     bundled Julia project (LP solver, optimiser, ForecastEnsembles.jl). This can
 #'     take a few minutes and then stays cached in the Julia depot.
 #'   \item Every fresh R session pays a Julia startup of roughly 10--15
 #'     seconds on the first call to any function in this package. Later
@@ -40,12 +40,12 @@
 #' # the env or PATH.
 #' julia_setup()
 #'
-#' # Develop a local checkout of Ensembles.jl into the bundled project.
-#' julia_setup(ensembles_jl_path = "~/code/ensembles.jl")
+#' # Develop a local checkout of ForecastEnsembles.jl into the bundled project.
+#' julia_setup(ensembles_jl_path = "~/code/ForecastEnsembles.jl")
 #' }
 #' @export
 julia_setup <- function(julia_bindir = NULL,
-                        ensembles_jl_path = getOption("ensembles.jl_path")) {
+                        ensembles_jl_path = getOption("ForecastEnsembles.jl_path")) {
   if (isTRUE(.pkg_env$ready)) return(invisible(NULL))
 
   if (!is.null(julia_bindir)) {
@@ -56,7 +56,7 @@ julia_setup <- function(julia_bindir = NULL,
 
   bridge <- .resolve_bridge()
 
-  # If a development checkout of Ensembles.jl was supplied, dev it into
+  # If a development checkout of ForecastEnsembles.jl was supplied, dev it into
   # the bundled project before instantiation.
   if (!is.null(ensembles_jl_path)) {
     abs <- normalizePath(ensembles_jl_path, mustWork = TRUE)
@@ -69,7 +69,7 @@ julia_setup <- function(julia_bindir = NULL,
   }
 
   juliaready::julia_ready(
-    packages  = c("Ensembles", "DataFrames"),
+    packages  = c("ForecastEnsembles", "DataFrames"),
     state_env = .pkg_env,
     project   = bridge,
     install   = FALSE,
@@ -106,11 +106,11 @@ end
 function _ens_simple(df_in, task_id_cols::Vector, agg::String, weights_in)
     df = _ens_to_symbol!(DataFrame(df_in))
     cols = Symbol.(task_id_cols)
-    ft = Ensembles.ForecastTable(df; task_id_cols = cols)
+    ft = ForecastEnsembles.ForecastTable(df; task_id_cols = cols)
     method = if weights_in === nothing
-        Ensembles.QuantileEnsemble(Symbol(agg))
+        ForecastEnsembles.QuantileEnsemble(Symbol(agg))
     else
-        Ensembles.QuantileEnsemble(Symbol(agg); weights = DataFrame(weights_in))
+        ForecastEnsembles.QuantileEnsemble(Symbol(agg); weights = DataFrame(weights_in))
     end
     _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
 end
@@ -119,11 +119,11 @@ function _ens_linear_pool(df_in, task_id_cols::Vector, n_samples::Int, weights_i
                           seed)
     df = _ens_to_symbol!(DataFrame(df_in))
     cols = Symbol.(task_id_cols)
-    ft = Ensembles.ForecastTable(df; task_id_cols = cols)
+    ft = ForecastEnsembles.ForecastTable(df; task_id_cols = cols)
     method = if weights_in === nothing
-        Ensembles.LinearPool(; n_samples = n_samples)
+        ForecastEnsembles.LinearPool(; n_samples = n_samples)
     else
-        Ensembles.LinearPool(; n_samples = n_samples, weights = DataFrame(weights_in))
+        ForecastEnsembles.LinearPool(; n_samples = n_samples, weights = DataFrame(weights_in))
     end
     rng = seed === nothing ? Random.default_rng() :
                               Random.MersenneTwister(Int(seed))
@@ -138,9 +138,9 @@ function _ens_qra(train_in, target_in, obs_in, task_id_cols::Vector,
     train_df  = _ens_to_symbol!(DataFrame(train_in))
     target_df = _ens_to_symbol!(DataFrame(target_in))
     obs_df    = DataFrame(obs_in)
-    train_ft  = Ensembles.ForecastTable(train_df;  task_id_cols = cols)
-    target_ft = Ensembles.ForecastTable(target_df; task_id_cols = cols)
-    method = Ensembles.QRA(;
+    train_ft  = ForecastEnsembles.ForecastTable(train_df;  task_id_cols = cols)
+    target_ft = ForecastEnsembles.ForecastTable(target_df; task_id_cols = cols)
+    method = ForecastEnsembles.QRA(;
         per_quantile_weights = per_quantile_weights,
         intercept = intercept,
         enforce_normalisation = enforce_normalisation,
@@ -149,7 +149,7 @@ function _ens_qra(train_in, target_in, obs_in, task_id_cols::Vector,
     )
     fitted = fit(method, train_ft, obs_df)
     pred = _ens_pack(_ens_to_string!(DataFrame(combine(target_ft, fitted))))
-    w = Ensembles.weights(fitted)
+    w = ForecastEnsembles.weights(fitted)
     (pred = pred,
      weights = w === nothing ? nothing : _ens_pack(DataFrame(w)))
 end
@@ -157,11 +157,11 @@ end
 function _ens_crps(train_in, obs_in, task_id_cols::Vector, dirichlet_alpha::Float64,
                    lambda, time_col, task_weights_in)
     cols = Symbol.(task_id_cols)
-    train_ft = Ensembles.ForecastTable(_ens_to_symbol!(DataFrame(train_in));
+    train_ft = ForecastEnsembles.ForecastTable(_ens_to_symbol!(DataFrame(train_in));
                                         task_id_cols = cols)
     obs_df   = DataFrame(obs_in)
     lam = lambda isa AbstractString ? Symbol(lambda) : lambda
-    method = Ensembles.CRPSStacking(;
+    method = ForecastEnsembles.CRPSStacking(;
         dirichlet_alpha = dirichlet_alpha,
         lambda = lam,
         time_col = time_col === nothing ? nothing : Symbol(time_col),

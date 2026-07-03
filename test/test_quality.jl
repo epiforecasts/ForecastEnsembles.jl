@@ -5,9 +5,9 @@ using JuliaFormatter
     # Ambiguities from dependencies are noisy and not our concern; the rest
     # of the Aqua battery (stale deps, compat bounds, undefined exports,
     # project consistency, piracy) runs.
-    Aqua.test_all(Ensembles; ambiguities = false)
+    Aqua.test_all(ForecastEnsembles; ambiguities = false)
 end
 
 @testset "Code formatting (JuliaFormatter)" begin
-    @test JuliaFormatter.format(pkgdir(Ensembles); overwrite = false)
+    @test JuliaFormatter.format(pkgdir(ForecastEnsembles); overwrite = false)
 end

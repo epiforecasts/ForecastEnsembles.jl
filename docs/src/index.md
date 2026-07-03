@@ -1,9 +1,9 @@
-# Ensembles.jl
+# ForecastEnsembles.jl
 
 A Julia package for combining probabilistic forecasts from several component
 models.
 
-`Ensembles.jl` computes weighted or unweighted ensembles of forecasts
+`ForecastEnsembles.jl` computes weighted or unweighted ensembles of forecasts
 expressed as quantiles, samples, CDFs, or summary statistics. Weights can be
 supplied by the user, fixed (equal weighting), or estimated from past
 forecast performance via quantile regression averaging or CRPS-stacking.
@@ -22,16 +22,16 @@ representation, two verbs (`fit`, `combine`), and two ensemble types
 
 ## Installation
 
-`Ensembles.jl` is not yet registered. Add it from a checkout:
+`ForecastEnsembles.jl` is not yet registered. Add it from a checkout:
 
 ```julia
-] add https://github.com/sbfnk/ensembles.jl
+] add https://github.com/sbfnk/ForecastEnsembles.jl
 ```
 
 ## Quick start
 
 ```julia
-using Ensembles, DataFrames
+using ForecastEnsembles, DataFrames
 
 df = DataFrame(
     location       = "A",

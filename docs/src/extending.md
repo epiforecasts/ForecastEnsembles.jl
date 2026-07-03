@@ -1,6 +1,6 @@
 # Extending: adding your own ensemble or weight estimator
 
-Everything in `Ensembles.jl` hangs off a small contract. To plug in a new
+Everything in `ForecastEnsembles.jl` hangs off a small contract. To plug in a new
 ensemble operation or a new way of estimating weights, you implement (a
 subset of) the same handful of methods.
 
@@ -68,7 +68,7 @@ function combine(ft::ForecastTable, m::FittedMyMethod; rng = default_rng())
 end
 ```
 
-`fit` is `StatsBase.fit`, imported by `Ensembles`. Adding a method is
+`fit` is `StatsBase.fit`, imported by `ForecastEnsembles`. Adding a method is
 non-piracy because at least one argument is your own type.
 
 ### Optional: enable composition with `weights`

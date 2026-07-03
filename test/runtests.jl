@@ -1,8 +1,8 @@
 using Test
-using Ensembles
+using ForecastEnsembles
 using DataFrames
 
-@testset "Ensembles.jl" begin
+@testset "ForecastEnsembles.jl" begin
     include("test_quality.jl")
     include("test_forecast_table.jl")
     include("test_quantile_ensemble.jl")

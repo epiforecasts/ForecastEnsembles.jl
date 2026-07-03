@@ -55,9 +55,9 @@ Three reasonable paths, in increasing order of effort:
 - *Sibling package, depending on PostForecasts.jl + ours.* Implements
   quantile-input recalibrators (IDR, BLP, empirical PIT mapping) by
   composing PostForecasts.jl's machinery where applicable and adding
-  what's missing. Avoids putting recalibration into Ensembles.jl
+  what's missing. Avoids putting recalibration into ForecastEnsembles.jl
   itself.
-- *Implement directly in Ensembles.jl.* IDR specifically has a clean
+- *Implement directly in ForecastEnsembles.jl.* IDR specifically has a clean
   reference implementation in
   [isodisreg](https://github.com/AlexanderHenzi/isodisreg) (R) that
   could be ported. Faster start, but duplicates code that already

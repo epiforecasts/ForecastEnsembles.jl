@@ -5,7 +5,7 @@ using Statistics: mean
 @testset "QuantileDistribution edge cases" begin
     # Two quantile pairs is the minimum valid input; previously crashed with
     # BoundsError in the PCHIP endpoint formulae.
-    qd = Ensembles.QuantileDistribution([0.25, 0.75], [1.0, 3.0])
+    qd = ForecastEnsembles.QuantileDistribution([0.25, 0.75], [1.0, 3.0])
     @test quantile(qd, 0.25) ≈ 1.0
     @test quantile(qd, 0.75) ≈ 3.0
     @test quantile(qd, 0.25) < quantile(qd, 0.5) < quantile(qd, 0.75)
@@ -15,7 +15,7 @@ using Statistics: mean
 
     # Duplicate probabilities previously passed `issorted` and produced NaN
     # slopes silently.
-    @test_throws ArgumentError Ensembles.QuantileDistribution(
+    @test_throws ArgumentError ForecastEnsembles.QuantileDistribution(
         [0.1, 0.1, 0.5],
         [1.0, 1.0, 2.0],
     )
@@ -144,12 +144,12 @@ end
         w = rand(rng, M)
         w ./= sum(w)
         N = rand(rng, 1:5000)
-        ks = Ensembles._ints_summing_to(rng, w, N)
+        ks = ForecastEnsembles._ints_summing_to(rng, w, N)
         @test sum(ks) == N
         @test all(>=(0), ks)
     end
     # Degenerate: single model takes everything.
-    @test Ensembles._ints_summing_to(rng, [1.0], 100) == [100]
+    @test ForecastEnsembles._ints_summing_to(rng, [1.0], 100) == [100]
 end
 
 @testset "CRPSStacking guards" begin
@@ -291,7 +291,7 @@ end
     train_df = in_df[in_df.target_date .!= target_date, :]
     test_df = in_df[in_df.target_date .== target_date, :]
 
-    train_ft = Ensembles.from_scoringutils(
+    train_ft = ForecastEnsembles.from_scoringutils(
         train_df,
         task_id_cols = [:location, :horizon, :target_date],
     )
@@ -318,7 +318,7 @@ end
         end
     end
 
-    test_ft = Ensembles.from_scoringutils(
+    test_ft = ForecastEnsembles.from_scoringutils(
         test_df,
         task_id_cols = [:location, :horizon, :target_date],
     )

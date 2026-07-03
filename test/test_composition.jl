@@ -31,7 +31,7 @@ using Distributions: Normal, quantile
     # weights() round-trips
     w = weights(fitted_crps)
     @test w isa EnsembleWeights
-    @test !Ensembles.is_per_quantile(w)
+    @test !ForecastEnsembles.is_per_quantile(w)
     w_df = DataFrame(w)
     @test sort(propertynames(w_df)) == [:model_id, :weight]
     @test sum(w_df.weight) ≈ 1.0 atol = 1e-8
@@ -80,7 +80,7 @@ using Distributions: Normal, quantile
     )
     w_q = weights(fitted_q_ok)
     @test w_q isa EnsembleWeights
-    @test !Ensembles.is_per_quantile(w_q)
+    @test !ForecastEnsembles.is_per_quantile(w_q)
     @test sum(DataFrame(w_q).weight) ≈ 1.0 atol = 1e-6
 
     # Per-quantile weights → long-format DataFrame; LinearPool dispatches
@@ -92,7 +92,7 @@ using Distributions: Normal, quantile
     )
     w_pq = weights(fitted_q_pq)
     @test w_pq isa EnsembleWeights
-    @test Ensembles.is_per_quantile(w_pq)
+    @test ForecastEnsembles.is_per_quantile(w_pq)
     w_pq_df = DataFrame(w_pq)
     @test sort(propertynames(w_pq_df)) == [:model_id, :output_type_id, :weight]
     for τ in unique(w_pq_df.output_type_id)

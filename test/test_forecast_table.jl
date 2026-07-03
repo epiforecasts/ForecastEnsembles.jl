@@ -8,13 +8,13 @@
     )
 
     ft = ForecastTable(df; task_id_cols = [:location])
-    @test Ensembles.task_id_cols(ft) == [:location]
-    @test Ensembles.model_ids(ft) == ["m1", "m2"]
-    @test Ensembles.output_type(ft) === :quantile
+    @test ForecastEnsembles.task_id_cols(ft) == [:location]
+    @test ForecastEnsembles.model_ids(ft) == ["m1", "m2"]
+    @test ForecastEnsembles.output_type(ft) === :quantile
 
     # task_id_cols inferred when omitted
     ft2 = ForecastTable(df)
-    @test Ensembles.task_id_cols(ft2) == [:location]
+    @test ForecastEnsembles.task_id_cols(ft2) == [:location]
 
     # missing required column
     bad = select(df, Not(:value))
@@ -37,5 +37,5 @@
         ),
     )
     ft3 = ForecastTable(mixed; task_id_cols = [:location])
-    @test_throws ArgumentError Ensembles.output_type(ft3)
+    @test_throws ArgumentError ForecastEnsembles.output_type(ft3)
 end

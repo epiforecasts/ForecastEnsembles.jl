@@ -1,20 +1,20 @@
 using Documenter
-using Ensembles
+using ForecastEnsembles
 using DataFrames    # `fit(::QRA, ::ForecastTable, ::AbstractDataFrame)` etc.
 
 DocMeta.setdocmeta!(
-    Ensembles,
+    ForecastEnsembles,
     :DocTestSetup,
-    :(using Ensembles, DataFrames);
+    :(using ForecastEnsembles, DataFrames);
     recursive = true,
 )
 
 makedocs(;
-    modules = [Ensembles],
+    modules = [ForecastEnsembles],
     authors = "Sebastian Funk",
-    sitename = "Ensembles.jl",
+    sitename = "ForecastEnsembles.jl",
     format = Documenter.HTML(;
-        canonical = "https://sbfnk.github.io/ensembles.jl",
+        canonical = "https://sbfnk.github.io/ForecastEnsembles.jl",
         edit_link = "main",
     ),
     pages = [
@@ -28,4 +28,4 @@ makedocs(;
     warnonly = [:missing_docs, :cross_references],
 )
 
-deploydocs(; repo = "github.com/sbfnk/ensembles.jl", devbranch = "main")
+deploydocs(; repo = "github.com/sbfnk/ForecastEnsembles.jl", devbranch = "main")

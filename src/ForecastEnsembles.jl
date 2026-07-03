@@ -1,4 +1,4 @@
-module Ensembles
+module ForecastEnsembles
 
 using DataFrames
 using LinearAlgebra: dot

@@ -1,9 +1,9 @@
-# ensembles 0.1.0
+# ForecastEnsembles 0.1.0
 
 Initial release. Mirrors the user-facing API of `hubEnsembles`
 (`simple_ensemble()`, `linear_pool()`), `qrensemble` (`qra()`), and
 `lopensemble` (`crps_weights()`, `mixture_from_samples()`), delegating
-the numerics to the Julia package Ensembles.jl over a JuliaConnectoR
+the numerics to the Julia package ForecastEnsembles.jl over a JuliaConnectoR
 bridge.
 
 Differences from the packages it mirrors:

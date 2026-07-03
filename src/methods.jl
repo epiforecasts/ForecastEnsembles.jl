@@ -229,7 +229,7 @@ function CRPSStacking(;
     return CRPSStacking(Float64(dirichlet_alpha), lambda, time_col, task_weights)
 end
 
-# `fit` is `StatsBase.fit` (imported in src/Ensembles.jl). Method
+# `fit` is `StatsBase.fit` (imported in src/ForecastEnsembles.jl). Method
 # definitions live with each TrainedMethod (see src/qra.jl,
 # src/crps_stacking.jl).
 

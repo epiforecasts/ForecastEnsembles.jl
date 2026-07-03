@@ -10,3 +10,6 @@ docs/site/
 
 # Internal design notes / unsent drafts — kept local, not published
 /design/
+
+# pkgdown build output for the R wrapper (regenerate with pkgdown::build_site)
+r-pkg/ForecastEnsembles/docs/
