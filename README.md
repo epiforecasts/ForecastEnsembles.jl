@@ -1,10 +1,15 @@
 # Ensembles.jl
 
 <!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/sbfnk/ensembles.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sbfnk/ensembles.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <!-- badges: end -->
+
+> **Experimental.** The API is still moving and the underlying forecast
+> data types are under active redesign. Pin a specific commit if you
+> depend on it.
 
 A Julia package for combining probabilistic forecasts from several component
 models.

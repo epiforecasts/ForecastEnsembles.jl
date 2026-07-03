@@ -1,6 +1,7 @@
 # ensembles (R)
 
 <!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CI](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/sbfnk/ensembles.jl/actions/workflows/R-CI.yml)
 <!-- badges: end -->
 
