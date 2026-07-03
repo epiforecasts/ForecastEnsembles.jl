@@ -54,7 +54,7 @@ combine(test_ft, fitted)
 ```
 
 The [Worked example](example.md) runs every method on a real hubverse flu
-hospitalisation slice that ships with the package.
+hospitalisation slice bundled with the package.
 
 ## Why this package?
 

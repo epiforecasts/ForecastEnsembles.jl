@@ -38,15 +38,12 @@ forecast goes in, a calibrated forecast comes out, both before scoring.
 We'd want a `Recalibrator` abstract type with `fit(m, training_forecasts,
 observations)` and `recalibrate(ft, fitted)` verbs.
 
-The state of recalibration in Julia today is awkward.
 [PostForecasts.jl](https://lipiecki.github.io/PostForecasts.jl/stable/)
-ships five methods (`Normal`, `CP`, `IDR`, `QR`, `LassoQR`) but they all
-take *point forecasts* as input and produce quantile forecasts. The
-`train`/`predict` flow is point → distributional, not distributional →
-distributional. For our use case (recalibrating an ensemble's quantile
-output) there is no off-the-shelf solution: collapsing to the median
-before recalibration throws away the distributional information we just
-spent the package combining.
+implements five methods (`Normal`, `CP`, `IDR`, `QR`, `LassoQR`), but
+they all take point forecasts as input and return quantile forecasts —
+point in, distribution out. Recalibrating an ensemble's quantile output
+is the other direction, and collapsing that ensemble to its median first
+throws away the distribution we just built.
 
 Three reasonable paths, in increasing order of effort:
 
