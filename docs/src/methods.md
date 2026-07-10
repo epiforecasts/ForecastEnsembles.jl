@@ -9,66 +9,36 @@ format frame with required columns `model_id`, `output_type`,
   `TrainedMethod` and returns a fitted counterpart, which is itself an
   `UnfittedMethod` and can then go through `combine`.
 
-Two ensemble methods cover all the operations:
+Combining forecasts has two independent axes, and the methods here map onto
+them:
 
-| Method              | Operation                                              |
-|---------------------|--------------------------------------------------------|
-| `QuantileEnsemble`  | Per-τ aggregation of quantile values (Vincentization for `:mean`, "median ensemble" for `:median`). |
-| `MixtureEnsemble`   | Mixture of distributions: F = Σᵢ wᵢ Fᵢ. Dispatched on output type. |
+1. **How the members are combined** — the aggregation operation
+   (`QuantileEnsemble`, `MixtureEnsemble`).
+2. **How the weights are chosen** — equal, user-supplied, or estimated by
+   optimising a score on past forecasts (`QRA`, `CRPSStacking`).
 
-(`LinearPool` is kept as an alias for `MixtureEnsemble`.)
+`QRA` and `CRPSStacking` are not a third and fourth kind of ensemble; they
+are weight estimators that feed either operation. The two sections below
+follow the two axes.
 
-## QuantileEnsemble
+This package covers the *combine* step of a forecasting pipeline
+(produce → combine → recalibrate → score). Recalibrating the combined
+forecast is a separate stage on a single distribution rather than an
+aggregation across several, and is out of scope here (see the
+[Roadmap](roadmap.md)).
+
+## Combining forecasts
+
+Two operations, differing in what they average.
+
+### QuantileEnsemble
 
 At each task and quantile level τ, take a weighted aggregation of the
 per-model τ-quantile values. With `agg = :mean` this is Vincentization
 (weighted vertical pooling); with `agg = :median` it's the "median
 ensemble" the COVID-19 hub used as its default.
 
-Weights take any of three shapes:
-
-- `nothing`: equal weights.
-- per-model `EnsembleWeights` (`:model_id, :weight`): same weights at
-  every τ.
-- per-quantile `EnsembleWeights` (`:model_id, :output_type_id, :weight`):
-  different weights per τ.
-
-Per-τ weights typically come from a per-quantile QRA fit; per-model
-weights from a CRPS-stacking fit or a joint QRA fit. Either plugs in.
-
-## Choosing between QuantileEnsemble and MixtureEnsemble
-
-The two operations produce genuinely different predictive distributions,
-and the difference matters in practice:
-
-- The mixture (linear opinion pool) averages CDFs. When the component
-  models disagree about location, the mixture spreads mass across all
-  their modes, and — a well-known result — is *underdispersed relative to
-  what calibration requires*: if each component is individually
-  calibrated, the linear pool is overconfident in the tails (Gneiting &
-  Ranjan 2013 introduced the beta-transformed pool precisely to correct
-  this).
-- Vincentization (`QuantileEnsemble(:mean)`) averages quantile functions.
-  Its implied CDF is the inverse of the averaged quantile functions,
-  which is sharper than the mixture when components disagree.
-  Lichtendahl, Grushka-Cockayne & Winkler (2013, *Management Science*)
-  show that the equally weighted quantile average outperforms the equally
-  weighted linear pool when the components are individually calibrated —
-  a setting close to a typical forecast hub.
-- The median ensemble (`QuantileEnsemble(:median)`) takes the per-τ
-  median of model quantile values. It is robust to a few extreme models —
-  the reason the COVID-19 Forecast Hub adopted it after outlier
-  submissions distorted the mean — but its implied distribution can
-  behave oddly when components are multimodal. Prefer it when robustness
-  to bad submissions matters more than efficiency.
-
-As a rule of thumb for hub-style quantile submissions: start with
-`QuantileEnsemble(:mean)` (or `:median` when robustness is a concern),
-and reach for `MixtureEnsemble` when you specifically want the mixture
-semantics, e.g. when the models represent genuinely distinct scenarios
-whose multimodality should survive into the ensemble.
-
-## MixtureEnsemble
+### MixtureEnsemble
 
 The ensemble distribution is a (weighted) mixture of the per-model
 distributions:
@@ -99,52 +69,83 @@ reconstructed distributions and re-extracts empirical quantiles; the
 sampling approach carries Monte Carlo noise that grows in the tails,
 which is exactly where hubs ask for τ = 0.01 and 0.99.
 
-Mixture pooling is inherently a per-model operation. Per-quantile weights
-are not meaningful for a mixture; `MixtureEnsemble` rejects them at
-construction.
+### Choosing between them
 
-## QRA
+The two operations produce different predictive distributions,
+and the difference matters in practice:
 
-Quantile Regression Averaging. Mirrors `qrensemble::qra`.
+- The mixture (linear opinion pool) averages CDFs. When the component
+  models disagree about location, the mixture spreads mass across all
+  their modes, and — a well-known result — is *underdispersed relative to
+  what calibration requires*: if each component is individually
+  calibrated, the linear pool is overconfident in the tails (Gneiting &
+  Ranjan 2013 introduced the beta-transformed pool precisely to correct
+  this).
+- Vincentization (`QuantileEnsemble(:mean)`) averages quantile functions.
+  Its implied CDF is the inverse of the averaged quantile functions,
+  which is sharper than the mixture when components disagree.
+  Lichtendahl, Grushka-Cockayne & Winkler (2013, *Management Science*)
+  show that the equally weighted quantile average outperforms the equally
+  weighted linear pool when the components are individually calibrated —
+  a setting close to a typical forecast hub.
+- The median ensemble (`QuantileEnsemble(:median)`) takes the per-τ
+  median of model quantile values. It is robust to a few extreme models —
+  the reason the COVID-19 Forecast Hub adopted it after outlier
+  submissions distorted the mean — but its implied distribution can
+  behave oddly when components are multimodal. Prefer it when robustness
+  to bad submissions matters more than efficiency.
 
-For each task group (and each quantile level if `per_quantile_weights = true`),
-solve
+As a rule of thumb for hub-style quantile submissions: start with
+`QuantileEnsemble(:mean)` (or `:median` when robustness is a concern),
+and reach for `MixtureEnsemble` when you specifically want the mixture
+semantics, e.g. when the models represent distinct scenarios
+whose multimodality should survive into the ensemble.
 
-```math
-\min_{\beta_0, \beta} \sum_i \rho_\tau\!\left(y_i - \beta_0 - \sum_m \beta_m\, x_{i,m,\tau}\right)
+## Choosing the weights
+
+Both operations combine the members through a set of weights. Whichever
+way they are obtained, the combined forecast is a linear rule over the
+members — a weighted quantile at level τ, or a weighted mixture — and the
+weights sit somewhere on a spectrum of how constrained that rule is:
+
+- **equal** — the default, no fitting;
+- **simplex weights** — non-negative, summing to one: a convex
+  combination of the members;
+- **+ intercept** — affine, adding a bias correction;
+- **unconstrained** — free or negative coefficients: a full regression on
+  the members that can extrapolate outside their range.
+
+The convex (simplex) point is the one the `weights` accessor exposes, for
+two reasons no looser fit shares. Its coefficients are *portable*: a
+per-model weight means the same thing whether you mix the distributions or
+average the quantiles. And they are *interpretable* as shares of belief,
+so the ensemble stays inside the members' convex hull. Off the simplex,
+the coefficients are tied to the specific regression that estimated them
+and no longer transfer.
+
+### Fixed and user-supplied weights
+
+Pass `nothing` for equal weights, or an [`EnsembleWeights`](@ref) frame
+(`:model_id, :weight`, optionally `:output_type_id` for per-τ weights):
+
+```julia
+w = EnsembleWeights(DataFrame(model_id = ["m1", "m2"], weight = [0.7, 0.3]))
+combine(ft, QuantileEnsemble(:mean; weights = w))
+combine(ft, MixtureEnsemble(; weights = w))
 ```
 
-where ``\rho_\tau`` is the τ-tilted absolute loss. Optional constraints:
+### Stacking: score-optimised weights
 
-- `enforce_normalisation`: ``\beta_m \ge 0`` and ``\sum_m \beta_m = 1``.
-- `noncross` (only with `per_quantile_weights = true`): for every
-  training point, the predicted quantiles at consecutive τ levels are
-  non-decreasing.
+Stacking chooses the weights to minimise a proper score of the *combined*
+forecast against past observations. Two instances, differing in the score
+and the forecast representation they consume.
 
-Two caveats worth knowing:
-
-- *Non-crossing is enforced at training points only* (the standard LP
-  formulation, same as `qrensemble`). At new points the fitted
-  hyperplanes can cross — unless the fit is simplex-constrained, in which
-  case predictions are convex combinations of the component quantiles and
-  inherit their monotonicity. `combine` checks the output and warns if
-  any task's quantiles cross.
-- *Joint QRA with the simplex constraint and no intercept is WIS-optimal
-  weight estimation for Vincentization.* The weighted interval score is
-  proportional to the mean pinball loss across the submitted quantile
-  levels, so minimising the summed τ-tilted losses with one shared weight
-  vector is the same optimisation. If you came looking for "WIS
-  stacking", this configuration is it.
-
-The LP runs in HiGHS via JuMP, with the solver's termination status
-checked (degenerate problems raise rather than returning NaN). With the
-same configuration as `qrensemble::qra`'s default, fitted weights and
-predictions agree with the R package to about 1e-3.
-
-## CRPSStacking
+#### CRPSStacking
 
 CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`,
-including its time weighting.
+including its time weighting. Always estimates simplex weights (a softmax
+parameterisation keeps them non-negative and summing to one), so the fit
+is always a portable per-model weight vector.
 
 For sample-based forecasts, the per-task CRPS for a mixture
 ``F = \sum_i w_i F_i`` has a closed-form unbiased estimator from the
@@ -200,17 +201,64 @@ fixtures. The residual difference reflects Stan's log-simplex
 parameterisation versus our softmax — the two behave differently near
 the simplex boundary.
 
-## Composition: weights from anywhere
+#### QRA
 
-Composition between trained and untrained methods runs through one
-accessor:
+Quantile Regression Averaging. Mirrors `qrensemble::qra`. QRA fits the
+linear rule directly, and its constructor flags set where on the
+constraint spectrum the fit lands.
+
+For each task group (and each quantile level if `per_quantile_weights = true`),
+solve
+
+```math
+\min_{\beta_0, \beta} \sum_i \rho_\tau\!\left(y_i - \beta_0 - \sum_m \beta_m\, x_{i,m,\tau}\right)
+```
+
+where ``\rho_\tau`` is the τ-tilted absolute loss. The LP runs in HiGHS
+via JuMP, with the solver's termination status checked (degenerate
+problems raise rather than returning NaN). With the same configuration as
+`qrensemble::qra`'s default, fitted weights and predictions agree with
+the R package to about 1e-3.
+
+**As a weighting scheme.** With `enforce_normalisation = true` and
+`intercept = false`, the coefficients are constrained to the simplex
+(``\beta_m \ge 0``, ``\sum_m \beta_m = 1``, ``\beta_0 = 0``). This is
+stacking too: the τ-tilted loss summed over the submitted levels is
+proportional to the Weighted Interval Score, so a single shared,
+simplex-constrained weight vector *is* WIS-optimal weight estimation. If
+you came looking for "WIS stacking", this configuration is it. The fit is
+then a portable weight vector — per-model for a joint fit, per-τ for
+`per_quantile_weights = true` — and flows through `weights` into either
+combination operation.
+
+`noncross` (only with `per_quantile_weights = true`) adds monotonicity
+constraints so predicted quantiles are non-decreasing in τ *at the
+training points*. This is the standard LP formulation, same as
+`qrensemble`. At new points the fitted hyperplanes can still cross —
+unless the fit is simplex-constrained, in which case predictions are
+convex combinations of the component quantiles and inherit their
+monotonicity. `combine` checks the output and warns if any task's
+quantiles cross.
+
+**As a regression combiner.** Relax the constraints — add an intercept,
+drop `enforce_normalisation` — and the same LP becomes an affine or
+unconstrained quantile regression on the members. This buys bias
+correction and extrapolation beyond the members' range, but the
+coefficients are no longer a convex combination: they are specific to
+this regression and do not transfer to a mixture, so `weights` returns
+`nothing`. You still apply the fit with `combine(ft, fitted)`, which
+evaluates the fitted regression to produce predicted quantiles directly.
+
+### Composition through `weights`
+
+The two axes meet at one accessor:
 
 ```julia
 weights(m) -> Union{EnsembleWeights, Nothing}
 ```
 
-When `weights(m)` returns an `EnsembleWeights`, you can pass the fitted
-method itself wherever a weights argument is accepted:
+When `weights(m)` returns an `EnsembleWeights`, pass the fitted method
+itself wherever a weights argument is accepted:
 
 ```julia
 fitted = fit(CRPSStacking(), train_samples, observations)
@@ -221,20 +269,19 @@ QuantileEnsemble(:mean; weights = fitted)
 
 Two shapes appear:
 
-- *Per-model* (`:model_id, :weight`): single weight vector that applies at
-  every quantile level. Always returned for `FittedCRPSStacking`.
-  Returned for `FittedQRA` when the fit is joint, simplex-constrained,
+- *Per-model* (`:model_id, :weight`): a single weight vector applied at
+  every quantile level. Always returned for `FittedCRPSStacking`;
+  returned for `FittedQRA` when the fit is joint, simplex-constrained,
   and has no intercept. Accepted by both `MixtureEnsemble` and
   `QuantileEnsemble`.
 - *Per-quantile* (`:model_id, :output_type_id, :weight`): weights vary
-  across τ. Returned for `FittedQRA` when the fit is per-τ,
-  simplex-constrained, and has no intercept. Accepted by
-  `QuantileEnsemble` only; `MixtureEnsemble` rejects this shape because
-  mixtures are not naturally τ-indexed.
+  across τ. Returned for `FittedQRA` in the per-τ, simplex-constrained,
+  no-intercept case. Accepted by `QuantileEnsemble` only; `MixtureEnsemble`
+  rejects this shape because mixtures are not naturally τ-indexed.
 
-In other cases — fits with an intercept, unconstrained fits, fits across
-multiple task groups — `weights(m)` returns `nothing` because the fit
-does not reduce to a clean weight vector. Passing such a method to
-`MixtureEnsemble` or `QuantileEnsemble` raises at construction. You can
-still call `combine(ft, fitted)` directly, which applies the fitted
-regression coefficients to produce predicted quantiles.
+Off the simplex (fits with an intercept, unconstrained fits, or fits
+across multiple task groups), `weights(m)` returns `nothing`, and passing
+the method to `MixtureEnsemble` or `QuantileEnsemble` raises at
+construction. This is the portability point again: those coefficients are
+not reusable as weights, so `combine(ft, fitted)` is the way to apply
+them.

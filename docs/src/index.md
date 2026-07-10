@@ -66,22 +66,25 @@ operations live in separate packages with no shared interface, so even a
 trivial substitution like plugging an externally supplied weight vector
 into a Vincentization combination ends up needing manual glue.
 
-In Julia this collapses to a small dispatch surface:
+In Julia this separates into two axes — how the members are combined, and
+how the weights are chosen — over a small dispatch surface:
 
 ```julia
-combine(ft, m::QuantileEnsemble)              # per-τ aggregation
-combine(ft, m::MixtureEnsemble)               # routes on output_type
-fit(::QRA, training, observations)            # → FittedQRA
-combine(ft, ::FittedQRA)
-fit(::CRPSStacking, training, observations)   # → FittedCRPSStacking
-combine(ft, ::FittedCRPSStacking)
+# axis 1: the combination operation
+combine(ft, QuantileEnsemble(:mean))          # per-τ quantile average / median
+combine(ft, MixtureEnsemble())                # mixture; routes on output_type
+
+# axis 2: where the weights come from
+QuantileEnsemble(:mean; weights = w)          # equal, or a user EnsembleWeights
+fit(CRPSStacking(), train, obs)               # or stacked: CRPS (samples)
+fit(QRA(enforce_normalisation = true), train, obs)   # or WIS (quantiles)
 ```
 
-Trained and untrained methods compose through `weights(m)`, which returns
-an `EnsembleWeights` whenever the fit reduces to a per-model or per-τ
-weight vector. Pass any fitted method straight into `MixtureEnsemble` or
-`QuantileEnsemble` and the conversion happens automatically. See
-[Methods](methods.md) for the algorithmic story.
+`QRA` and `CRPSStacking` are weight estimators, not separate ensemble
+kinds: a fitted method composes through `weights(m)`, which returns an
+`EnsembleWeights` whenever the fit is a simplex weight vector, so you pass
+it straight into either operation and the conversion happens
+automatically. See [Methods](methods.md) for the two-axis story in full.
 
 The optimiser backends are also pluggable: QRA's LP swaps between HiGHS,
 GLPK, Gurobi or anything else with a JuMP wrapper in one line, and
@@ -90,7 +93,7 @@ CRPS-stacking goes through Optim.jl. `qrensemble` is pinned to GLPK via
 
 ## R interface
 
-A thin R wrapper at `r-pkg/ensembles/` mirrors the user-facing API of
+A thin R wrapper at `r-pkg/ForecastEnsembles/` mirrors the user-facing API of
 `hubEnsembles`, `qrensemble`, and `lopensemble`. Numerical work runs in
 Julia over a JuliaConnectoR bridge. The package's `pkgdown` site has the
 R-side docs.
