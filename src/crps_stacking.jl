@@ -1,4 +1,3 @@
-using Optim
 
 """
     FittedCRPSStacking(weights, models)

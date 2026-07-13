@@ -17,11 +17,6 @@
 # guaranteed by the Fritsch–Carlson construction when the input pairs are
 # strictly increasing.
 
-using Distributions: Normal
-import Distributions: cdf
-import Statistics: quantile
-using Random: AbstractRNG, default_rng
-
 """
     QuantileDistribution(probs, vals)
 

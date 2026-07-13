@@ -1,5 +1,3 @@
-using JuMP
-using HiGHS
 
 """
     FittedQRA(coefs, intercepts, models, levels, group_cols, per_quantile_weights)

@@ -1,5 +1,3 @@
-using Random: AbstractRNG, default_rng
-import Statistics: quantile
 
 """
     combine(ft::ForecastTable, m::MixtureEnsemble; rng = default_rng()) -> ForecastTable
