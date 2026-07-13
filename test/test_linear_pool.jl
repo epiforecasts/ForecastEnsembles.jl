@@ -9,7 +9,7 @@ using Statistics: mean, std, quantile
         output_type = "sample",
         output_type_id = vcat(1:200, 1:200),
         location = "A",
-        value = vcat(randn(rng, 200), randn(rng, 200) .+ 10.0),
+        value = vcat(randn(rng, 200), randn(rng, 200) .+ 10.0)
     )
     ft = ForecastTable(df; task_id_cols = [:location])
 
@@ -20,8 +20,7 @@ using Statistics: mean, std, quantile
 
     # 80/20 weights toward m1: pooled mean ≈ 2.0
     w = DataFrame(model_id = ["m1", "m2"], weight = [0.8, 0.2])
-    out_w =
-        combine(ft, LinearPool(; n_samples = 5000, weights = w); rng = MersenneTwister(1))
+    out_w = combine(ft, LinearPool(; n_samples = 5000, weights = w); rng = MersenneTwister(1))
     pooled_w = DataFrame(out_w).value
     @test mean(pooled_w) ≈ 2.0 atol = 0.5
 end
@@ -42,8 +41,8 @@ end
                 output_type = "quantile",
                 output_type_id = probs,
                 location = "A",
-                value = quantile.(Ref(dist), probs),
-            ),
+                value = quantile.(Ref(dist), probs)
+            )
         )
     end
     df = reduce(vcat, rows)
@@ -66,7 +65,7 @@ end
         output_type = "cdf",
         output_type_id = repeat([0.0, 1.0, 2.0], 2),
         location = "A",
-        value = [0.1, 0.5, 0.9, 0.3, 0.7, 0.95],
+        value = [0.1, 0.5, 0.9, 0.3, 0.7, 0.95]
     )
     ft = ForecastTable(df; task_id_cols = [:location])
 

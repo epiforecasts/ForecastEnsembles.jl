@@ -39,6 +39,7 @@ end
     # Two models over two locations, sample forecasts.
     rows = DataFrame[]
     for loc in ["A", "B"], (mid, sd) in (("good", 0.5), ("bad", 3.0))
+
         push!(
             rows,
             DataFrame(
@@ -46,8 +47,8 @@ end
                 output_type = "sample",
                 output_type_id = 1:100,
                 location = loc,
-                value = randn(rng, 100) .* sd,
-            ),
+                value = randn(rng, 100) .* sd
+            )
         )
     end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])

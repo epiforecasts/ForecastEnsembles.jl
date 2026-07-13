@@ -10,9 +10,9 @@ using Distributions: Normal, quantile
     rows = DataFrame[]
     for (mid, sampler) in (
         ("m_good", (y, rng) -> y .+ randn(rng, K)),
-        ("m_noisy", (y, rng) -> 5.0 .* randn(rng, K)),
+        ("m_noisy", (y, rng) -> 5.0 .* randn(rng, K))
     )
-        for t = 1:T
+        for t in 1:T
             push!(
                 rows,
                 DataFrame(
@@ -20,8 +20,8 @@ using Distributions: Normal, quantile
                     output_type = "sample",
                     output_type_id = 1:K,
                     t = t,
-                    value = sampler(obs.observed[t], rng),
-                ),
+                    value = sampler(obs.observed[t], rng)
+                )
             )
         end
     end
@@ -60,8 +60,8 @@ using Distributions: Normal, quantile
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -73,10 +73,10 @@ using Distributions: Normal, quantile
         QRA(;
             per_quantile_weights = false,
             enforce_normalisation = true,
-            intercept = false,
+            intercept = false
         ),
         qtrain,
-        qobs,
+        qobs
     )
     w_q = weights(fitted_q_ok)
     @test w_q isa EnsembleWeights
@@ -88,7 +88,7 @@ using Distributions: Normal, quantile
     fitted_q_pq = fit(
         QRA(; per_quantile_weights = true, enforce_normalisation = true, intercept = false),
         qtrain,
-        qobs,
+        qobs
     )
     w_pq = weights(fitted_q_pq)
     @test w_pq isa EnsembleWeights
@@ -107,7 +107,7 @@ using Distributions: Normal, quantile
     j = innerjoin(
         select(via_qra, :t, :output_type_id, :value),
         rename(select(via_qe, :t, :output_type_id, :value), :value => :v_qe);
-        on = [:t, :output_type_id],
+        on = [:t, :output_type_id]
     )
     @test maximum(abs.(j.value .- j.v_qe)) < 1e-10
 
@@ -119,7 +119,7 @@ using Distributions: Normal, quantile
     fitted_q_int = fit(
         QRA(; per_quantile_weights = false, enforce_normalisation = true, intercept = true),
         qtrain,
-        qobs,
+        qobs
     )
     @test weights(fitted_q_int) === nothing
 
@@ -128,10 +128,10 @@ using Distributions: Normal, quantile
         QRA(;
             per_quantile_weights = false,
             enforce_normalisation = false,
-            intercept = false,
+            intercept = false
         ),
         qtrain,
-        qobs,
+        qobs
     )
     @test weights(fitted_q_un) === nothing
 

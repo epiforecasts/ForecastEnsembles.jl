@@ -14,7 +14,7 @@ function from_scoringutils(df; task_id_cols = nothing)
         out,
         :model => :model_id,
         :quantile_level => :output_type_id,
-        :predicted => :value,
+        :predicted => :value
     )
     out.output_type = fill(:quantile, nrow(out))
     # observed is metadata for scoring, not part of the forecast — drop it
@@ -34,11 +34,11 @@ Convert a sample-shaped frame (one row per draw) to a `ForecastTable` with
 `lopensemble::mixture_from_samples`.
 """
 function from_samples(
-    df;
-    task_id_cols = nothing,
-    model_col::Symbol = :model,
-    sample_col::Symbol = :sample,
-    value_col::Symbol = :predicted,
+        df;
+        task_id_cols = nothing,
+        model_col::Symbol = :model,
+        sample_col::Symbol = :sample,
+        value_col::Symbol = :predicted
 )
     out = DataFrame(df)
     rename!(out, model_col => :model_id, sample_col => :output_type_id, value_col => :value)

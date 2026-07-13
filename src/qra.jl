@@ -11,8 +11,8 @@ sharing the same group share the same coefficients (and have the same key
 under a sentinel `:any` quantile_level).
 """
 struct FittedQRA <: UnfittedMethod
-    coefs::Dict{Tuple,Vector{Float64}}
-    intercepts::Dict{Tuple,Float64}
+    coefs::Dict{Tuple, Vector{Float64}}
+    intercepts::Dict{Tuple, Float64}
     models::Vector{String}
     levels::Vector{Float64}
     group_cols::Vector{Symbol}
@@ -53,23 +53,24 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
     levels = sort(unique(Float64.(df.output_type_id)))
 
     group_cols = m.group
-    coefs = Dict{Tuple,Vector{Float64}}()
-    intercepts = Dict{Tuple,Float64}()
+    coefs = Dict{Tuple, Vector{Float64}}()
+    intercepts = Dict{Tuple, Float64}()
 
     for group_df in DataFrames.groupby(df, isempty(group_cols) ? Symbol[] : group_cols)
-        gkey =
-            isempty(group_cols) ? () : NamedTuple(c => group_df[1, c] for c in group_cols)
+        gkey = isempty(group_cols) ? () :
+               NamedTuple(c => group_df[1, c] for c in group_cols)
 
         if m.per_quantile_weights
             if m.noncross
                 # Joint LP across τ with cross-τ monotonicity constraints.
-                βs, β0s = _per_quantile_regression_noncross(
+                βs,
+                β0s = _per_quantile_regression_noncross(
                     group_df,
                     models,
                     levels,
                     training.model_id_col;
                     intercept = m.intercept,
-                    simplex = m.enforce_normalisation,
+                    simplex = m.enforce_normalisation
                 )
                 for (k, τ) in enumerate(levels)
                     coefs[(gkey, τ)] = βs[k]
@@ -79,12 +80,13 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
                 for τ in levels
                     gτ = group_df[group_df.output_type_id .== τ, :]
                     X, y = _design_matrix(gτ, models, training.model_id_col)
-                    β, β0 = _quantile_regression(
+                    β,
+                    β0 = _quantile_regression(
                         X,
                         y,
                         τ;
                         intercept = m.intercept,
-                        simplex = m.enforce_normalisation,
+                        simplex = m.enforce_normalisation
                     )
                     coefs[(gkey, τ)] = β
                     intercepts[(gkey, τ)] = β0
@@ -92,13 +94,14 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
             end
         else
             # Joint fit: stack rows over τ levels with τ-tilted loss.
-            β, β0 = _joint_quantile_regression(
+            β,
+            β0 = _joint_quantile_regression(
                 group_df,
                 models,
                 levels,
                 training.model_id_col;
                 intercept = m.intercept,
-                simplex = m.enforce_normalisation,
+                simplex = m.enforce_normalisation
             )
             for τ in levels
                 coefs[(gkey, τ)] = β
@@ -115,7 +118,7 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
         group_cols,
         m.per_quantile_weights,
         m.enforce_normalisation,
-        m.intercept,
+        m.intercept
     )
 end
 
@@ -141,23 +144,23 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         unseen = setdiff(levels_present, m.levels)
         isempty(unseen) || throw(
             ArgumentError(
-                "FittedQRA was not trained on quantile levels $unseen " *
-                "(trained levels: $(m.levels)).",
-            ),
+            "FittedQRA was not trained on quantile levels $unseen " *
+            "(trained levels: $(m.levels)).",
+        ),
         )
         haskey(m.coefs, (gkey, first(levels_present))) || throw(
             ArgumentError(
-                "FittedQRA was not trained on group $gkey " *
-                "(group columns: $(m.group_cols)).",
-            ),
+            "FittedQRA was not trained on group $gkey " *
+            "(group columns: $(m.group_cols)).",
+        ),
         )
 
         models_present = unique(tg[!, ft.model_id_col])
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
             ArgumentError(
-                "FittedQRA models $missing_models are absent from the input table.",
-            ),
+            "FittedQRA models $missing_models are absent from the input table.",
+        ),
         )
 
         values = Float64[]
@@ -172,12 +175,11 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         # fitted with noncross = true). At new points, per-quantile fits
         # without the simplex constraint can produce crossing quantiles,
         # which hub validators typically reject.
-        issorted(values) || @warn(
-            "FittedQRA produced crossing quantiles for at least one task; " *
-            "consider per_quantile_weights = true with noncross = true, or " *
-            "post-process (e.g. sort) before submission.",
-            maxlog = 1,
-        )
+        issorted(values) ||
+            @warn("FittedQRA produced crossing quantiles for at least one task; " *
+                  "consider per_quantile_weights = true with noncross = true, or " *
+                  "post-process (e.g. sort) before submission.",
+                maxlog = 1,)
         out = DataFrame(tg[1:1, ft.task_id_cols])
         out = repeat(out, length(levels_present))
         out.output_type = fill(:quantile, length(levels_present))
@@ -191,7 +193,7 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
     return ForecastTable(
         res;
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 
@@ -271,13 +273,13 @@ end
 # is the long-format slice for one (group, τ) and contains the :value and
 # :observed columns.
 function _design_matrix(
-    df::AbstractDataFrame,
-    models::Vector{<:AbstractString},
-    model_id_col::Symbol,
+        df::AbstractDataFrame,
+        models::Vector{<:AbstractString},
+        model_id_col::Symbol
 )
     # Pivot so each (task) has all M model values on a single row.
-    other_cols =
-        setdiff(propertynames(df), [model_id_col, :output_type, :output_type_id, :value])
+    other_cols = setdiff(propertynames(df), [
+        model_id_col, :output_type, :output_type_id, :value])
     wide = unstack(df, other_cols, model_id_col, :value)
     # Ensure model columns are present in expected order; missing models →
     # zero columns (defensive — should not happen given construction).
@@ -291,11 +293,11 @@ end
 
 # Single-τ quantile regression LP.
 function _quantile_regression(
-    X::AbstractMatrix,
-    y::AbstractVector,
-    τ::Real;
-    intercept::Bool = true,
-    simplex::Bool = false,
+        X::AbstractMatrix,
+        y::AbstractVector,
+        τ::Real;
+        intercept::Bool = true,
+        simplex::Bool = false
 )
     n, M = size(X)
     model = Model(HiGHS.Optimizer)
@@ -311,12 +313,10 @@ function _quantile_regression(
     end
     @variable(model, u[1:n] >= 0)
     @variable(model, v[1:n] >= 0)
-    @constraint(
-        model,
+    @constraint(model,
         [i = 1:n],
-        y[i] - β0 - sum(X[i, j] * β[j] for j = 1:M) == u[i] - v[i]
-    )
-    @objective(model, Min, sum(τ * u[i] + (1 - τ) * v[i] for i = 1:n))
+        y[i] - β0 - sum(X[i, j] * β[j] for j in 1:M) == u[i] - v[i])
+    @objective(model, Min, sum(τ * u[i] + (1 - τ) * v[i] for i in 1:n))
     optimize!(model)
     _check_lp_solution(model, "single-τ")
     return value.(β), value(β0)
@@ -327,12 +327,12 @@ end
 # quantiles must be non-decreasing in τ. Returns (Vector{Vector{Float64}},
 # Vector{Float64}) keyed in the order of `levels`.
 function _per_quantile_regression_noncross(
-    group_df::AbstractDataFrame,
-    models::Vector{<:AbstractString},
-    levels::Vector{Float64},
-    model_id_col::Symbol;
-    intercept::Bool = true,
-    simplex::Bool = false,
+        group_df::AbstractDataFrame,
+        models::Vector{<:AbstractString},
+        levels::Vector{Float64},
+        model_id_col::Symbol;
+        intercept::Bool = true,
+        simplex::Bool = false
 )
     # Build aligned design matrices per τ. Assumes all τ share the same set
     # of training points (typical when forecasts are produced jointly).
@@ -366,11 +366,9 @@ function _per_quantile_regression_noncross(
     for (k, τ) in enumerate(levels)
         u = @variable(model, [1:n], lower_bound = 0.0)
         v = @variable(model, [1:n], lower_bound = 0.0)
-        for i = 1:n
-            @constraint(
-                model,
-                ys[k][i] - β0[k] - sum(Xs[k][i, j] * β[j, k] for j = 1:M) == u[i] - v[i]
-            )
+        for i in 1:n
+            @constraint(model,
+                ys[k][i] - β0[k] - sum(Xs[k][i, j] * β[j, k] for j in 1:M) == u[i] - v[i])
             add_to_expression!(obj, τ, u[i])
             add_to_expression!(obj, 1 - τ, v[i])
         end
@@ -378,13 +376,11 @@ function _per_quantile_regression_noncross(
 
     # Non-crossing: predicted quantile at τ_k ≤ predicted at τ_{k+1} for
     # every training point.
-    for k = 1:(K-1)
-        for i = 1:n
-            @constraint(
-                model,
-                β0[k] + sum(Xs[k][i, j] * β[j, k] for j = 1:M) <=
-                β0[k+1] + sum(Xs[k+1][i, j] * β[j, k+1] for j = 1:M)
-            )
+    for k in 1:(K - 1)
+        for i in 1:n
+            @constraint(model,
+                β0[k] + sum(Xs[k][i, j] * β[j, k] for j in 1:M) <=
+                β0[k + 1] + sum(Xs[k + 1][i, j] * β[j, k + 1] for j in 1:M))
         end
     end
 
@@ -392,7 +388,7 @@ function _per_quantile_regression_noncross(
     optimize!(model)
     _check_lp_solution(model, "noncross")
 
-    βs = [collect(value.(β[:, k])) for k = 1:K]
+    βs = [collect(value.(β[:, k])) for k in 1:K]
     β0s = collect(value.(β0))
     return βs, β0s
 end
@@ -402,12 +398,12 @@ end
 # rhs are the τ-specific quantile values. Mirrors qrensemble's
 # `per_quantile_weights = FALSE` mode.
 function _joint_quantile_regression(
-    group_df::AbstractDataFrame,
-    models::Vector{<:AbstractString},
-    levels::Vector{Float64},
-    model_id_col::Symbol;
-    intercept::Bool = true,
-    simplex::Bool = false,
+        group_df::AbstractDataFrame,
+        models::Vector{<:AbstractString},
+        levels::Vector{Float64},
+        model_id_col::Symbol;
+        intercept::Bool = true,
+        simplex::Bool = false
 )
     Xs = Matrix{Float64}[]
     ys = Vector{Float64}[]
@@ -438,11 +434,9 @@ function _joint_quantile_regression(
         n = size(Xs[k], 1)
         u = @variable(model, [1:n], lower_bound = 0.0)
         v = @variable(model, [1:n], lower_bound = 0.0)
-        for i = 1:n
-            @constraint(
-                model,
-                ys[k][i] - β0 - sum(Xs[k][i, j] * β[j] for j = 1:M) == u[i] - v[i]
-            )
+        for i in 1:n
+            @constraint(model,
+                ys[k][i] - β0 - sum(Xs[k][i, j] * β[j] for j in 1:M) == u[i] - v[i])
             add_to_expression!(obj, τ, u[i])
             add_to_expression!(obj, 1 - τ, v[i])
         end

@@ -8,7 +8,7 @@ function _regime_data(; T = 40, K = 80, seed = 17)
     rng = MersenneTwister(seed)
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
     rows = DataFrame[]
-    for t = 1:T
+    for t in 1:T
         y = obs.observed[t]
         good_a = t <= T ÷ 2
         for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
@@ -20,8 +20,8 @@ function _regime_data(; T = 40, K = 80, seed = 17)
                     output_type = "sample",
                     output_type_id = 1:K,
                     t = t,
-                    value = y .+ sd .* randn(rng, K),
-                ),
+                    value = y .+ sd .* randn(rng, K)
+                )
             )
         end
     end
@@ -60,14 +60,14 @@ end
 
     # Vector form: explicit per-time weights (one per unique t).
     T = length(unique(obs.t))
-    vec_w = [float(t > T ÷ 2) for t = 1:T]   # second half only
+    vec_w = [float(t > T ÷ 2) for t in 1:T]   # second half only
     late_only = fit(CRPSStacking(; lambda = vec_w, time_col = :t), train, obs)
     @test w_b(late_only) > 0.95
     # Wrong length raises.
     @test_throws ArgumentError fit(
         CRPSStacking(; lambda = ones(T + 1), time_col = :t),
         train,
-        obs,
+        obs
     )
 end
 
@@ -82,16 +82,16 @@ end
     @test w_u.weights.weight ≈ w_0.weights.weight atol = 1e-8
 
     # task_weights equivalent to the exponential lambda gives the same fit.
-    expo = DataFrame(t = 1:T, weight = [0.7^(T - t) for t = 1:T])
+    expo = DataFrame(t = 1:T, weight = [0.7^(T - t) for t in 1:T])
     w_e = fit(CRPSStacking(; task_weights = expo), train, obs)
     w_l = fit(CRPSStacking(; lambda = 0.7, time_col = :t), train, obs)
     @test w_e.weights.weight ≈ w_l.weights.weight atol = 1e-8
 
     # Missing a task raises.
     @test_throws ArgumentError fit(
-        CRPSStacking(; task_weights = uniform[1:(T-1), :]),
+        CRPSStacking(; task_weights = uniform[1:(T - 1), :]),
         train,
-        obs,
+        obs
     )
     # Negative weights rejected at construction.
     @test_throws ArgumentError CRPSStacking(;
@@ -111,12 +111,12 @@ end
             in_df,
             :model => :model_id,
             :sample_id => :output_type_id,
-            :predicted => :value,
+            :predicted => :value
         )
         in_df.output_type = fill(:sample, nrow(in_df))
         ft = ForecastTable(
             in_df[:, [:model_id, :output_type, :output_type_id, :date, :value]];
-            task_id_cols = [:date],
+            task_id_cols = [:date]
         )
         obs = unique(in_df[:, [:date, :observed]])
 

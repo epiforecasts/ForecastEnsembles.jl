@@ -32,9 +32,9 @@ end
 const REQUIRED_NON_TASK_COLS = (:output_type, :output_type_id, :value)
 
 function ForecastTable(
-    df::AbstractDataFrame;
-    task_id_cols::Union{Nothing,AbstractVector{Symbol}} = nothing,
-    model_id_col::Symbol = :model_id,
+        df::AbstractDataFrame;
+        task_id_cols::Union{Nothing, AbstractVector{Symbol}} = nothing,
+        model_id_col::Symbol = :model_id
 )
     df = DataFrame(df) # defensive copy / materialise
     _validate_columns!(df, model_id_col)
@@ -42,19 +42,19 @@ function ForecastTable(
     if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)
         throw(
             ArgumentError(
-                "ForecastTable :value column contains missing or NaN entries; " *
-                "filter or impute before constructing.",
-            ),
+            "ForecastTable :value column contains missing or NaN entries; " *
+            "filter or impute before constructing.",
+        ),
         )
     end
 
-    inferred_task =
-        setdiff(Symbol.(propertynames(df)), [model_id_col, REQUIRED_NON_TASK_COLS...])
+    inferred_task = setdiff(Symbol.(propertynames(df)), [
+        model_id_col, REQUIRED_NON_TASK_COLS...])
     chosen_task = task_id_cols === nothing ? inferred_task : Symbol.(task_id_cols)
     isempty(chosen_task) && throw(
         ArgumentError(
-            "ForecastTable needs at least one task-id column; none could be inferred.",
-        ),
+        "ForecastTable needs at least one task-id column; none could be inferred.",
+    ),
     )
     for c in chosen_task
         hasproperty(df, c) || throw(ArgumentError("task_id_col $c not present in data"))
@@ -97,8 +97,8 @@ function output_type(ft::ForecastTable)
     types = unique(ft.data.output_type)
     length(types) == 1 || throw(
         ArgumentError(
-            "ForecastTable contains mixed output_types $types; split before combining.",
-        ),
+        "ForecastTable contains mixed output_types $types; split before combining.",
+    ),
     )
     return types[1]
 end

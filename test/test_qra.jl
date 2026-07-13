@@ -23,8 +23,8 @@ using Distributions: Normal, quantile
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -66,8 +66,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -77,7 +77,7 @@ end
     fitted = fit(
         QRA(; per_quantile_weights = true, enforce_normalisation = true, intercept = false),
         train,
-        obs,
+        obs
     )
     # Different keys per τ.
     for τ in levels
@@ -106,8 +106,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -119,10 +119,10 @@ end
             per_quantile_weights = true,
             enforce_normalisation = true,
             intercept = false,
-            noncross = true,
+            noncross = true
         ),
         train,
-        obs,
+        obs
     )
     out = combine(train, fitted)
     d = DataFrame(out)

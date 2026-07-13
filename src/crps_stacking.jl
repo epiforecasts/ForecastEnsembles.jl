@@ -51,8 +51,8 @@ effective sample size of the weights.
 function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample || throw(
         ArgumentError(
-            "CRPSStacking expects sample forecasts; got $(output_type(training))",
-        ),
+        "CRPSStacking expects sample forecasts; got $(output_type(training))",
+    ),
     )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
@@ -77,14 +77,13 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
         B = zeros(M, M)
         samples_per_model = Vector{Vector{Float64}}(undef, M)
         for (i, mod) in enumerate(models)
-            samples_per_model[i] =
-                Float64.(tg[tg[!, training.model_id_col] .== mod, :value])
+            samples_per_model[i] = Float64.(tg[tg[!, training.model_id_col] .== mod, :value])
         end
-        for i = 1:M
+        for i in 1:M
             si = samples_per_model[i]
             isempty(si) && continue
             A[i] = mean(abs.(si .- y))
-            for j = i:M
+            for j in i:M
                 sj = samples_per_model[j]
                 isempty(sj) && continue
                 total = sum(abs.(si .- reshape(sj, 1, :)))
@@ -116,8 +115,8 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
     # The prior scales with the effective sample size (Σλ)²/Σλ², so
     # down-weighting history does not quietly strengthen the prior; with
     # equal weights T_eff = T and this reduces to the unweighted case.
-    Ā = sum(λ̃[t] .* a_list[t] for t = 1:T)
-    B̄ = sum(λ̃[t] .* b_list[t] for t = 1:T)
+    Ā = sum(λ̃[t] .* a_list[t] for t in 1:T)
+    B̄ = sum(λ̃[t] .* b_list[t] for t in 1:T)
     T_eff = sum(λ)^2 / sum(abs2, λ)
     prior_scale = (α - 1) / T_eff
 
@@ -143,7 +142,7 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
 
     # Multi-start: uniform weights plus one vertex-leaning start per model.
     starts = [zeros(M)]
-    for i = 1:M
+    for i in 1:M
         z = zeros(M)
         z[i] = 4.0
         push!(starts, z)
@@ -156,11 +155,9 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
             best_res = res
         end
     end
-    Optim.converged(best_res) || @warn(
-        "CRPSStacking: L-BFGS did not converge " *
-        "($(Optim.iterations(best_res)) iterations); weights are the best " *
-        "iterate found."
-    )
+    Optim.converged(best_res) || @warn("CRPSStacking: L-BFGS did not converge " *
+          "($(Optim.iterations(best_res)) iterations); weights are the best " *
+          "iterate found.")
 
     w_hat = _softmax(Optim.minimizer(best_res))
     crps_hat = Optim.minimum(best_res)
@@ -201,8 +198,8 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
         sort!(joined, :__row__)
         any(ismissing, joined.weight) && throw(
             ArgumentError(
-                "`task_weights` is missing a weight for at least one training task",
-            ),
+            "`task_weights` is missing a weight for at least one training task",
+        ),
         )
         return Float64.(joined.weight)
     end
@@ -211,28 +208,28 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
 
     m.time_col in join_cols || throw(
         ArgumentError(
-            "time_col $(m.time_col) is not one of the task-id columns $join_cols",
-        ),
+        "time_col $(m.time_col) is not one of the task-id columns $join_cols",
+    ),
     )
     tvals = tasks[!, m.time_col]
     ut = sort(unique(tvals))
     Tt = length(ut)
     per_time = if m.lambda isa Float64
-        [m.lambda^(Tt - i) for i = 1:Tt]
+        [m.lambda^(Tt - i) for i in 1:Tt]
     elseif m.lambda === :lopensemble
-        [2 - (1 - i / Tt)^2 for i = 1:Tt]
+        [2 - (1 - i / Tt)^2 for i in 1:Tt]
     elseif m.lambda === :equal
         ones(Tt)
     elseif m.lambda isa Vector{Float64}
         length(m.lambda) == Tt || throw(
             ArgumentError(
-                "`lambda` has length $(length(m.lambda)) but the training data " *
-                "has $Tt unique values of $(m.time_col)",
-            ),
+            "`lambda` has length $(length(m.lambda)) but the training data " *
+            "has $Tt unique values of $(m.time_col)",
+        ),
         )
         m.lambda
     else # Function of the normalised time rank
-        w = [Float64(m.lambda(i / Tt)) for i = 1:Tt]
+        w = [Float64(m.lambda(i / Tt)) for i in 1:Tt]
         all(>=(0), w) ||
             throw(ArgumentError("`lambda` function returned a negative weight"))
         w

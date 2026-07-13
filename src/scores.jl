@@ -51,7 +51,8 @@ function _crps_sample(samples::AbstractVector{<:Real}, y::Real)
     term1 = mean(abs.(samples .- y))
     n == 1 && return term1
     pair_sum = 0.0
-    @inbounds for i = 1:n, j = (i+1):n
+    @inbounds for i in 1:n, j in (i + 1):n
+
         pair_sum += abs(samples[i] - samples[j])
     end
     term2 = 2 * pair_sum / (n * (n - 1))
@@ -61,9 +62,9 @@ end
 # WIS of a quantile forecast: 2 × mean pinball loss over the levels.
 # Pinball ρ_τ(y, q) = (y − q)(τ − 1{y < q}) ≥ 0.
 function _wis_quantile(
-    levels::AbstractVector{<:Real},
-    values::AbstractVector{<:Real},
-    y::Real,
+        levels::AbstractVector{<:Real},
+        values::AbstractVector{<:Real},
+        y::Real
 )
     isempty(levels) && return NaN
     s = 0.0
@@ -94,9 +95,9 @@ plus an `:observed` column), one row per (model, task). Columns:
 (`CRPS` for samples, `WIS` for quantiles) and can be set explicitly.
 """
 function score(
-    ft::ForecastTable,
-    observations::AbstractDataFrame;
-    rule::ScoringRule = default_rule(output_type(ft)),
+        ft::ForecastTable,
+        observations::AbstractDataFrame;
+        rule::ScoringRule = default_rule(output_type(ft))
 )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
@@ -126,6 +127,6 @@ function mean_score(ft::ForecastTable, observations::AbstractDataFrame; kwargs..
     per = score(ft, observations; kwargs...)
     return DataFrames.combine(
         DataFrames.groupby(per, ft.model_id_col),
-        :score => mean => :score,
+        :score => mean => :score
     )
 end

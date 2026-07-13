@@ -52,7 +52,7 @@ function QuantileDistribution(probs::AbstractVector, vals::AbstractVector)
     inv_d = _pchip_slopes(v, p)
 
     lt = _fit_normal_tail(p[1], v[1], p[2], v[2])
-    rt = _fit_normal_tail(p[end-1], v[end-1], p[end], v[end])
+    rt = _fit_normal_tail(p[end - 1], v[end - 1], p[end], v[end])
 
     return QuantileDistribution(p, v, fwd_d, inv_d, lt, rt)
 end
@@ -97,36 +97,36 @@ function _pchip_slopes(x::AbstractVector, y::AbstractVector)
         d[1] = 3 * s[1]
     end
 
-    d[n] = ((2h[n-1] + h[n-2]) * s[n-1] - h[n-1] * s[n-2]) / (h[n-1] + h[n-2])
-    if sign(d[n]) != sign(s[n-1])
+    d[n] = ((2h[n - 1] + h[n - 2]) * s[n - 1] - h[n - 1] * s[n - 2]) / (h[n - 1] + h[n - 2])
+    if sign(d[n]) != sign(s[n - 1])
         d[n] = 0.0
-    elseif sign(s[n-1]) != sign(s[n-2]) && abs(d[n]) > abs(3 * s[n-1])
-        d[n] = 3 * s[n-1]
+    elseif sign(s[n - 1]) != sign(s[n - 2]) && abs(d[n]) > abs(3 * s[n - 1])
+        d[n] = 3 * s[n - 1]
     end
 
     # Interior: weighted harmonic-mean of neighbouring secants when they
     # share sign; zero otherwise.
-    for i = 2:(n-1)
-        if s[i-1] * s[i] <= 0
+    for i in 2:(n - 1)
+        if s[i - 1] * s[i] <= 0
             d[i] = 0.0
         else
-            w1 = 2h[i] + h[i-1]
-            w2 = h[i] + 2h[i-1]
-            d[i] = (w1 + w2) / (w1 / s[i-1] + w2 / s[i])
+            w1 = 2h[i] + h[i - 1]
+            w2 = h[i] + 2h[i - 1]
+            d[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i])
         end
     end
 
     # Final monotonicity pass (region-of-monotonicity test): rescale
     # so that (d_i / s_i)^2 + (d_{i+1} / s_i)^2 ≤ 9.
-    for i = 1:(n-1)
+    for i in 1:(n - 1)
         s[i] == 0 && continue
         α = d[i] / s[i]
-        β = d[i+1] / s[i]
+        β = d[i + 1] / s[i]
         r = α^2 + β^2
         if r > 9
             τ = 3 / sqrt(r)
             d[i] = τ * α * s[i]
-            d[i+1] = τ * β * s[i]
+            d[i + 1] = τ * β * s[i]
         end
     end
 
@@ -159,7 +159,7 @@ function quantile(d::QuantileDistribution, u::Real)
     else
         i = searchsortedlast(p, u)
         i == length(p) && return v[end]
-        return _hermite(p[i], p[i+1], v[i], v[i+1], d.fwd_d[i], d.fwd_d[i+1], u)
+        return _hermite(p[i], p[i + 1], v[i], v[i + 1], d.fwd_d[i], d.fwd_d[i + 1], u)
     end
 end
 
@@ -178,7 +178,7 @@ function cdf(d::QuantileDistribution, x::Real)
     else
         i = searchsortedlast(v, x)
         i == length(v) && return p[end]
-        return _hermite(v[i], v[i+1], p[i], p[i+1], d.inv_d[i], d.inv_d[i+1], x)
+        return _hermite(v[i], v[i + 1], p[i], p[i + 1], d.inv_d[i], d.inv_d[i + 1], x)
     end
 end
 
@@ -188,7 +188,7 @@ end
 Draw `n` samples from `d` by inverse-CDF sampling.
 """
 function Base.rand(rng::AbstractRNG, d::QuantileDistribution, n::Integer)
-    return [quantile(d, rand(rng)) for _ = 1:n]
+    return [quantile(d, rand(rng)) for _ in 1:n]
 end
 
 Base.rand(d::QuantileDistribution, n::Integer) = rand(default_rng(), d, n)

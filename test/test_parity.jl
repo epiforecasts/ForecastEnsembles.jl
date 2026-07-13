@@ -21,7 +21,7 @@ end
     ref = select(
         CSV.read(joinpath(REF, "simple_mean_output.csv"), DataFrame),
         on_cols...,
-        :value => :value_r,
+        :value => :value_r
     )
     j = innerjoin(out_df, ref; on = on_cols)
     @test nrow(j) == nrow(out_df) == nrow(ref)
@@ -32,7 +32,7 @@ end
     ref_med = select(
         CSV.read(joinpath(REF, "simple_median_output.csv"), DataFrame),
         on_cols...,
-        :value => :value_r,
+        :value => :value_r
     )
     j2 = innerjoin(out_med, ref_med; on = on_cols)
     @test maximum(abs.(j2.value .- j2.value_r)) < 1e-10
@@ -42,12 +42,12 @@ end
     out_w = select(
         DataFrame(combine(ft, QuantileEnsemble(:mean; weights = weights))),
         on_cols...,
-        :value,
+        :value
     )
     ref_w = select(
         CSV.read(joinpath(REF, "simple_wmean_output.csv"), DataFrame),
         on_cols...,
-        :value => :value_r,
+        :value => :value_r
     )
     j3 = innerjoin(out_w, ref_w; on = on_cols)
     @test maximum(abs.(j3.value .- j3.value_r)) < 1e-10
@@ -116,14 +116,14 @@ end
         :location,
         :horizon,
         :output_type_id,
-        :value,
+        :value
     )
     ref = select(
         CSV.read(joinpath(REF, "lp_quantile_output.csv"), DataFrame),
         :location,
         :horizon,
         :output_type_id,
-        :value => :value_r,
+        :value => :value_r
     )
     j = innerjoin(out_df, ref; on = [:location, :horizon, :output_type_id])
     # Our side inverts the mixture CDF exactly, so the only differences left
@@ -140,7 +140,7 @@ end
     in_df.output_type = fill(:sample, nrow(in_df))
     ft = ForecastTable(
         in_df[:, [:model_id, :output_type, :output_type_id, :date, :value]];
-        task_id_cols = [:date],
+        task_id_cols = [:date]
     )
     obs = unique(in_df[:, [:date, :observed]])
 
@@ -158,7 +158,7 @@ end
     # agrees to 2-3 decimal places.
     for r in eachrow(j)
         @info "crps weight" model=r.model_id julia=r.weight stan=r.weight_r diff=abs(
-            r.weight - r.weight_r,
+            r.weight-r.weight_r,
         )
         @test abs(r.weight - r.weight_r) < 0.05
     end
@@ -172,7 +172,7 @@ end
 
     train_ft = ForecastEnsembles.from_scoringutils(
         rename(train_df, :predicted => :predicted, :model => :model),
-        task_id_cols = [:location, :horizon, :target_date],
+        task_id_cols = [:location, :horizon, :target_date]
     )
     obs = unique(train_df[:, [:location, :horizon, :target_date, :observed]])
 
@@ -181,10 +181,10 @@ end
             per_quantile_weights = false,
             enforce_normalisation = true,
             intercept = false,
-            noncross = true,
+            noncross = true
         ),
         train_ft,
-        obs,
+        obs
     )
 
     # Compare weights against the R reference.
@@ -203,7 +203,7 @@ end
     # Compare predicted values on the holdout target.
     test_ft = ForecastEnsembles.from_scoringutils(
         test_df,
-        task_id_cols = [:location, :horizon, :target_date],
+        task_id_cols = [:location, :horizon, :target_date]
     )
     out = select(
         DataFrame(combine(test_ft, fitted)),
@@ -211,12 +211,12 @@ end
         :horizon,
         :target_date,
         :output_type_id,
-        :value,
+        :value
     )
     ref_pred = CSV.read(joinpath(REF, "qra_default_output.csv"), DataFrame)
     rename!(ref_pred, :predicted => :predicted_r, :quantile_level => :output_type_id)
-    ref_pred =
-        select(ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r)
+    ref_pred = select(
+        ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r)
     j = innerjoin(out, ref_pred; on = [:location, :horizon, :target_date, :output_type_id])
     @test maximum(abs.(j.value .- j.predicted_r)) < 1e-3
 end

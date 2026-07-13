@@ -21,10 +21,10 @@ end
 # ---------- :sample ---------------------------------------------------------
 
 function _linear_pool(
-    ft::ForecastTable,
-    ::Val{:sample},
-    m::MixtureEnsemble,
-    rng::AbstractRNG,
+        ft::ForecastTable,
+        ::Val{:sample},
+        m::MixtureEnsemble,
+        rng::AbstractRNG
 )
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
@@ -37,7 +37,7 @@ function _linear_pool(
         ws = [weights[mod] for mod in models]
         ws ./= sum(ws)
 
-        samples_per_model = Dict{eltype(models),Vector{Float64}}()
+        samples_per_model = Dict{eltype(models), Vector{Float64}}()
         for sub in DataFrames.groupby(tg, ft.model_id_col)
             samples_per_model[sub[1, ft.model_id_col]] = Float64.(sub.value)
         end
@@ -66,7 +66,7 @@ function _linear_pool(
     return ForecastTable(
         out;
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 
@@ -78,7 +78,7 @@ function _ints_summing_to(rng::AbstractRNG, weights::AbstractVector{<:Real}, N::
     base = floor.(Int, targets)
     frac = targets .- base
     remaining = N - sum(base)
-    for _ = 1:remaining
+    for _ in 1:remaining
         tot = sum(frac)
         if tot > 0
             # Sample without replacement proportionally to fractional parts.
@@ -115,24 +115,24 @@ function _linear_pool(ft::ForecastTable, ::Val{:cdf}, m::MixtureEnsemble, ::Abst
     df.weight = [weights[mod] for mod in df[!, ft.model_id_col]]
     out = DataFrames.combine(
         DataFrames.groupby(df, group_cols),
-        [:value, :weight] => ((v, w) -> sum(v .* w) / sum(w)) => :value,
+        [:value, :weight] => ((v, w) -> sum(v .* w) / sum(w)) => :value
     )
     out[!, ft.model_id_col] .= "hub-ensemble"
     select!(out, ft.model_id_col, :output_type, :output_type_id, ft.task_id_cols..., :value)
     return ForecastTable(
         out;
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 
 # ---------- :quantile -------------------------------------------------------
 
 function _linear_pool(
-    ft::ForecastTable,
-    ::Val{:quantile},
-    m::MixtureEnsemble,
-    ::AbstractRNG,
+        ft::ForecastTable,
+        ::Val{:quantile},
+        m::MixtureEnsemble,
+        ::AbstractRNG
 )
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
@@ -166,7 +166,7 @@ function _linear_pool(
     return ForecastTable(
         out;
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 
@@ -175,15 +175,15 @@ end
 # component CDF is ≤ τ so the mixture CDF is ≤ τ, and symmetrically at the
 # max. ~50 bisection steps reach machine precision on the bracket width.
 function _mixture_quantile(
-    dists::Vector{QuantileDistribution},
-    ws::AbstractVector{<:Real},
-    τ::Real,
+        dists::Vector{QuantileDistribution},
+        ws::AbstractVector{<:Real},
+        τ::Real
 )
     lo = minimum(quantile(d, τ) for d in dists)
     hi = maximum(quantile(d, τ) for d in dists)
     lo == hi && return lo
     mixture_cdf(x) = sum(w * cdf(d, x) for (w, d) in zip(ws, dists))
-    for _ = 1:200
+    for _ in 1:200
         mid = 0.5 * (lo + hi)
         if mixture_cdf(mid) < τ
             lo = mid
@@ -203,9 +203,9 @@ end
 # reach this helper. Validates that every model in `df` has a
 # weight.
 function _weights_vector(
-    weights::Union{Nothing,EnsembleWeights},
-    ft::ForecastTable,
-    df::AbstractDataFrame,
+        weights::Union{Nothing, EnsembleWeights},
+        ft::ForecastTable,
+        df::AbstractDataFrame
 )
     models = unique(df[!, ft.model_id_col])
     if weights === nothing
@@ -215,14 +215,13 @@ function _weights_vector(
     miss = setdiff(models, wdf.model_id)
     isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
     extra = setdiff(wdf.model_id, models)
-    isempty(extra) || @warn(
-        "weights provided for models not present in the data " *
-        "(possible typo in model_id): $extra",
-        maxlog = 1,
-    )
+    isempty(extra) || @warn("weights provided for models not present in the data " *
+          "(possible typo in model_id): $extra",
+        maxlog = 1,)
     return Dict(row.model_id => Float64(row.weight) for row in eachrow(wdf))
 end
 
 # Fallback for unsupported output types.
-_linear_pool(::ForecastTable, ::Val{T}, ::MixtureEnsemble, ::AbstractRNG) where {T} =
+function _linear_pool(::ForecastTable, ::Val{T}, ::MixtureEnsemble, ::AbstractRNG) where {T}
     throw(ArgumentError("MixtureEnsemble is not defined for output_type :$T"))
+end

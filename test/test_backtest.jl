@@ -8,7 +8,7 @@ function _bt_sample_data(; T = 30, K = 80, seed = 4)
     rng = MersenneTwister(seed)
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
     rows = DataFrame[]
-    for t = 1:T
+    for t in 1:T
         y = obs.observed[t]
         a_good = t <= T ÷ 2
         for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
@@ -20,8 +20,8 @@ function _bt_sample_data(; T = 30, K = 80, seed = 4)
                     output_type = "sample",
                     output_type_id = 1:K,
                     t = t,
-                    value = y .+ sd .* randn(rng, K),
-                ),
+                    value = y .+ sd .* randn(rng, K)
+                )
             )
         end
     end
@@ -43,11 +43,10 @@ end
     ft, obs = _bt_sample_data(T = 30)
     schemes = [
         "equal" => MixtureEnsemble(; n_samples = 1000),
-        "crps_recency" => CRPSStacking(; lambda = 0.6, time_col = :t),
+        "crps_recency" => CRPSStacking(; lambda = 0.6, time_col = :t)
     ]
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 6, rng = MersenneTwister(7))
-    agg =
-        DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
+    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
     recency = agg[agg.scheme .== "crps_recency", :mean_score][1]
     @test recency < equal
@@ -62,7 +61,8 @@ end
     rows = DataFrame[]
     for (mid, pred) in
         (("m_good", y .+ 0.3 .* randn(rng, T)), ("m_noisy", 2 .* randn(rng, T)))
-        for t = 1:T, τ in levels
+        for t in 1:T, τ in levels
+
             push!(
                 rows,
                 DataFrame(
@@ -70,8 +70,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = t,
-                    value = pred[t] + dquantile(Normal(0, 1), τ),
-                ),
+                    value = pred[t] + dquantile(Normal(0, 1), τ)
+                )
             )
         end
     end
@@ -80,11 +80,10 @@ end
 
     schemes = [
         "equal" => QuantileEnsemble(:mean),
-        "qra" => QRA(; enforce_normalisation = true, intercept = false),
+        "qra" => QRA(; enforce_normalisation = true, intercept = false)
     ]
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 8)
-    agg =
-        DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
+    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
     qra = agg[agg.scheme .== "qra", :mean_score][1]
     # QRA should learn to downweight the noisy model → better WIS.
@@ -98,13 +97,13 @@ end
         ft,
         obs,
         ["equal" => QuantileEnsemble(:mean)];
-        time_col = :nope,
+        time_col = :nope
     )
     @test_throws ArgumentError backtest(
         ft,
         obs,
         ["equal" => QuantileEnsemble(:mean)];
         time_col = :t,
-        min_train = 10,
+        min_train = 10
     )
 end
