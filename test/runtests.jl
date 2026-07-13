@@ -1,20 +1,14 @@
-using Test
-using ForecastEnsembles
-using DataFrames
+using TestItemRunner
 
-@testset "ForecastEnsembles.jl" begin
-    include("test_quality.jl")
-    include("test_forecast_table.jl")
-    include("test_quantile_ensemble.jl")
-    include("test_interop.jl")
-    include("test_distfromq.jl")
-    include("test_linear_pool.jl")
-    include("test_qra.jl")
-    include("test_crps_stacking.jl")
-    include("test_composition.jl")
-    include("test_review_fixes.jl")
-    include("test_recency.jl")
-    include("test_scores.jl")
-    include("test_backtest.jl")
-    include("test_parity.jl")
+# Every test is a `@testitem` discovered recursively under `test/`, including
+# the managed quality suite in `test/package/`. Tag-based filters let CI split
+# the fast package tests from the slower quality checks (JET, Aqua, doctests).
+if "skip_quality" in ARGS
+    @run_package_tests filter=ti -> !(:quality in ti.tags)
+elseif "quality_only" in ARGS
+    @run_package_tests filter=ti -> :quality in ti.tags
+elseif "readme_only" in ARGS
+    @run_package_tests filter=ti -> :readme in ti.tags
+else
+    @run_package_tests
 end

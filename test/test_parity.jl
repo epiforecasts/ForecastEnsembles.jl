@@ -1,16 +1,13 @@
-using CSV
-using DataFrames
-using Statistics: mean, quantile
-
-const REF = joinpath(@__DIR__, "reference")
-
-function _read_input(path)
-    df = CSV.read(joinpath(REF, path), DataFrame)
-    df.output_type = Symbol.(df.output_type)
-    return df
-end
-
-@testset "Parity — hubEnsembles::simple_ensemble" begin
+@testitem "Parity — hubEnsembles::simple_ensemble" begin
+    using CSV
+    using DataFrames
+    using Statistics: mean, quantile
+    const REF = joinpath(@__DIR__, "reference")
+    function _read_input(path)
+        df = CSV.read(joinpath(REF, path), DataFrame)
+        df.output_type = Symbol.(df.output_type)
+        return df
+    end
     in_df = _read_input("simple_input.csv")
     ft = ForecastTable(in_df; task_id_cols = [:location, :horizon])
 
@@ -53,7 +50,16 @@ end
     @test maximum(abs.(j3.value .- j3.value_r)) < 1e-10
 end
 
-@testset "Parity — hubEnsembles::linear_pool (sample)" begin
+@testitem "Parity — hubEnsembles::linear_pool (sample)" begin
+    using CSV
+    using DataFrames
+    using Statistics: mean, quantile
+    const REF = joinpath(@__DIR__, "reference")
+    function _read_input(path)
+        df = CSV.read(joinpath(REF, path), DataFrame)
+        df.output_type = Symbol.(df.output_type)
+        return df
+    end
     using Random: MersenneTwister
     using Distributions: Normal, pdf, quantile as dquantile
 
@@ -108,7 +114,16 @@ end
     end
 end
 
-@testset "Parity — hubEnsembles::linear_pool (quantile)" begin
+@testitem "Parity — hubEnsembles::linear_pool (quantile)" begin
+    using CSV
+    using DataFrames
+    using Statistics: mean, quantile
+    const REF = joinpath(@__DIR__, "reference")
+    function _read_input(path)
+        df = CSV.read(joinpath(REF, path), DataFrame)
+        df.output_type = Symbol.(df.output_type)
+        return df
+    end
     in_df = _read_input("lp_quantile_input.csv")
     ft = ForecastTable(in_df; task_id_cols = [:location, :horizon])
     out_df = select(
@@ -133,7 +148,16 @@ end
     @test maximum(abs.(j.value .- j.value_r)) < 0.05
 end
 
-@testset "Parity — lopensemble::crps_weights" begin
+@testitem "Parity — lopensemble::crps_weights" begin
+    using CSV
+    using DataFrames
+    using Statistics: mean, quantile
+    const REF = joinpath(@__DIR__, "reference")
+    function _read_input(path)
+        df = CSV.read(joinpath(REF, path), DataFrame)
+        df.output_type = Symbol.(df.output_type)
+        return df
+    end
     in_df = CSV.read(joinpath(REF, "crps_input.csv"), DataFrame)
     # `lopensemble` uses `model`, `sample_id`, `predicted`, `observed`, `date`.
     rename!(in_df, :model => :model_id, :sample_id => :output_type_id, :predicted => :value)
@@ -164,7 +188,16 @@ end
     end
 end
 
-@testset "Parity — qrensemble::qra (default)" begin
+@testitem "Parity — qrensemble::qra (default)" begin
+    using CSV
+    using DataFrames
+    using Statistics: mean, quantile
+    const REF = joinpath(@__DIR__, "reference")
+    function _read_input(path)
+        df = CSV.read(joinpath(REF, path), DataFrame)
+        df.output_type = Symbol.(df.output_type)
+        return df
+    end
     in_df = CSV.read(joinpath(REF, "qra_input.csv"), DataFrame)
     target_date = CSV.read(joinpath(REF, "qra_target.csv"), DataFrame)[1, :target_date]
     train_df = in_df[in_df.target_date .!= target_date, :]

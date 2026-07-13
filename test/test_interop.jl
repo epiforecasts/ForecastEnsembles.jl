@@ -1,4 +1,5 @@
-@testset "Interop converters" begin
+@testitem "Interop converters" begin
+    using DataFrames
     # scoringutils-shaped → ForecastTable
     su = DataFrame(
         model = ["m1", "m1", "m2", "m2"],

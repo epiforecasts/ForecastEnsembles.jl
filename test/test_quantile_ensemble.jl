@@ -1,4 +1,5 @@
-@testset "QuantileEnsemble" begin
+@testitem "QuantileEnsemble" begin
+    using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2", "m3"], inner = 2),
         output_type = "quantile",

@@ -1,34 +1,35 @@
-using Random: MersenneTwister
-using Statistics: mean
+@testitem "backtest — shape and columns" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
 
-# Non-stationary regime: model A is sharp in the first half of the time
-# window, model B in the second. A scheme that learns weights from recent
-# performance should beat equal weighting out of sample.
-function _bt_sample_data(; T = 30, K = 80, seed = 4)
-    rng = MersenneTwister(seed)
-    obs = DataFrame(t = 1:T, observed = randn(rng, T))
-    rows = DataFrame[]
-    for t in 1:T
-        y = obs.observed[t]
-        a_good = t <= T ÷ 2
-        for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
-            sd = sharp ? 0.4 : 3.0
-            push!(
-                rows,
-                DataFrame(
-                    model_id = mid,
-                    output_type = "sample",
-                    output_type_id = 1:K,
-                    t = t,
-                    value = y .+ sd .* randn(rng, K)
+    # Non-stationary regime: model A is sharp in the first half of the time
+    # window, model B in the second. A scheme that learns weights from recent
+    # performance should beat equal weighting out of sample.
+    function _bt_sample_data(; T = 30, K = 80, seed = 4)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            a_good = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
+                sd = sharp ? 0.4 : 3.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
                 )
-            )
+            end
         end
+        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
-    return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
-end
 
-@testset "backtest — shape and columns" begin
     ft, obs = _bt_sample_data(T = 10)
     schemes = Dict("equal" => MixtureEnsemble(; n_samples = 500), "crps" => CRPSStacking())
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 3, rng = MersenneTwister(1))
@@ -39,7 +40,38 @@ end
     @test all(isfinite, res.score)
 end
 
-@testset "backtest — recency-weighted CRPS beats equal out of sample" begin
+@testitem "backtest — recency-weighted CRPS beats equal out of sample" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
+
+    # Non-stationary regime: model A is sharp in the first half of the time
+    # window, model B in the second. A scheme that learns weights from recent
+    # performance should beat equal weighting out of sample.
+    function _bt_sample_data(; T = 30, K = 80, seed = 4)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            a_good = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
+                sd = sharp ? 0.4 : 3.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
+                )
+            end
+        end
+        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
+    end
+
     ft, obs = _bt_sample_data(T = 30)
     schemes = [
         "equal" => MixtureEnsemble(; n_samples = 1000),
@@ -52,7 +84,11 @@ end
     @test recency < equal
 end
 
-@testset "backtest — quantile schemes (QRA vs equal)" begin
+@testitem "backtest — quantile schemes (QRA vs equal)" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
+
     using Distributions: Normal, quantile as dquantile
     rng = MersenneTwister(11)
     T = 25
@@ -91,7 +127,38 @@ end
     @test all(res.score .>= 0)
 end
 
-@testset "backtest — guards" begin
+@testitem "backtest — guards" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
+
+    # Non-stationary regime: model A is sharp in the first half of the time
+    # window, model B in the second. A scheme that learns weights from recent
+    # performance should beat equal weighting out of sample.
+    function _bt_sample_data(; T = 30, K = 80, seed = 4)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            a_good = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
+                sd = sharp ? 0.4 : 3.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
+                )
+            end
+        end
+        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
+    end
+
     ft, obs = _bt_sample_data(T = 5)
     @test_throws ArgumentError backtest(
         ft,

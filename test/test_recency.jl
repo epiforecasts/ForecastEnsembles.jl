@@ -1,34 +1,35 @@
-using Random: MersenneTwister
-using Statistics: mean
+@testitem "CRPSStacking recency weighting" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
 
-# Regime-switch setup shared by the recency tests: model A is sharp in the
-# first half of the training window, model B in the second half. Equal
-# weighting sees a symmetric problem; recency weighting should favour B.
-function _regime_data(; T = 40, K = 80, seed = 17)
-    rng = MersenneTwister(seed)
-    obs = DataFrame(t = 1:T, observed = randn(rng, T))
-    rows = DataFrame[]
-    for t in 1:T
-        y = obs.observed[t]
-        good_a = t <= T ÷ 2
-        for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
-            sd = sharp ? 0.3 : 4.0
-            push!(
-                rows,
-                DataFrame(
-                    model_id = mid,
-                    output_type = "sample",
-                    output_type_id = 1:K,
-                    t = t,
-                    value = y .+ sd .* randn(rng, K)
+    # Regime-switch setup shared by the recency tests: model A is sharp in the
+    # first half of the training window, model B in the second half. Equal
+    # weighting sees a symmetric problem; recency weighting should favour B.
+    function _regime_data(; T = 40, K = 80, seed = 17)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            good_a = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
+                sd = sharp ? 0.3 : 4.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
                 )
-            )
+            end
         end
+        ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
-    ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
-end
 
-@testset "CRPSStacking recency weighting" begin
     train, obs = _regime_data()
 
     w_b(fitted) = fitted.weights[fitted.weights.model_id .== "m_b", :weight][1]
@@ -71,7 +72,38 @@ end
     )
 end
 
-@testset "CRPSStacking task_weights" begin
+@testitem "CRPSStacking task_weights" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
+
+    # Regime-switch setup shared by the recency tests: model A is sharp in the
+    # first half of the training window, model B in the second half. Equal
+    # weighting sees a symmetric problem; recency weighting should favour B.
+    function _regime_data(; T = 40, K = 80, seed = 17)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            good_a = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
+                sd = sharp ? 0.3 : 4.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
+                )
+            end
+        end
+        ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
+    end
+
     train, obs = _regime_data()
     T = length(unique(obs.t))
 
@@ -99,7 +131,38 @@ end
     )
 end
 
-@testset "Parity — lopensemble ramp" begin
+@testitem "Parity — lopensemble ramp" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
+
+    # Regime-switch setup shared by the recency tests: model A is sharp in the
+    # first half of the training window, model B in the second half. Equal
+    # weighting sees a symmetric problem; recency weighting should favour B.
+    function _regime_data(; T = 40, K = 80, seed = 17)
+        rng = MersenneTwister(seed)
+        obs = DataFrame(t = 1:T, observed = randn(rng, T))
+        rows = DataFrame[]
+        for t in 1:T
+            y = obs.observed[t]
+            good_a = t <= T ÷ 2
+            for (mid, sharp) in (("m_a", good_a), ("m_b", !good_a))
+                sd = sharp ? 0.3 : 4.0
+                push!(
+                    rows,
+                    DataFrame(
+                        model_id = mid,
+                        output_type = "sample",
+                        output_type_id = 1:K,
+                        t = t,
+                        value = y .+ sd .* randn(rng, K)
+                    )
+                )
+            end
+        end
+        ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
+    end
+
     using CSV
     ref_dir = joinpath(@__DIR__, "reference")
     ramp_path = joinpath(ref_dir, "crps_weights_ramp_output.csv")

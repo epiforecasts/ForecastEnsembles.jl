@@ -1,4 +1,6 @@
-@testset "ForecastTable" begin
+@testitem "ForecastTable" begin
+    using DataFrames
+
     df = DataFrame(
         model_id = ["m1", "m1", "m2", "m2"],
         output_type = ["quantile", "quantile", "quantile", "quantile"],

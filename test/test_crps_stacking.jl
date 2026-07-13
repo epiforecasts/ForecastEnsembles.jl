@@ -1,7 +1,8 @@
-using Random: MersenneTwister
-using Statistics: mean
+@testitem "CRPSStacking" begin
+    using Random: MersenneTwister
+    using Statistics: mean
+    using DataFrames
 
-@testset "CRPSStacking" begin
     rng = MersenneTwister(2026)
 
     # Setup: T tasks. For each task t, observed y_t ~ N(0, 1).

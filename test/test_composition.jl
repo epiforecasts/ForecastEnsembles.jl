@@ -1,7 +1,8 @@
-using Random: MersenneTwister
-using Distributions: Normal, quantile
+@testitem "weights() accessor + composition" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
 
-@testset "weights() accessor + composition" begin
     # ---- CRPSStacking → LinearPool ----------------------------------------
     rng = MersenneTwister(2026)
     T = 40;

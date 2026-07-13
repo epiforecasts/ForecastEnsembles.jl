@@ -1,8 +1,8 @@
-using Random: MersenneTwister
-using Distributions: Normal, cdf as dcdf, quantile as dquantile
-using Statistics: mean
-
-@testset "QuantileDistribution edge cases" begin
+@testitem "QuantileDistribution edge cases" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     # Two quantile pairs is the minimum valid input; previously crashed with
     # BoundsError in the PCHIP endpoint formulae.
     qd = ForecastEnsembles.QuantileDistribution([0.25, 0.75], [1.0, 3.0])
@@ -21,7 +21,11 @@ using Statistics: mean
     )
 end
 
-@testset "ForecastTable validation" begin
+@testitem "ForecastTable validation" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     df = DataFrame(
         model_id = ["m1", "m2"],
         output_type = "quantile",
@@ -44,7 +48,11 @@ end
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 end
 
-@testset "EnsembleWeights validation" begin
+@testitem "EnsembleWeights validation" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     @test_throws ArgumentError EnsembleWeights(
         DataFrame(model_id = ["m1", "m2"], weight = [1.5, -0.5]),
     )
@@ -53,7 +61,11 @@ end
     )
 end
 
-@testset "Extra weights warn" begin
+@testitem "Extra weights warn" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 2),
         output_type = "quantile",
@@ -66,7 +78,11 @@ end
     @test_logs (:warn,) match_mode = :any combine(ft, QuantileEnsemble(:mean; weights = w))
 end
 
-@testset "Single-model tables" begin
+@testitem "Single-model tables" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(5)
     qdf = DataFrame(
         model_id = "only",
@@ -94,7 +110,11 @@ end
     @test nrow(out_s) == 50
 end
 
-@testset "Exact mixture quantile inversion" begin
+@testitem "Exact mixture quantile inversion" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     # Equal mixture of N(0,1) and N(5,1). At x = 2.5 the two reconstructed
     # CDFs are evaluated in their (exact) Normal tails, so the mixture
     # median is exactly 2.5 — a property the old Monte Carlo path could only
@@ -137,7 +157,11 @@ end
     end
 end
 
-@testset "_ints_summing_to always sums to N" begin
+@testitem "_ints_summing_to always sums to N" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(7)
     for _ in 1:50
         M = rand(rng, 1:8)
@@ -152,7 +176,11 @@ end
     @test ForecastEnsembles._ints_summing_to(rng, [1.0], 100) == [100]
 end
 
-@testset "CRPSStacking guards" begin
+@testitem "CRPSStacking guards" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(11)
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 20),
@@ -189,7 +217,11 @@ end
     @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
 end
 
-@testset "FittedQRA combine guards" begin
+@testitem "FittedQRA combine guards" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(123)
     n = 60
     levels = [0.25, 0.5, 0.75]
@@ -241,7 +273,11 @@ end
     )
 end
 
-@testset "QRA noncross holds out of sample" begin
+@testitem "QRA noncross holds out of sample" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(31)
     n = 80
     levels = [0.1, 0.5, 0.9]
@@ -283,7 +319,11 @@ end
     end
 end
 
-@testset "Parity — qrensemble::qra (per-quantile, intercept)" begin
+@testitem "Parity — qrensemble::qra (per-quantile, intercept)" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     using CSV
     ref_dir = joinpath(@__DIR__, "reference")
     in_df = CSV.read(joinpath(ref_dir, "qra_input.csv"), DataFrame)

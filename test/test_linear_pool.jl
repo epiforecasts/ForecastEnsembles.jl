@@ -1,7 +1,7 @@
-using Random: MersenneTwister
-using Statistics: mean, std, quantile
-
-@testset "LinearPool — sample path" begin
+@testitem "LinearPool — sample path" begin
+    using Random: MersenneTwister
+    using Statistics: mean, std, quantile
+    using DataFrames
     rng = MersenneTwister(7)
     # Two models, very different sample distributions.
     df = DataFrame(
@@ -25,7 +25,10 @@ using Statistics: mean, std, quantile
     @test mean(pooled_w) ≈ 2.0 atol = 0.5
 end
 
-@testset "LinearPool — quantile path" begin
+@testitem "LinearPool — quantile path" begin
+    using Random: MersenneTwister
+    using Statistics: mean, std, quantile
+    using DataFrames
     using Distributions
     rng = MersenneTwister(11)
 
@@ -59,7 +62,10 @@ end
     @test d[d.output_type_id .== 0.95, :].value[1] > 4.0
 end
 
-@testset "LinearPool — cdf path" begin
+@testitem "LinearPool — cdf path" begin
+    using Random: MersenneTwister
+    using Statistics: mean, std, quantile
+    using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 3),
         output_type = "cdf",
