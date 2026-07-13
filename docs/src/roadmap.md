@@ -1,97 +1,147 @@
 # Roadmap
 
-Methods and features I'd like to add. Cross-references to the issues that
-prompted them are in parentheses.
+Planned work, organised around the two axes (combination operations and
+weighting schemes) plus the workflow and ecosystem pieces. Cross-references
+to the issues that prompted items are in parentheses.
 
-## Combination methods
+## The enabling seam: internal scoring
 
-- **Log-score stacking.** Mirror `CRPSStacking` but minimise mean negative
-  log predictive density. Standard for sample/density forecasts; not in
-  `lopensemble`.
-- **WIS-based optimisation.** For *Vincentized* (vertical) combination,
-  this already exists: WIS is proportional to the mean pinball loss
-  across the submitted levels, so joint QRA with the simplex constraint
-  and no intercept is exactly WIS-optimal weight estimation (see the
-  Methods page). What remains open is WIS-optimal weights for the
-  *mixture* (the harder, non-convex case mentioned in
-  [lopensemble#10](https://github.com/epiforecasts/lopensemble/issues/10)).
-- **Generic scoringutils-score stacking.** Same shape as the above two,
-  for any proper scoring rule available in `scoringutils`. Open question
-  whether it's worth doing in the general case (the simplex constraint
-  on weights complicates optimisation, see lopensemble#10).
-- **Trimmed-mean / trimmed-median ensemble.** Drop the top/bottom k% of
-  model values per (task, τ) before averaging. Used by several forecast
-  hubs to robustify against outlier models.
-- **Beta-transformed linear pool (BLP).** Gneiting & Ranjan's
-  recalibration of the mixture, designed to fix LOP underdispersion.
-  Drops in alongside `MixtureEnsemble`.
-- **Performance-based / inverse-skill weights.** Analytic weights from
-  past CRPS or log-score, no optimiser needed. Cheap, sometimes
-  competitive.
-- **Bayesian model averaging.** Posterior model probabilities as weights.
-  Niche but well-defined and asked for.
+Several items below need "the CRPS or WIS of a forecast". We already
+compute both internally — CRPS-from-samples in `CRPSStacking`, WIS/pinball
+in `QRA`. The first step is to factor these into a small interface,
+
+```julia
+score(forecast, obs, CRPS())    # samples
+score(forecast, obs, WIS())     # quantiles
+score(forecast, obs, Coverage())
+```
+
+so the workflow items can consume it now, and it becomes the delegation
+point to `ScoringRules.jl` (see Ecosystem) once that lands — at which
+point the in-house estimators are swapped for its versions and generic
+stacking generalises.
+
+## Weighting schemes (axis 2)
+
+The organising idea is **stacking with any target**: choose weights to
+minimise a proper score of the *combined* forecast on past observations.
+`CRPSStacking` (CRPS on samples) and constrained `QRA` (WIS on quantiles)
+are the two closed-form instances we already have; the general
+`Stacking{Score}` over an arbitrary score needs `ScoringRules.jl` and its
+optimisation is non-convex for some score/operation pairs (notably
+log-score on a mixture).
+
+Buildable now (reuse the scoring seam, no `ScoringRules.jl` dependency):
+
+- **Cheap baseline: inverse-score / softmax weights.** `wᵢ ∝ exp(−score of
+  member i)`. Analytic, no optimiser. A strong, fast default.
+- **Window training.** Trailing-window wrapper around any estimator; the
+  coarse cousin of the recency `lambda` already in `CRPSStacking`.
+- **Online / adaptive weighting.** Exponentiated-gradient / Hedge:
+  update weights from each round's per-member loss, with regret
+  guarantees, no full refit. Natural fit for a weekly operational cadence.
+- **Partial pooling / hierarchical weights.** Share weights across strata
+  (locations, age groups) with shrinkage, so a data-sparse stratum
+  borrows strength. Extends the `CRPSStacking` objective with a
+  cross-stratum shrinkage term. Genuinely novel for this space and matches
+  hub data shape.
+
+Needs `ScoringRules.jl`:
+
+- **Generic `Stacking{Score}`.** One stacker parameterised by any proper
+  score, with the CRPS and WIS specialisations dispatched underneath.
+  Subsumes the old "generic scoringutils-score stacking" item.
+- **Log-score stacking** and **BMA.** BMA is essentially log-score
+  stacking of a mixture fitted by EM, so it folds into the generic stacker
+  rather than standing alone.
+
+## Combination operations (axis 1)
+
+- **Log / geometric opinion pool.** `f_ens ∝ Πᵢ fᵢ^wᵢ` — multiply the
+  densities (product of experts), precision-weighting toward the sharpest
+  member. Distinct from Vincentization (which averages quantile functions)
+  and from convolution (the sum of independent variables); they coincide
+  only for an equal-spread location family. A real third operation, but
+  niche — lower priority.
+- **Trimmed / winsorised mean.** Drop the top/bottom k% of member values
+  per (task, τ) before averaging; robustness to outlier submissions. Sketch
+  already in [Extending](extending.md).
+- **Spread / dispersion adjustment.** A one-parameter widen/narrow of the
+  combined forecast to hit nominal coverage. Cheap, and often more
+  effective than heavier recalibration.
+- **Beta-transformed linear pool (BLP).** Gneiting & Ranjan's recalibrated
+  mixture; fixes LOP underdispersion. Sits between axis 1 and
+  recalibration (it maps the mixture CDF through a fitted Beta).
+
+## Workflow: choosing a scheme
+
+- **Backtesting / cross-validation harness.** Expanding-window or
+  leave-one-time-out, refit each scheme, compare out-of-sample scores.
+  This turns the package from a box of combiners into "here is how to pick
+  one on your data" — the biggest user-value gap, and buildable now on the
+  scoring seam. *Scoring* itself lives upstream (Ecosystem); the
+  *selection loop* is ensemble-specific and lives here.
+- **Weight & calibration diagnostics.** Effective number of models (weight
+  concentration), weight stability over time, PIT histograms of the
+  ensemble.
 
 ## Recalibration
 
-Recalibration sits downstream of `combine`: an ensemble (or single-model)
-forecast goes in, a calibrated forecast comes out, both before scoring.
-We'd want a `Recalibrator` abstract type with `fit(m, training_forecasts,
-observations)` and `recalibrate(ft, fitted)` verbs.
+A separate pipeline stage — it transforms a single predictive distribution
+rather than aggregating several — so it is out of scope for the core
+combine story, but planned. A `Recalibrator` abstract type with
+`fit(m, training_forecasts, observations)` and `recalibrate(ft, fitted)`.
 
 [PostForecasts.jl](https://lipiecki.github.io/PostForecasts.jl/stable/)
-implements five methods (`Normal`, `CP`, `IDR`, `QR`, `LassoQR`), but
-they all take point forecasts as input and return quantile forecasts —
-point in, distribution out. Recalibrating an ensemble's quantile output
-is the other direction, and collapsing that ensemble to its median first
-throws away the distribution we just built.
+implements five methods (`Normal`, `CP`, `IDR`, `QR`, `LassoQR`), but they
+all take point forecasts as input and return quantile forecasts — point
+in, distribution out. Recalibrating an ensemble's quantile output is the
+other direction, so there is no off-the-shelf fit; three paths, in
+increasing effort:
 
-Three reasonable paths, in increasing order of effort:
+- *Contribute to PostForecasts.jl* — its IDR could generalise to richer
+  input (Henzi/Ziegel/Gneiting's IDR is distributional regression on
+  arbitrary covariates, not point-only). A PR benefits everyone.
+- *Sibling package* over PostForecasts.jl + ours.
+- *Implement here* — IDR has a clean R reference in
+  [isodisreg](https://github.com/AlexanderHenzi/isodisreg).
 
-- *Contribute to PostForecasts.jl.* Their IDR implementation could
-  generalise to richer input — Henzi/Ziegel/Gneiting's IDR is in
-  principle distributional regression on arbitrary covariates, not
-  point-only. A PR extending the input type is a natural next step
-  for that package and would benefit everyone using it.
-- *Sibling package, depending on PostForecasts.jl + ours.* Implements
-  quantile-input recalibrators (IDR, BLP, empirical PIT mapping) by
-  composing PostForecasts.jl's machinery where applicable and adding
-  what's missing. Avoids putting recalibration into ForecastEnsembles.jl
-  itself.
-- *Implement directly in ForecastEnsembles.jl.* IDR specifically has a clean
-  reference implementation in
-  [isodisreg](https://github.com/AlexanderHenzi/isodisreg) (R) that
-  could be ported. Faster start, but duplicates code that already
-  exists elsewhere.
+Candidate methods: **IDR** (Henzi, Ziegel, Gneiting 2019,
+[arXiv:1909.03725](https://arxiv.org/abs/1909.03725)); **empirical PIT
+mapping** (simple enough to be the first `Recalibrator`, no upstream
+dependency); **CRPS-minimising parametric recalibration** (the
+`CRPSStacking` machinery applied one model at a time); **BLP**.
 
-Methods worth covering once one of those paths lands:
+## Ecosystem
 
-- **IDR** for quantile- or sample-input forecasts (Henzi, Ziegel,
-  Gneiting 2019, [arXiv:1909.03725](https://arxiv.org/abs/1909.03725)).
-- **Beta-transformed linear pool (BLP).** Already on the combination
-  list above; really a recalibration on top of the mixture (maps the
-  mixture CDF through a fitted Beta(a, b)). Cures LOP underdispersion.
-- **Empirical PIT mapping.** Map raw forecast quantiles through the
-  empirical PIT histogram of past forecasts. Crude but very general;
-  baseline for everything else. Simple enough (~50 lines) that it need
-  not wait for any upstream package — a good first `Recalibrator`.
-- **CRPS-minimising parametric recalibration.** Fit a parametric CDF
-  transform per model that minimises mean CRPS on training pairs. Same
-  optimisation machinery as `CRPSStacking`, applied to one model at a
-  time.
+- **ScoringRules.jl** — a Julia port of the R `scoringRules` (atomic
+  proper scoring rules dispatching on Distributions.jl), approved to be
+  built ([ProjectProposals#1](https://github.com/EpiAware/ProjectProposals/issues/1)).
+  It is the shared objective library for stacking *and* the evaluation
+  library for the ecosystem. Built neutral and transfer-portable, with
+  prominent attribution to the original authors (Jordan, Krüger & Lerch,
+  JSS 2019) and a clear statement that it is an LLM-assisted port.
+- **Shared forecast types** — an array-backed `Forecast`/`ForecastSet`
+  layer (`ProbabilisticForecasts.jl`) that ForecastBaselines.jl,
+  PostForecasts.jl, ForecastEnsembles.jl and the scoring stack all speak.
+  The real unifier; see `design/forecast-types.md`.
+- **Evaluation** — scoring lives in ScoringRules.jl /
+  ForecastScoring.jl ([#2](https://github.com/EpiAware/ProjectProposals/issues/2));
+  we consume it, we do not build it.
+- **A domain-agnostic forecasting org** — a possible neutral home grouping
+  ForecastBaselines.jl, ForecastEnsembles.jl, ScoringRules.jl and
+  potentially non-epi packages (PostForecasts.jl). Under discussion;
+  packages are built to be org-portable regardless.
 
 ## Infrastructure
 
-- **Tighter scoringutils integration.** Round-trip from
-  `scoringutils::forecast_quantile` and `forecast_sample` to
-  `ForecastTable` is already covered by `from_scoringutils`. Going the
-  other way for scoring is the missing half. lopensemble#17 references
-  this concern via tidymodels' `stacks`.
-- **Benchmarks vs the R packages.** A small `benchmark/` directory
-  comparing throughput on a realistic hubverse `model_out_tbl`. Until it
-  exists, the docs make no performance claims.
+- **hubverse directory IO** — read a `model-output/` tree and write a
+  valid submission directly.
+- **Benchmarks vs the R packages** — a small `benchmark/` on a realistic
+  hubverse `model_out_tbl`. Until it exists, the docs make no performance
+  claims.
 
 ## Out of scope (for now)
 
 - Decision-theoretic combination (utility-weighted ensembles).
-- Online / streaming weight updates.
 - A GUI.

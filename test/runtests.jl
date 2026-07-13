@@ -14,5 +14,7 @@ using DataFrames
     include("test_composition.jl")
     include("test_review_fixes.jl")
     include("test_recency.jl")
+    include("test_scores.jl")
+    include("test_backtest.jl")
     include("test_parity.jl")
 end

@@ -125,7 +125,7 @@ end
 Apply fitted QRA weights to a new set of forecasts. The output has
 `output_type = :quantile` and one row per (task, quantile_level).
 """
-function combine(ft::ForecastTable, m::FittedQRA)
+function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng())
     output_type(ft) === :quantile ||
         throw(ArgumentError("FittedQRA expects quantile forecasts; got $(output_type(ft))"))
 

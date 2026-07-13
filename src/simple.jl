@@ -8,7 +8,7 @@ within each (task, output_type, output_type_id) group, using `m.agg`
 Mirrors `hubEnsembles::simple_ensemble`. The output `model_id` is set to
 `"hub-ensemble"`, matching the R package default.
 """
-function combine(ft::ForecastTable, m::QuantileEnsemble)
+function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = default_rng())
     df = ft.data
     group_cols = vcat([:output_type, :output_type_id], ft.task_id_cols)
 
