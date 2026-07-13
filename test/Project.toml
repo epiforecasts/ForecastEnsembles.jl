@@ -1,0 +1,41 @@
+# PACKAGE-OWNED — scaffold writes this once and never overwrites it.
+# The test environment (no-AD variant: the package opted out of the AD harness,
+# so the AD deps are absent). Seeded with the deps the shared QA helpers need;
+# add the package's own test-only deps here. EpiAwarePackageTools supplies the
+# helpers; until it is registered, pin it via `[sources]` below.
+[deps]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+EpiAwarePackageTools = "7aaea248-0d11-4a0d-a7dc-86da30abb951"
+ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
+
+# Bounded compat for the seeded QA deps (mirrors CensoredDistributions.jl).
+# The package under test and EpiAwarePackageTools are pinned by `[sources]`, so
+# they carry no compat entry. Add a bound for each test-only dep you add.
+# This is the no-AD variant, so no AD-harness deps appear.
+[compat]
+Aqua = "0.8"
+BenchmarkTools = "1"
+Documenter = "1"
+ExplicitImports = "1"
+JET = "0.9, 0.10"
+JuliaFormatter = "2"
+Pkg = "1"
+Test = "1"
+TestItemRunner = "1"
+TestItems = "1"
+
+[sources]
+ForecastEnsembles = {path = ".."}
+# Until EpiAwarePackageTools is registered, it is pinned by git so
+# the env resolves out of the box. Switch to a local path to
+# develop the kit alongside this package.
+EpiAwarePackageTools = {url = "https://github.com/sbfnk/EpiAwarePackageTools.jl", rev = "main"}
