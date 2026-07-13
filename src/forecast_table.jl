@@ -22,6 +22,13 @@ ForecastTable(df; task_id_cols, model_id_col = :model_id)
 
 `task_id_cols` may be omitted, in which case it is inferred as every column
 that is not one of the required columns.
+
+Fields
+------
+
+- `data`: the underlying long-format `DataFrame` holding the forecasts.
+- `task_id_cols`: the task-id columns identifying a forecast target.
+- `model_id_col`: the column naming the model that produced each forecast.
 """
 struct ForecastTable
     data::DataFrame
@@ -84,7 +91,58 @@ end
 # ---- accessors ----
 
 DataFrames.DataFrame(ft::ForecastTable) = ft.data
+
+"""
+    task_id_cols(ft::ForecastTable) -> Vector{Symbol}
+
+The task-id columns of `ft`, i.e. the columns that together identify a forecast
+target (e.g. `:location`, `:horizon`, `:target_date`).
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Example
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+task_id_cols(ft)
+```
+"""
 task_id_cols(ft::ForecastTable) = ft.task_id_cols
+
+"""
+    model_ids(ft::ForecastTable) -> Vector
+
+The distinct model identifiers present in `ft`, taken from its model-id column.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Example
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+model_ids(ft)
+```
+"""
 model_ids(ft::ForecastTable) = unique(ft.data[!, ft.model_id_col])
 
 """

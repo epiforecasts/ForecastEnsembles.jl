@@ -9,7 +9,25 @@ Top of the method-type hierarchy. Subtypes split into
   then be passed to `combine`.
 """
 abstract type EnsembleMethod end
+
+"""
+    UnfittedMethod
+
+An ensemble method applied directly to forecasts with no training, for example
+[`QuantileEnsemble(:mean)`](@ref) or [`MixtureEnsemble()`](@ref). It carries any
+fixed configuration (aggregation rule, supplied weights) and can be passed
+straight to [`combine`](@ref) without a prior call to [`fit`](@ref).
+"""
 abstract type UnfittedMethod <: EnsembleMethod end
+
+"""
+    TrainedMethod
+
+An ensemble method whose weights or coefficients are learned from past
+performance before use, for example [`QRA`](@ref) or [`CRPSStacking`](@ref).
+Passing one through [`fit`](@ref) returns a fitted object (itself an
+[`UnfittedMethod`](@ref)) that can then be passed to [`combine`](@ref).
+"""
 abstract type TrainedMethod <: EnsembleMethod end
 
 """

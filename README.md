@@ -3,19 +3,16 @@
 <!-- badges:start -->
 | **Documentation** | **Build Status** | **Code Quality** | **License & DOI** | **Downloads** |
 |:-----------------:|:----------------:|:----------------:|:-----------------:|:-------------:|
-| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://epiaware.org/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://epiaware.org/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl) | [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
+| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sbfnk.github.io/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sbfnk.github.io/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl) | [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
 <!-- badges:end -->
 
-<!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CI](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-<!-- badges: end -->
 
 > **Experimental.** The API is still moving and the underlying forecast
 > data types are under active redesign. Pin a specific commit if you
 > depend on it.
+
+## Overview
 
 A Julia package for combining probabilistic forecasts from several component
 models.
@@ -42,7 +39,7 @@ The optimiser backends are pluggable: QRA's LP runs through JuMP, so
 HiGHS, GLPK, Gurobi or anything else with a JuMP wrapper is one line
 away, and CRPS-stacking goes through Optim.jl.
 
-## A small example
+## Getting started
 
 ```julia
 using ForecastEnsembles, DataFrames
@@ -62,6 +59,13 @@ combine(ft, QuantileEnsemble(:mean))
 
 For an end-to-end walkthrough on real flu hospitalisation forecasts, see
 `docs/src/example.md`.
+
+## Documentation
+
+Full documentation — method reference, worked examples, and the API — is at
+[sbfnk.github.io/ForecastEnsembles.jl](https://sbfnk.github.io/ForecastEnsembles.jl/stable/).
+The [`docs/src/methods.md`](docs/src/methods.md) page explains the two axes
+(combination operation and weighting scheme) that organise the methods.
 
 <!-- standard-sections:start -->
 <!-- MANAGED by EpiAwarePackageTools.scaffold — do not edit between the
