@@ -53,7 +53,7 @@ end
 @testitem "Parity — hubEnsembles::linear_pool (sample)" begin
     using CSV
     using DataFrames
-    using Statistics: mean, quantile
+    using Statistics: mean, quantile, std
     const REF = joinpath(@__DIR__, "reference")
     function _read_input(path)
         df = CSV.read(joinpath(REF, path), DataFrame)

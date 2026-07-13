@@ -1,7 +1,7 @@
 @testitem "QuantileDistribution edge cases" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     # Two quantile pairs is the minimum valid input; previously crashed with
     # BoundsError in the PCHIP endpoint formulae.
@@ -24,7 +24,7 @@ end
 @testitem "ForecastTable validation" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     df = DataFrame(
         model_id = ["m1", "m2"],
@@ -51,7 +51,7 @@ end
 @testitem "EnsembleWeights validation" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     @test_throws ArgumentError EnsembleWeights(
         DataFrame(model_id = ["m1", "m2"], weight = [1.5, -0.5]),
@@ -64,7 +64,7 @@ end
 @testitem "Extra weights warn" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 2),
@@ -81,7 +81,7 @@ end
 @testitem "Single-model tables" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     rng = MersenneTwister(5)
     qdf = DataFrame(
@@ -113,7 +113,7 @@ end
 @testitem "Exact mixture quantile inversion" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     # Equal mixture of N(0,1) and N(5,1). At x = 2.5 the two reconstructed
     # CDFs are evaluated in their (exact) Normal tails, so the mixture
@@ -160,7 +160,7 @@ end
 @testitem "_ints_summing_to always sums to N" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     rng = MersenneTwister(7)
     for _ in 1:50
@@ -179,7 +179,7 @@ end
 @testitem "CRPSStacking guards" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     rng = MersenneTwister(11)
     df = DataFrame(
@@ -220,7 +220,7 @@ end
 @testitem "FittedQRA combine guards" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     rng = MersenneTwister(123)
     n = 60
@@ -276,7 +276,7 @@ end
 @testitem "QRA noncross holds out of sample" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     rng = MersenneTwister(31)
     n = 80
@@ -322,7 +322,7 @@ end
 @testitem "Parity — qrensemble::qra (per-quantile, intercept)" begin
     using Random: MersenneTwister
     using Distributions: Normal, cdf as dcdf, quantile as dquantile
-    using Statistics: mean
+    using Statistics: mean, quantile
     using DataFrames
     using CSV
     ref_dir = joinpath(@__DIR__, "reference")
