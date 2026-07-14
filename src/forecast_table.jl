@@ -46,7 +46,7 @@ function ForecastTable(
     df = DataFrame(df) # defensive copy / materialise
     _validate_columns!(df, model_id_col)
     nrow(df) > 0 || throw(ArgumentError("ForecastTable must contain at least one row"))
-    if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)
+    if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)::Bool
         throw(
             ArgumentError(
             "ForecastTable :value column contains missing or NaN entries; " *

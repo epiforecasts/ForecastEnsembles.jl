@@ -155,6 +155,7 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
             best_res = res
         end
     end
+    best_res === nothing && error("CRPSStacking: optimisation produced no result")
     Optim.converged(best_res) || @warn("CRPSStacking: L-BFGS did not converge " *
           "($(Optim.iterations(best_res)) iterations); weights are the best " *
           "iterate found.")
@@ -231,12 +232,15 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
 
     m.lambda === nothing && return ones(T)
 
-    m.time_col in join_cols || throw(
+    tc = m.time_col
+    tc isa Symbol ||
+        throw(ArgumentError("CRPSStacking: time_col must be set when lambda is used"))
+    tc in join_cols || throw(
         ArgumentError(
-        "time_col $(m.time_col) is not one of the task-id columns $join_cols",
+        "time_col $tc is not one of the task-id columns $join_cols",
     ),
     )
-    tvals = tasks[!, m.time_col]
+    tvals = tasks[!, tc]
     ut = sort(unique(tvals))
     Tt = length(ut)
     per_time = if m.lambda isa Float64

@@ -28,7 +28,7 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
         if is_per_quantile(m.weights)
             join_cols = [ft.model_id_col => :model_id, :output_type_id => :output_type_id]
             joined = leftjoin(df, wdf; on = join_cols)
-            any(ismissing, joined.weight) && throw(
+            any(ismissing, joined.weight)::Bool && throw(
                 ArgumentError(
                 "per-quantile weights are missing some (model_id, output_type_id) pairs",
             ),
