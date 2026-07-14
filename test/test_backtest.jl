@@ -78,7 +78,8 @@ end
         "crps_recency" => CRPSStacking(; lambda = 0.6, time_col = :t)
     ]
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 6, rng = MersenneTwister(7))
-    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
+    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score =>
+        mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
     recency = agg[agg.scheme .== "crps_recency", :mean_score][1]
     @test recency < equal
@@ -119,7 +120,8 @@ end
         "qra" => QRA(; enforce_normalisation = true, intercept = false)
     ]
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 8)
-    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score => mean => :mean_score)
+    agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score =>
+        mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
     qra = agg[agg.scheme .== "qra", :mean_score][1]
     # QRA should learn to downweight the noisy model → better WIS.
