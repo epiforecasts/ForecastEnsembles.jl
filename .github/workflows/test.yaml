@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   test:
-    uses: sbfnk/.github/.github/workflows/tests.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    uses: EpiAware/.github/.github/workflows/tests.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
     secrets: inherit  # pragma: allowlist secret
 
   downgrade-compat:
-    uses: sbfnk/.github/.github/workflows/downgrade.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    uses: EpiAware/.github/.github/workflows/downgrade.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
     secrets: inherit  # pragma: allowlist secret
