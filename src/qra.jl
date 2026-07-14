@@ -1,12 +1,26 @@
 
 """
-    FittedQRA(coefs, intercepts, models, levels, group_cols, per_quantile_weights)
+    FittedQRA(coefs, intercepts, models, levels, group_cols, per_quantile_weights, enforce_normalisation, has_intercept)
 
 Output of `fit(::QRA, …)`. `coefs` is a `Dict{NamedTuple => Vector{Float64}}`
 mapping a `(group..., quantile_level)` key to a vector of model coefficients
 in the order `models`. When `per_quantile_weights` is `false`, all keys
 sharing the same group share the same coefficients (and have the same key
 under a sentinel `:any` quantile_level).
+
+# Fields
+- `coefs`: `Dict` mapping each `(group, quantile_level)` key to its vector of
+  model coefficients (ordered as `models`).
+- `intercepts`: `Dict` mapping each `(group, quantile_level)` key to its
+  intercept; empty (all zero) when the fit has no intercept.
+- `models`: component model ids, giving the order of the coefficient vectors.
+- `levels`: the quantile levels the fit was trained on.
+- `group_cols`: the grouping task columns used when fitting; may be empty.
+- `per_quantile_weights`: `Bool`, whether coefficients vary across quantile
+  levels.
+- `enforce_normalisation`: `Bool`, whether the simplex constraint
+  (non-negative coefficients summing to one) was imposed.
+- `has_intercept`: `Bool`, whether an intercept was estimated.
 """
 struct FittedQRA <: UnfittedMethod
     coefs::Dict{Tuple, Vector{Float64}}
@@ -33,6 +47,31 @@ Mirrors the core of `qrensemble::qra`: per group (and per quantile level if
 component forecasts as predictors. `enforce_normalisation = true` constrains
 the coefficients to lie on the simplex (non-negative, sum to one); `noncross`
 adds across-quantile monotonicity constraints when `per_quantile_weights = true`.
+
+# Arguments
+- `m`: a `QRA` configuration specifying grouping, per-quantile weighting,
+  intercept, normalisation and non-crossing options.
+- `training`: a `ForecastTable` of quantile forecasts to fit weights from.
+- `observations`: a `DataFrame` containing the task-id columns of `training`
+  plus an `:observed` column with the realised value.
+
+# Examples
+```@example
+using ForecastEnsembles, DataFrames, Random, Distributions
+rng = MersenneTwister(1)
+n = 60; levels = [0.1, 0.5, 0.9]
+y = randn(rng, n)
+rows = DataFrame[]
+for (mid, pred) in (("m1", y .+ 0.3 .* randn(rng, n)), ("m2", y .+ randn(rng, n)))
+    for τ in levels
+        push!(rows, DataFrame(model_id = mid, output_type = "quantile",
+            output_type_id = τ, t = 1:n, value = pred .+ quantile(Normal(), τ)))
+    end
+end
+train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+obs = DataFrame(t = 1:n, observed = y)
+fit(QRA(; enforce_normalisation = true, intercept = false), train, obs)
+```
 """
 function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :quantile ||

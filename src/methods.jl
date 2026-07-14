@@ -262,6 +262,27 @@ When `weights(m) !== nothing`, `m` can be passed in place of an explicit
 weights frame to any method that accepts one — for example
 `MixtureEnsemble(weights = m)` or `QuantileEnsemble(:mean; weights = m)`. This is
 the composition path between trained and untrained methods.
+
+# Arguments
+- `m`: a fitted method (such as [`FittedCRPSStacking`](@ref) or
+  [`FittedQRA`](@ref)) from which per-model weights are extracted.
+
+# Examples
+```@example
+using ForecastEnsembles, DataFrames, Random
+rng = MersenneTwister(1)
+T = 20; K = 50
+obs = DataFrame(t = 1:T, observed = randn(rng, T))
+rows = DataFrame[]
+for (mid, s) in (("m1", (y, r) -> y .+ randn(r, K)), ("m2", (y, r) -> 3 .* randn(r, K)))
+    for t in 1:T
+        push!(rows, DataFrame(model_id = mid, output_type = "sample",
+            output_type_id = 1:K, t = t, value = s(obs.observed[t], rng)))
+    end
+end
+ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+weights(fit(CRPSStacking(), ft, obs))
+```
 """
 function weights end
 

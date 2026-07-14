@@ -3,9 +3,10 @@
     FittedCRPSStacking(weights, models)
 
 Output of `fit(::CRPSStacking, …)`. Stores the simplex-constrained ensemble
-weights as a `DataFrame` with columns `model_id` and `weight`. Plug into
-`combine(ft, fitted)` (sample inputs) — internally a [`LinearPool`](@ref)
-with these weights.
+`weights` as a `DataFrame` with columns `model_id` and `weight`, the list of
+`models` these weights refer to, and `crps`, the fitted objective value (the
+mean CRPS achieved at the optimum). Plug into `combine(ft, fitted)` (sample
+inputs) — internally a [`LinearPool`](@ref) with these weights.
 """
 struct FittedCRPSStacking <: UnfittedMethod
     weights::DataFrame
@@ -170,6 +171,31 @@ end
 
 Apply CRPS-stacked weights to a (sample-typed) forecast table. Equivalent to
 `combine(ft, LinearPool(weights = m.weights))`.
+
+# Arguments
+- `ft`: a `ForecastTable` of sample forecasts.
+- `m`: a `FittedCRPSStacking` holding the fitted ensemble weights.
+
+# Keyword Arguments
+- `rng`: random number generator used for resampling; defaults to `default_rng()`.
+
+# Example
+```@example
+using ForecastEnsembles, DataFrames, Random
+rng = MersenneTwister(1)
+T = 20; K = 50
+obs = DataFrame(t = 1:T, observed = randn(rng, T))
+rows = DataFrame[]
+for (mid, s) in (("m1", (y, r) -> y .+ randn(r, K)), ("m2", (y, r) -> 3 .* randn(r, K)))
+    for t in 1:T
+        push!(rows, DataFrame(model_id = mid, output_type = "sample",
+            output_type_id = 1:K, t = t, value = s(obs.observed[t], rng)))
+    end
+end
+ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+fitted = fit(CRPSStacking(), ft, obs)
+combine(ft, fitted)
+```
 """
 function combine(ft::ForecastTable, m::FittedCRPSStacking; rng::AbstractRNG = default_rng())
     return combine(ft, LinearPool(; weights = m.weights); rng = rng)
