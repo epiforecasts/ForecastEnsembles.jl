@@ -21,6 +21,10 @@ pages = [
     "Getting started" => [
         "Overview" => "getting-started/index.md"
     ],
+    "Methods" => "methods.md",
+    "Worked example" => "example.md",
+    "Extending" => "extending.md",
+    "Roadmap" => "roadmap.md",
     "API reference" => [
         "Public API" => "lib/public.md",
         "Internal API" => "lib/internals.md"
