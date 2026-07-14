@@ -227,8 +227,8 @@ end
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in
-        (("m_a", y .+ 0.3 .* randn(rng, n)), ("m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, pred) in (("m_a", y .+ 0.3 .* randn(rng, n)), (
+        "m_b", y .+ 0.3 .* randn(rng, n)))
         for τ in levels
             push!(
                 rows,
@@ -283,8 +283,8 @@ end
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in
-        (("m_a", y .+ 0.4 .* randn(rng, n)), ("m_b", y .+ 0.4 .* randn(rng, n)))
+    for (mid, pred) in (("m_a", y .+ 0.4 .* randn(rng, n)), (
+        "m_b", y .+ 0.4 .* randn(rng, n)))
         for τ in levels
             push!(
                 rows,

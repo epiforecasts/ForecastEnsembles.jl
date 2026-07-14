@@ -59,8 +59,8 @@ end
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n_train)
     rows = DataFrame[]
-    for (mid, prediction) in
-        (("m_a", y .+ 0.5 .* randn(rng, n_train)), ("m_b", y .+ 0.5 .* randn(rng, n_train)))
+    for (mid, prediction) in (("m_a", y .+ 0.5 .* randn(rng, n_train)), (
+        "m_b", y .+ 0.5 .* randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -102,8 +102,8 @@ end
     y = randn(rng, n_train)
 
     rows = DataFrame[]
-    for (mid, prediction) in
-        (("m_a", y .+ 0.3 .* randn(rng, n_train)), ("m_b", y .+ 0.3 .* randn(rng, n_train)))
+    for (mid, prediction) in (("m_a", y .+ 0.3 .* randn(rng, n_train)), (
+        "m_b", y .+ 0.3 .* randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(

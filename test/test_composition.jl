@@ -50,8 +50,8 @@
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     qrows = DataFrame[]
-    for (mid, prediction) in
-        (("m_a", y .+ 0.3 .* randn(rng, n)), ("m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, prediction) in (("m_a", y .+ 0.3 .* randn(rng, n)), (
+        "m_b", y .+ 0.3 .* randn(rng, n)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
