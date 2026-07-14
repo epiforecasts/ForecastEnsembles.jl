@@ -40,7 +40,12 @@ const FORCE_STUB_TUTORIALS = String[]
 
 # Regexes for URLs to skip during the (full-build) linkcheck, e.g. a page
 # published by a separate workflow that is not yet live.
-const LINKCHECK_IGNORE = Regex[]
+const LINKCHECK_IGNORE = [
+    # Own docs site — not live until the first gh-pages deploy.
+    r"sbfnk\.github\.io/ForecastEnsembles\.jl",
+    # Own repo blob links (e.g. CITATION.cff) — 404 until the branch is on main.
+    r"github\.com/sbfnk/ForecastEnsembles\.jl/blob"
+]
 
 # README -> index.md link rewrites: `from => to` pairs applied line by line,
 # e.g. rewriting an absolute docs URL to an in-site `@ref` so links stay within

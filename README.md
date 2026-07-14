@@ -64,8 +64,9 @@ For an end-to-end walkthrough on real flu hospitalisation forecasts, see
 
 Full documentation — method reference, worked examples, and the API — is at
 [sbfnk.github.io/ForecastEnsembles.jl](https://sbfnk.github.io/ForecastEnsembles.jl/stable/).
-The [`docs/src/methods.md`](docs/src/methods.md) page explains the two axes
-(combination operation and weighting scheme) that organise the methods.
+The [Methods](https://sbfnk.github.io/ForecastEnsembles.jl/stable/methods) page
+explains the two axes (combination operation and weighting scheme) that
+organise the methods.
 
 <!-- standard-sections:start -->
 <!-- MANAGED by EpiAwarePackageTools.scaffold — do not edit between the
