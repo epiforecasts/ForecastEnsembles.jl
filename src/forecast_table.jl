@@ -150,6 +150,25 @@ model_ids(ft::ForecastTable) = unique(ft.data[!, ft.model_id_col])
 
 The single output_type present in `ft`. Throws if the table mixes output types,
 since most ensemble methods are defined on a single type at a time.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+output_type(ft)
+```
 """
 function output_type(ft::ForecastTable)
     types = unique(ft.data.output_type)

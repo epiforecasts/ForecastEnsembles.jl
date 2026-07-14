@@ -32,6 +32,38 @@ using DataFrames
 res = backtest(ft, obs, schemes; time_col = :target_date)
 combine(groupby(res, :scheme), :score => mean => :mean_score)
 ```
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+- `observations`: a `DataFrame` with the table's task-id columns and an
+  `:observed` column.
+- `schemes`: a `Dict` or vector of `name => EnsembleMethod` pairs to compare.
+
+# Keyword Arguments
+
+- `time_col`: the column giving the time index to expand the window over.
+- `min_train`: number of initial times used only for training (default `1`).
+- `rng`: RNG used by sample-based schemes (default `default_rng()`).
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames, Random
+rng = MersenneTwister(1)
+T = 12; K = 40
+obs = DataFrame(t = 1:T, observed = randn(rng, T))
+rows = DataFrame[]
+for (mid, s) in (("m1", (y, r) -> y .+ randn(r, K)), ("m2", (y, r) -> 2 .* randn(r, K)))
+    for t in 1:T
+        push!(rows, DataFrame(model_id = mid, output_type = "sample",
+            output_type_id = 1:K, t = t, value = s(obs.observed[t], rng)))
+    end
+end
+ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+schemes = ["equal" => MixtureEnsemble(), "stack" => CRPSStacking()]
+backtest(ft, obs, schemes; time_col = :t, min_train = 6)
+```
 """
 function backtest(
         ft::ForecastTable,
