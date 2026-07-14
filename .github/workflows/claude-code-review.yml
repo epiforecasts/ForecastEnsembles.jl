@@ -13,8 +13,8 @@ on:
 
 jobs:
   claude-review:
-    # Only run for PRs from the configured reviewer handle
-    if: github.event.pull_request.user.login == 'sbfnk'
+    # Only run for PRs authored by the maintainer or the automation bot
+    if: contains(fromJson('["sbfnk", "sbfnk-bot"]'), github.event.pull_request.user.login)
 
     runs-on: ubuntu-latest
     permissions:
