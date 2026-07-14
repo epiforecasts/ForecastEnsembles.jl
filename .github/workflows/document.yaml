@@ -1,4 +1,6 @@
-# MANAGED by EpiAwarePackageTools.scaffold — do not edit by hand.
+# Based on EpiAwarePackageTools.scaffold, customised: explicit DOCUMENTER_KEY
+# passing (cross-org `secrets: inherit` does not forward secrets to a reusable
+# workflow in another organisation).
 name: Documenter
 
 on:
@@ -18,4 +20,5 @@ concurrency:
 jobs:
   Documenter:
     uses: EpiAware/.github/.github/workflows/documentation.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
-    secrets: inherit  # pragma: allowlist secret
+    secrets:
+      DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

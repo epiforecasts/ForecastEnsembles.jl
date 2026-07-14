@@ -1,4 +1,6 @@
-# MANAGED by EpiAwarePackageTools.scaffold — do not edit by hand.
+# Based on EpiAwarePackageTools.scaffold, customised: explicit CODECOV_TOKEN
+# passing (cross-org `secrets: inherit` does not forward secrets to a reusable
+# workflow in another organisation).
 name: Code coverage
 
 on:
@@ -23,4 +25,5 @@ jobs:
       # loud reminder to add the secret. Add CODECOV_TOKEN (repo or org secret)
       # to make coverage upload — and report — for real.
       fail_ci_if_error: true
-    secrets: inherit  # pragma: allowlist secret
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
