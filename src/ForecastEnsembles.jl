@@ -33,14 +33,11 @@ export ForecastTable,
        FittedQRA,
        CRPSStacking,
        FittedCRPSStacking,
+       Stacking,
+       FittedStacking,
        combine,
        fit,
        weights,
-       ScoringRule,
-       CRPS,
-       WIS,
-       score,
-       mean_score,
        backtest
 
 include("output_types.jl")
@@ -52,7 +49,7 @@ include("distfromq.jl")
 include("linear_pool.jl")
 include("qra.jl")
 include("crps_stacking.jl")
-include("scores.jl")
+include("stacking.jl")
 include("backtest.jl")
 include("interop.jl")
 

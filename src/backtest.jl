@@ -1,29 +1,38 @@
-# Expanding-window backtesting: compare weighting schemes out-of-sample.
-# The scoring is done by the internal `score` (CRPS / WIS); the loop here is
-# the ensemble-specific part — refit each trained scheme on the growing
-# training window and apply it to the held-out time.
+# Expanding-window backtesting: compare weighting schemes out-of-sample. The
+# loop here is the ensemble-specific part — refit each trained scheme on the
+# growing training window and apply it to the held-out time. Scoring is
+# delegated: a `score_fn` is injected, so the loop stays free of any particular
+# scoring rule (and of ScoringRules.jl's GPL code). `_default_score_fn` is a
+# hook with no method in the core; the `ForecastEnsemblesScoringRulesExt`
+# extension supplies one built on ScoringRules once `using ScoringRules` runs.
+
+function _default_score_fn end
 
 """
     backtest(ft, observations, schemes; time_col, min_train = 1,
-             rng = default_rng()) -> DataFrame
+             rng = default_rng(), score_fn = <ScoringRules default>) -> DataFrame
 
-Expanding-window backtest of ensemble schemes. The unique values of
-`time_col` are ordered; for each test time after the first `min_train`,
-every scheme is trained on the earlier times and scored on the test time
-out-of-sample. Returns one row per (scheme, test time) with columns
-`scheme`, the `time_col`, and `:score` (mean over that time's tasks).
+Expanding-window backtest of ensemble schemes. The unique values of `time_col`
+are ordered; for each test time after the first `min_train`, every scheme is
+trained on the earlier times and scored on the test time out-of-sample. Returns
+one row per (scheme, test time) with columns `scheme`, the `time_col`, and
+`:score` (mean over that time's tasks).
 
 `schemes` maps names to `EnsembleMethod`s (a `Dict` or a vector of
 `name => method` pairs):
 
-- a `TrainedMethod` — `CRPSStacking()`, `QRA(...)` — is fitted on the
-  training window each fold, then applied to the test time;
+- a `TrainedMethod` — `CRPSStacking()`, `QRA(...)` — is fitted on the training
+  window each fold, then applied to the test time;
 - an `UnfittedMethod` — `QuantileEnsemble(:mean)`, `MixtureEnsemble()` — is
   applied directly.
 
-Each scheme must match the table's `output_type`: `CRPSStacking` and
-sample combiners need `:sample` data, `QRA` and quantile combiners need
-`:quantile`.
+Each scheme must match the table's `output_type`: `CRPSStacking` and sample
+combiners need `:sample` data, `QRA` and quantile combiners need `:quantile`.
+
+Scoring is injected via `score_fn(forecast::ForecastTable, observations) -> Real`
+(the mean score of one fold). Load `ScoringRules` (`using ScoringRules`) for a
+sensible default — CRPS for sample forecasts, the quantile score for quantile
+forecasts — or pass your own `score_fn`.
 
 Aggregate across folds yourself, e.g.
 
@@ -45,11 +54,14 @@ combine(groupby(res, :scheme), :score => mean => :mean_score)
 - `time_col`: the column giving the time index to expand the window over.
 - `min_train`: number of initial times used only for training (default `1`).
 - `rng`: RNG used by sample-based schemes (default `default_rng()`).
+- `score_fn`: a scorer `(forecast, observations) -> Real`; defaults to the
+  ScoringRules-based rule for the table's `output_type` (needs `using
+  ScoringRules`).
 
 # Examples
 
 ```@example
-using ForecastEnsembles, DataFrames, Random
+using ForecastEnsembles, DataFrames, Random, Statistics
 rng = MersenneTwister(1)
 T = 12; K = 40
 obs = DataFrame(t = 1:T, observed = randn(rng, T))
@@ -62,7 +74,17 @@ for (mid, s) in (("m1", (y, r) -> y .+ randn(r, K)), ("m2", (y, r) -> 2 .* randn
 end
 ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
 schemes = ["equal" => MixtureEnsemble(), "stack" => CRPSStacking()]
-backtest(ft, obs, schemes; time_col = :t, min_train = 6)
+
+# Inject a scorer — here mean absolute error of the ensemble mean; with
+# `using ScoringRules` you would instead pass a proper rule such as ScoringRules.crps.
+function mae(ens, o)
+    d = innerjoin(DataFrame(ens), o; on = :t)
+    per = combine(groupby(d, :t),
+        [:value, :observed] => ((v, y) -> abs(mean(v) - first(y))) => :e)
+    return mean(per.e)
+end
+
+backtest(ft, obs, schemes; time_col = :t, min_train = 6, score_fn = mae)
 ```
 """
 function backtest(
@@ -71,7 +93,8 @@ function backtest(
         schemes;
         time_col::Symbol,
         min_train::Integer = 1,
-        rng::AbstractRNG = default_rng()
+        rng::AbstractRNG = default_rng(),
+        score_fn = nothing
 )
     time_col in ft.task_id_cols || throw(
         ArgumentError(
@@ -81,6 +104,17 @@ function backtest(
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
         throw(ArgumentError("observations must have an :observed column"))
+
+    if score_fn === nothing
+        try
+            score_fn = _default_score_fn(ft)
+        catch e
+            e isa MethodError || rethrow()
+            throw(ArgumentError(
+                "backtest needs a scoring function. Run `using ScoringRules` for " *
+                "a default, or pass `score_fn = (forecast, observations) -> score`."))
+        end
+    end
 
     times = sort(unique(ft.data[!, time_col]))
     length(times) > min_train || throw(
@@ -102,7 +136,7 @@ function backtest(
 
         for (name, scheme) in scheme_pairs
             ens = _run_scheme(scheme, train_ft, test_ft, train_obs, rng)
-            fold_score = mean(score(ens, test_obs).score)
+            fold_score = score_fn(ens, test_obs)
             r = DataFrame(scheme = [String(name)])
             r[!, time_col] = [test_t]
             r.score = [fold_score]
