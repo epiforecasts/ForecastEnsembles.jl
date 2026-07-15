@@ -1,7 +1,8 @@
-using Random: MersenneTwister
-using Distributions: Normal, quantile
-
-@testset "QRA" begin
+@testitem "QRA" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
+    using Statistics: cor
     rng = MersenneTwister(123)
 
     # Synthetic ground truth: y_t ~ N(0, 1).
@@ -23,8 +24,8 @@ using Distributions: Normal, quantile
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -49,14 +50,17 @@ using Distributions: Normal, quantile
     @test cor(median_rows.value, y) > 0.9
 end
 
-@testset "QRA per_quantile_weights" begin
+@testitem "QRA per_quantile_weights" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
     rng = MersenneTwister(7)
     n_train = 150
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n_train)
     rows = DataFrame[]
-    for (mid, prediction) in
-        (("m_a", y .+ 0.5 .* randn(rng, n_train)), ("m_b", y .+ 0.5 .* randn(rng, n_train)))
+    for (mid, prediction) in (("m_a", y .+ 0.5 .* randn(rng, n_train)), (
+        "m_b", y .+ 0.5 .* randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -66,8 +70,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -77,7 +81,7 @@ end
     fitted = fit(
         QRA(; per_quantile_weights = true, enforce_normalisation = true, intercept = false),
         train,
-        obs,
+        obs
     )
     # Different keys per τ.
     for τ in levels
@@ -88,15 +92,18 @@ end
     @test all(DataFrame(out).model_id .== "qra")
 end
 
-@testset "QRA noncross" begin
+@testitem "QRA noncross" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
     rng = MersenneTwister(99)
     n_train = 100
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n_train)
 
     rows = DataFrame[]
-    for (mid, prediction) in
-        (("m_a", y .+ 0.3 .* randn(rng, n_train)), ("m_b", y .+ 0.3 .* randn(rng, n_train)))
+    for (mid, prediction) in (("m_a", y .+ 0.3 .* randn(rng, n_train)), (
+        "m_b", y .+ 0.3 .* randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -106,8 +113,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n_train,
-                    value = prediction .+ zτ,
-                ),
+                    value = prediction .+ zτ
+                )
             )
         end
     end
@@ -119,10 +126,10 @@ end
             per_quantile_weights = true,
             enforce_normalisation = true,
             intercept = false,
-            noncross = true,
+            noncross = true
         ),
         train,
-        obs,
+        obs
     )
     out = combine(train, fitted)
     d = DataFrame(out)

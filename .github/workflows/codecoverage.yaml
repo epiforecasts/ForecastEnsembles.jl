@@ -1,0 +1,29 @@
+# Based on EpiAwarePackageTools.scaffold, customised: explicit CODECOV_TOKEN
+# passing (cross-org `secrets: inherit` does not forward secrets to a reusable
+# workflow in another organisation).
+name: Code coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    uses: EpiAware/.github/.github/workflows/coverage.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    with:
+      julia_version: '1'
+      # Hard-fail the coverage check on an upload error. This is intentional:
+      # a repo with no CODECOV_TOKEN cannot upload on a protected branch
+      # ('Token required because branch is protected'), so CI goes red as a
+      # loud reminder to add the secret. Add CODECOV_TOKEN (repo or org secret)
+      # to make coverage upload — and report — for real.
+      fail_ci_if_error: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

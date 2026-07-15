@@ -1,0 +1,22 @@
+# MANAGED by EpiAwarePackageTools.scaffold — do not edit by hand.
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: EpiAware/.github/.github/workflows/tests.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    secrets: inherit  # pragma: allowlist secret
+
+  downgrade-compat:
+    uses: EpiAware/.github/.github/workflows/downgrade.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    secrets: inherit  # pragma: allowlist secret

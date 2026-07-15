@@ -51,7 +51,8 @@ function _crps_sample(samples::AbstractVector{<:Real}, y::Real)
     term1 = mean(abs.(samples .- y))
     n == 1 && return term1
     pair_sum = 0.0
-    @inbounds for i = 1:n, j = (i+1):n
+    @inbounds for i in 1:n, j in (i + 1):n
+
         pair_sum += abs(samples[i] - samples[j])
     end
     term2 = 2 * pair_sum / (n * (n - 1))
@@ -61,9 +62,9 @@ end
 # WIS of a quantile forecast: 2 × mean pinball loss over the levels.
 # Pinball ρ_τ(y, q) = (y − q)(τ − 1{y < q}) ≥ 0.
 function _wis_quantile(
-    levels::AbstractVector{<:Real},
-    values::AbstractVector{<:Real},
-    y::Real,
+        levels::AbstractVector{<:Real},
+        values::AbstractVector{<:Real},
+        y::Real
 )
     isempty(levels) && return NaN
     s = 0.0
@@ -92,11 +93,38 @@ plus an `:observed` column), one row per (model, task). Columns:
 
 `rule` defaults to the scoring rule matching the table's `output_type`
 (`CRPS` for samples, `WIS` for quantiles) and can be set explicitly.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+- `observations`: a `DataFrame` with the table's task-id columns and an
+  `:observed` column.
+
+# Keyword Arguments
+
+- `rule`: a [`ScoringRule`](@ref). Defaults to [`CRPS`](@ref) for sample
+  forecasts and [`WIS`](@ref) for quantile forecasts.
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    model_id = repeat(["m1", "m2"], inner = 3),
+    output_type = "sample",
+    output_type_id = repeat(1:3, 2),
+    location = "A",
+    value = [0.8, 1.0, 1.2, 1.5, 2.0, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location])
+obs = DataFrame(location = "A", observed = 1.0)
+score(ft, obs)
+```
 """
 function score(
-    ft::ForecastTable,
-    observations::AbstractDataFrame;
-    rule::ScoringRule = default_rule(output_type(ft)),
+        ft::ForecastTable,
+        observations::AbstractDataFrame;
+        rule::ScoringRule = default_rule(output_type(ft))
 )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
@@ -121,11 +149,38 @@ end
 
 Mean [`score`](@ref) per model, averaged over tasks. Columns: `model_id`,
 `:score`.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+- `observations`: a `DataFrame` with the table's task-id columns and an
+  `:observed` column.
+
+# Keyword Arguments
+
+- `rule`: a [`ScoringRule`](@ref), forwarded to [`score`](@ref). Defaults to
+  [`CRPS`](@ref) for sample forecasts and [`WIS`](@ref) for quantile forecasts.
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    model_id = repeat(["m1", "m2"], inner = 3),
+    output_type = "sample",
+    output_type_id = repeat(1:3, 2),
+    location = "A",
+    value = [0.8, 1.0, 1.2, 1.5, 2.0, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location])
+obs = DataFrame(location = "A", observed = 1.0)
+mean_score(ft, obs)
+```
 """
 function mean_score(ft::ForecastTable, observations::AbstractDataFrame; kwargs...)
     per = score(ft, observations; kwargs...)
     return DataFrames.combine(
         DataFrames.groupby(per, ft.model_id_col),
-        :score => mean => :score,
+        :score => mean => :score
     )
 end

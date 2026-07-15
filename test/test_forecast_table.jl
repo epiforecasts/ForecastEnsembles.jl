@@ -1,10 +1,12 @@
-@testset "ForecastTable" begin
+@testitem "ForecastTable" begin
+    using DataFrames
+
     df = DataFrame(
         model_id = ["m1", "m1", "m2", "m2"],
         output_type = ["quantile", "quantile", "quantile", "quantile"],
         output_type_id = [0.25, 0.75, 0.25, 0.75],
         location = ["A", "A", "A", "A"],
-        value = [1.0, 3.0, 2.0, 4.0],
+        value = [1.0, 3.0, 2.0, 4.0]
     )
 
     ft = ForecastTable(df; task_id_cols = [:location])
@@ -33,8 +35,8 @@
             output_type = ["mean"],
             output_type_id = [missing],
             location = ["A"],
-            value = [2.5],
-        ),
+            value = [2.5]
+        )
     )
     ft3 = ForecastTable(mixed; task_id_cols = [:location])
     @test_throws ArgumentError ForecastEnsembles.output_type(ft3)

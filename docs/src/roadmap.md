@@ -104,7 +104,7 @@ increasing effort:
   arbitrary covariates, not point-only). A PR benefits everyone.
 - *Sibling package* over PostForecasts.jl + ours.
 - *Implement here* — IDR has a clean R reference in
-  [isodisreg](https://github.com/AlexanderHenzi/isodisreg).
+  [isodistrreg](https://github.com/AlexanderHenzi/isodistrreg).
 
 Candidate methods: **IDR** (Henzi, Ziegel, Gneiting 2019,
 [arXiv:1909.03725](https://arxiv.org/abs/1909.03725)); **empirical PIT

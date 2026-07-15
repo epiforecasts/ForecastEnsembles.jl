@@ -1,6 +1,5 @@
-using Random: MersenneTwister
-
-@testset "QuantileDistribution" begin
+@testitem "QuantileDistribution" begin
+    using Random: MersenneTwister
     # Round-trip: build a QD from quantiles of a known Normal, check that
     # `quantile` and `cdf` recover values close to that Normal at interior
     # points.

@@ -22,6 +22,13 @@ ForecastTable(df; task_id_cols, model_id_col = :model_id)
 
 `task_id_cols` may be omitted, in which case it is inferred as every column
 that is not one of the required columns.
+
+Fields
+------
+
+- `data`: the underlying long-format `DataFrame` holding the forecasts.
+- `task_id_cols`: the task-id columns identifying a forecast target.
+- `model_id_col`: the column naming the model that produced each forecast.
 """
 struct ForecastTable
     data::DataFrame
@@ -32,29 +39,29 @@ end
 const REQUIRED_NON_TASK_COLS = (:output_type, :output_type_id, :value)
 
 function ForecastTable(
-    df::AbstractDataFrame;
-    task_id_cols::Union{Nothing,AbstractVector{Symbol}} = nothing,
-    model_id_col::Symbol = :model_id,
+        df::AbstractDataFrame;
+        task_id_cols::Union{Nothing, AbstractVector{Symbol}} = nothing,
+        model_id_col::Symbol = :model_id
 )
     df = DataFrame(df) # defensive copy / materialise
     _validate_columns!(df, model_id_col)
     nrow(df) > 0 || throw(ArgumentError("ForecastTable must contain at least one row"))
-    if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)
+    if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)::Bool
         throw(
             ArgumentError(
-                "ForecastTable :value column contains missing or NaN entries; " *
-                "filter or impute before constructing.",
-            ),
+            "ForecastTable :value column contains missing or NaN entries; " *
+            "filter or impute before constructing.",
+        ),
         )
     end
 
-    inferred_task =
-        setdiff(Symbol.(propertynames(df)), [model_id_col, REQUIRED_NON_TASK_COLS...])
+    inferred_task = setdiff(Symbol.(propertynames(df)), [
+        model_id_col, REQUIRED_NON_TASK_COLS...])
     chosen_task = task_id_cols === nothing ? inferred_task : Symbol.(task_id_cols)
     isempty(chosen_task) && throw(
         ArgumentError(
-            "ForecastTable needs at least one task-id column; none could be inferred.",
-        ),
+        "ForecastTable needs at least one task-id column; none could be inferred.",
+    ),
     )
     for c in chosen_task
         hasproperty(df, c) || throw(ArgumentError("task_id_col $c not present in data"))
@@ -84,7 +91,58 @@ end
 # ---- accessors ----
 
 DataFrames.DataFrame(ft::ForecastTable) = ft.data
+
+"""
+    task_id_cols(ft::ForecastTable) -> Vector{Symbol}
+
+The task-id columns of `ft`, i.e. the columns that together identify a forecast
+target (e.g. `:location`, `:horizon`, `:target_date`).
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Example
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+task_id_cols(ft)
+```
+"""
 task_id_cols(ft::ForecastTable) = ft.task_id_cols
+
+"""
+    model_ids(ft::ForecastTable) -> Vector
+
+The distinct model identifiers present in `ft`, taken from its model-id column.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Example
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+model_ids(ft)
+```
+"""
 model_ids(ft::ForecastTable) = unique(ft.data[!, ft.model_id_col])
 
 """
@@ -92,13 +150,32 @@ model_ids(ft::ForecastTable) = unique(ft.data[!, ft.model_id_col])
 
 The single output_type present in `ft`. Throws if the table mixes output types,
 since most ensemble methods are defined on a single type at a time.
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames
+df = DataFrame(
+    location = "A", horizon = 1,
+    model_id = repeat(["m1", "m2", "m3"], inner = 2),
+    output_type = "quantile",
+    output_type_id = repeat([0.25, 0.75], 3),
+    value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
+)
+ft = ForecastTable(df; task_id_cols = [:location, :horizon])
+output_type(ft)
+```
 """
 function output_type(ft::ForecastTable)
     types = unique(ft.data.output_type)
     length(types) == 1 || throw(
         ArgumentError(
-            "ForecastTable contains mixed output_types $types; split before combining.",
-        ),
+        "ForecastTable contains mixed output_types $types; split before combining.",
+    ),
     )
     return types[1]
 end

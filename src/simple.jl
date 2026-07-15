@@ -16,7 +16,7 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
         agg_fun = m.agg === :mean ? mean : median
         out = DataFrames.combine(
             DataFrames.groupby(df, group_cols),
-            :value => agg_fun => :value,
+            :value => agg_fun => :value
         )
     else
         wdf = DataFrame(m.weights)
@@ -28,27 +28,25 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
         if is_per_quantile(m.weights)
             join_cols = [ft.model_id_col => :model_id, :output_type_id => :output_type_id]
             joined = leftjoin(df, wdf; on = join_cols)
-            any(ismissing, joined.weight) && throw(
+            any(ismissing, joined.weight)::Bool && throw(
                 ArgumentError(
-                    "per-quantile weights are missing some (model_id, output_type_id) pairs",
-                ),
+                "per-quantile weights are missing some (model_id, output_type_id) pairs",
+            ),
             )
         else
             models_present = unique(df[!, ft.model_id_col])
             miss = setdiff(models_present, wdf.model_id)
             isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
             extra = setdiff(wdf.model_id, models_present)
-            isempty(extra) || @warn(
-                "weights provided for models not present in the data " *
-                "(possible typo in model_id): $extra",
-                maxlog = 1,
-            )
+            isempty(extra) || @warn("weights provided for models not present in the data " *
+                  "(possible typo in model_id): $extra",
+                maxlog = 1,)
             joined = leftjoin(df, wdf; on = ft.model_id_col => :model_id)
         end
         agg_fun = m.agg === :mean ? _weighted_mean : _weighted_median
         out = DataFrames.combine(
             DataFrames.groupby(joined, group_cols),
-            [:value, :weight] => agg_fun => :value,
+            [:value, :weight] => agg_fun => :value
         )
     end
 
@@ -57,7 +55,7 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
     return ForecastTable(
         out;
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 

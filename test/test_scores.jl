@@ -1,8 +1,8 @@
-using Random: MersenneTwister
-using Distributions: Normal, quantile as dquantile
-using Statistics: mean
-
-@testset "CRPS (sample)" begin
+@testitem "CRPS (sample)" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     # A point mass at the observation scores 0.
     @test ForecastEnsembles._crps_sample(fill(2.0, 50), 2.0) ≈ 0.0 atol = 1e-12
     # Non-negative.
@@ -19,7 +19,11 @@ using Statistics: mean
     @test ForecastEnsembles._crps_sample([3.0], 1.0) ≈ 2.0
 end
 
-@testset "WIS (quantile)" begin
+@testitem "WIS (quantile)" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     levels = [0.1, 0.25, 0.5, 0.75, 0.9]
     vals = dquantile.(Normal(0, 1), levels)
     # With only the median, WIS reduces to the absolute error.
@@ -34,11 +38,16 @@ end
     @test good < shifted
 end
 
-@testset "score / mean_score" begin
+@testitem "score / mean_score" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile as dquantile
+    using Statistics: mean
+    using DataFrames
     rng = MersenneTwister(3)
     # Two models over two locations, sample forecasts.
     rows = DataFrame[]
     for loc in ["A", "B"], (mid, sd) in (("good", 0.5), ("bad", 3.0))
+
         push!(
             rows,
             DataFrame(
@@ -46,8 +55,8 @@ end
                 output_type = "sample",
                 output_type_id = 1:100,
                 location = loc,
-                value = randn(rng, 100) .* sd,
-            ),
+                value = randn(rng, 100) .* sd
+            )
         )
     end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])

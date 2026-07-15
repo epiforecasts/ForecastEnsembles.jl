@@ -32,19 +32,51 @@ using DataFrames
 res = backtest(ft, obs, schemes; time_col = :target_date)
 combine(groupby(res, :scheme), :score => mean => :mean_score)
 ```
+
+# Arguments
+
+- `ft`: a [`ForecastTable`](@ref).
+- `observations`: a `DataFrame` with the table's task-id columns and an
+  `:observed` column.
+- `schemes`: a `Dict` or vector of `name => EnsembleMethod` pairs to compare.
+
+# Keyword Arguments
+
+- `time_col`: the column giving the time index to expand the window over.
+- `min_train`: number of initial times used only for training (default `1`).
+- `rng`: RNG used by sample-based schemes (default `default_rng()`).
+
+# Examples
+
+```@example
+using ForecastEnsembles, DataFrames, Random
+rng = MersenneTwister(1)
+T = 12; K = 40
+obs = DataFrame(t = 1:T, observed = randn(rng, T))
+rows = DataFrame[]
+for (mid, s) in (("m1", (y, r) -> y .+ randn(r, K)), ("m2", (y, r) -> 2 .* randn(r, K)))
+    for t in 1:T
+        push!(rows, DataFrame(model_id = mid, output_type = "sample",
+            output_type_id = 1:K, t = t, value = s(obs.observed[t], rng)))
+    end
+end
+ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+schemes = ["equal" => MixtureEnsemble(), "stack" => CRPSStacking()]
+backtest(ft, obs, schemes; time_col = :t, min_train = 6)
+```
 """
 function backtest(
-    ft::ForecastTable,
-    observations::AbstractDataFrame,
-    schemes;
-    time_col::Symbol,
-    min_train::Integer = 1,
-    rng::AbstractRNG = default_rng(),
+        ft::ForecastTable,
+        observations::AbstractDataFrame,
+        schemes;
+        time_col::Symbol,
+        min_train::Integer = 1,
+        rng::AbstractRNG = default_rng()
 )
     time_col in ft.task_id_cols || throw(
         ArgumentError(
-            "time_col $time_col must be one of the task-id columns $(ft.task_id_cols)",
-        ),
+        "time_col $time_col must be one of the task-id columns $(ft.task_id_cols)",
+    ),
     )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
@@ -53,15 +85,15 @@ function backtest(
     times = sort(unique(ft.data[!, time_col]))
     length(times) > min_train || throw(
         ArgumentError(
-            "need more than min_train = $min_train distinct $time_col values (got $(length(times)))",
-        ),
+        "need more than min_train = $min_train distinct $time_col values (got $(length(times)))",
+    ),
     )
 
     scheme_pairs = _scheme_pairs(schemes)
     rows = DataFrame[]
-    for i = (min_train+1):length(times)
+    for i in (min_train + 1):length(times)
         test_t = times[i]
-        train_set = Set(times[1:(i-1)])
+        train_set = Set(times[1:(i - 1)])
 
         train_ft = _time_subset(ft, time_col, v -> v in train_set)
         test_ft = _time_subset(ft, time_col, v -> v == test_t)
@@ -85,7 +117,7 @@ function _time_subset(ft::ForecastTable, time_col::Symbol, keep)
     return ForecastTable(
         ft.data[mask, :];
         task_id_cols = ft.task_id_cols,
-        model_id_col = ft.model_id_col,
+        model_id_col = ft.model_id_col
     )
 end
 

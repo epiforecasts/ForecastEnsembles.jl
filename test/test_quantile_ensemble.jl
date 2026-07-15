@@ -1,10 +1,11 @@
-@testset "QuantileEnsemble" begin
+@testitem "QuantileEnsemble" begin
+    using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2", "m3"], inner = 2),
         output_type = "quantile",
         output_type_id = repeat([0.25, 0.75], 3),
         location = "A",
-        value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5],
+        value = [1.0, 3.0, 2.0, 4.0, 0.5, 2.5]
     )
     ft = ForecastTable(df; task_id_cols = [:location])
 

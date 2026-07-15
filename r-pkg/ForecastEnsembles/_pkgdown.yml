@@ -25,4 +25,4 @@ navbar:
   components:
     github:
       icon: fa-github
-      href: https://github.com/sbfnk/ensembles.jl
+      href: https://github.com/epiforecasts/ForecastEnsembles.jl

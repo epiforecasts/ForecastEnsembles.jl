@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![R-CI](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/R-CI.yml)
+[![R-CI](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/R-CI.yml/badge.svg)](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/R-CI.yml)
 <!-- badges: end -->
 
 A thin R wrapper around the Julia package `ForecastEnsembles.jl`. The user-facing

@@ -1,8 +1,8 @@
-using Random: MersenneTwister
-using Distributions: Normal, cdf as dcdf, quantile as dquantile
-using Statistics: mean
-
-@testset "QuantileDistribution edge cases" begin
+@testitem "QuantileDistribution edge cases" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     # Two quantile pairs is the minimum valid input; previously crashed with
     # BoundsError in the PCHIP endpoint formulae.
     qd = ForecastEnsembles.QuantileDistribution([0.25, 0.75], [1.0, 3.0])
@@ -17,17 +17,21 @@ using Statistics: mean
     # slopes silently.
     @test_throws ArgumentError ForecastEnsembles.QuantileDistribution(
         [0.1, 0.1, 0.5],
-        [1.0, 1.0, 2.0],
+        [1.0, 1.0, 2.0]
     )
 end
 
-@testset "ForecastTable validation" begin
+@testitem "ForecastTable validation" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     df = DataFrame(
         model_id = ["m1", "m2"],
         output_type = "quantile",
         output_type_id = [0.5, 0.5],
         location = "A",
-        value = [1.0, 2.0],
+        value = [1.0, 2.0]
     )
 
     # Empty table rejected.
@@ -44,7 +48,11 @@ end
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 end
 
-@testset "EnsembleWeights validation" begin
+@testitem "EnsembleWeights validation" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     @test_throws ArgumentError EnsembleWeights(
         DataFrame(model_id = ["m1", "m2"], weight = [1.5, -0.5]),
     )
@@ -53,27 +61,35 @@ end
     )
 end
 
-@testset "Extra weights warn" begin
+@testitem "Extra weights warn" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 2),
         output_type = "quantile",
         output_type_id = repeat([0.25, 0.75], 2),
         location = "A",
-        value = [1.0, 3.0, 2.0, 4.0],
+        value = [1.0, 3.0, 2.0, 4.0]
     )
     ft = ForecastTable(df; task_id_cols = [:location])
     w = DataFrame(model_id = ["m1", "m2", "m3_typo"], weight = [0.4, 0.4, 0.2])
     @test_logs (:warn,) match_mode = :any combine(ft, QuantileEnsemble(:mean; weights = w))
 end
 
-@testset "Single-model tables" begin
+@testitem "Single-model tables" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     rng = MersenneTwister(5)
     qdf = DataFrame(
         model_id = "only",
         output_type = "quantile",
         output_type_id = [0.1, 0.5, 0.9],
         location = "A",
-        value = [-1.0, 0.0, 1.0],
+        value = [-1.0, 0.0, 1.0]
     )
     qft = ForecastTable(qdf; task_id_cols = [:location])
     # Single-model ensembles reproduce the model at the knots.
@@ -87,14 +103,18 @@ end
         output_type = "sample",
         output_type_id = 1:100,
         location = "A",
-        value = randn(rng, 100),
+        value = randn(rng, 100)
     )
     sft = ForecastTable(sdf; task_id_cols = [:location])
     out_s = DataFrame(combine(sft, MixtureEnsemble(; n_samples = 50); rng = rng))
     @test nrow(out_s) == 50
 end
 
-@testset "Exact mixture quantile inversion" begin
+@testitem "Exact mixture quantile inversion" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     # Equal mixture of N(0,1) and N(5,1). At x = 2.5 the two reconstructed
     # CDFs are evaluated in their (exact) Normal tails, so the mixture
     # median is exactly 2.5 — a property the old Monte Carlo path could only
@@ -109,8 +129,8 @@ end
                 output_type = "quantile",
                 output_type_id = probs,
                 location = "A",
-                value = dquantile.(Ref(dist), probs),
-            ),
+                value = dquantile.(Ref(dist), probs)
+            )
         )
     end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])
@@ -127,7 +147,7 @@ end
     for τ in (0.1, 0.25, 0.75, 0.9)
         truth_fn(x) = 0.5 * (dcdf(Normal(0, 1), x) + dcdf(Normal(5, 1), x)) - τ
         lo, hi = -10.0, 15.0
-        for _ = 1:100
+        for _ in 1:100
             mid = 0.5 * (lo + hi)
             truth_fn(mid) < 0 ? (lo = mid) : (hi = mid)
         end
@@ -137,9 +157,13 @@ end
     end
 end
 
-@testset "_ints_summing_to always sums to N" begin
+@testitem "_ints_summing_to always sums to N" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     rng = MersenneTwister(7)
-    for _ = 1:50
+    for _ in 1:50
         M = rand(rng, 1:8)
         w = rand(rng, M)
         w ./= sum(w)
@@ -152,14 +176,18 @@ end
     @test ForecastEnsembles._ints_summing_to(rng, [1.0], 100) == [100]
 end
 
-@testset "CRPSStacking guards" begin
+@testitem "CRPSStacking guards" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     rng = MersenneTwister(11)
     df = DataFrame(
         model_id = repeat(["m1", "m2"], inner = 20),
         output_type = "sample",
         output_type_id = repeat(1:20, 2),
         t = 1,
-        value = randn(rng, 40),
+        value = randn(rng, 40)
     )
     ft = ForecastTable(df; task_id_cols = [:t])
     obs = DataFrame(t = [1], observed = [0.0])
@@ -172,7 +200,7 @@ end
     @test_throws ArgumentError CRPSStacking(;
         lambda = 0.9,
         time_col = :t,
-        task_weights = DataFrame(t = [1], weight = [1.0]),
+        task_weights = DataFrame(t = [1], weight = [1.0])
     )
 
     # Tiny per-model sample counts no longer produce a biased/NaN diagonal.
@@ -181,7 +209,7 @@ end
         output_type = "sample",
         output_type_id = repeat(1:2, 2),
         t = 1,
-        value = [0.0, 1.0, 5.0, 6.0],
+        value = [0.0, 1.0, 5.0, 6.0]
     )
     sft = ForecastTable(small; task_id_cols = [:t])
     fitted = fit(CRPSStacking(), sft, obs)
@@ -189,14 +217,18 @@ end
     @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
 end
 
-@testset "FittedQRA combine guards" begin
+@testitem "FittedQRA combine guards" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     rng = MersenneTwister(123)
     n = 60
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in
-        (("m_a", y .+ 0.3 .* randn(rng, n)), ("m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, pred) in (("m_a", y .+ 0.3 .* randn(rng, n)), (
+        "m_b", y .+ 0.3 .* randn(rng, n)))
         for τ in levels
             push!(
                 rows,
@@ -205,8 +237,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n,
-                    value = pred .+ dquantile(Normal(0, 1), τ),
-                ),
+                    value = pred .+ dquantile(Normal(0, 1), τ)
+                )
             )
         end
     end
@@ -220,11 +252,11 @@ end
         output_type = "quantile",
         output_type_id = [0.33, 0.33],
         t = [1, 1],
-        value = [0.0, 0.1],
+        value = [0.0, 0.1]
     )
     @test_throws ArgumentError combine(
         ForecastTable(bad_level; task_id_cols = [:t]),
-        fitted,
+        fitted
     )
 
     # Missing model → checked error, not BoundsError.
@@ -233,22 +265,26 @@ end
         output_type = "quantile",
         output_type_id = levels,
         t = 1,
-        value = [-0.5, 0.0, 0.5],
+        value = [-0.5, 0.0, 0.5]
     )
     @test_throws ArgumentError combine(
         ForecastTable(one_model; task_id_cols = [:t]),
-        fitted,
+        fitted
     )
 end
 
-@testset "QRA noncross holds out of sample" begin
+@testitem "QRA noncross holds out of sample" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     rng = MersenneTwister(31)
     n = 80
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in
-        (("m_a", y .+ 0.4 .* randn(rng, n)), ("m_b", y .+ 0.4 .* randn(rng, n)))
+    for (mid, pred) in (("m_a", y .+ 0.4 .* randn(rng, n)), (
+        "m_b", y .+ 0.4 .* randn(rng, n)))
         for τ in levels
             push!(
                 rows,
@@ -257,8 +293,8 @@ end
                     output_type = "quantile",
                     output_type_id = τ,
                     t = 1:n,
-                    value = pred .+ dquantile(Normal(0, 1), τ),
-                ),
+                    value = pred .+ dquantile(Normal(0, 1), τ)
+                )
             )
         end
     end
@@ -272,10 +308,10 @@ end
             per_quantile_weights = true,
             noncross = true,
             enforce_normalisation = true,
-            intercept = false,
+            intercept = false
         ),
         train,
-        obs,
+        obs
     )
     out = DataFrame(combine(test_ft, fitted))
     for tdf in DataFrames.groupby(out, :t)
@@ -283,7 +319,11 @@ end
     end
 end
 
-@testset "Parity — qrensemble::qra (per-quantile, intercept)" begin
+@testitem "Parity — qrensemble::qra (per-quantile, intercept)" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, cdf as dcdf, quantile as dquantile
+    using Statistics: mean, quantile
+    using DataFrames
     using CSV
     ref_dir = joinpath(@__DIR__, "reference")
     in_df = CSV.read(joinpath(ref_dir, "qra_input.csv"), DataFrame)
@@ -293,7 +333,7 @@ end
 
     train_ft = ForecastEnsembles.from_scoringutils(
         train_df,
-        task_id_cols = [:location, :horizon, :target_date],
+        task_id_cols = [:location, :horizon, :target_date]
     )
     obs = unique(train_df[:, [:location, :horizon, :target_date, :observed]])
 
@@ -302,10 +342,10 @@ end
             per_quantile_weights = true,
             enforce_normalisation = false,
             intercept = true,
-            noncross = false,
+            noncross = false
         ),
         train_ft,
-        obs,
+        obs
     )
 
     ref_w = CSV.read(joinpath(ref_dir, "qra_perq_weights.csv"), DataFrame)
@@ -320,7 +360,7 @@ end
 
     test_ft = ForecastEnsembles.from_scoringutils(
         test_df,
-        task_id_cols = [:location, :horizon, :target_date],
+        task_id_cols = [:location, :horizon, :target_date]
     )
     out = select(
         DataFrame(combine(test_ft, fitted)),
@@ -328,14 +368,14 @@ end
         :horizon,
         :target_date,
         :output_type_id,
-        :value,
+        :value
     )
     ref_pred = CSV.read(joinpath(ref_dir, "qra_perq_output.csv"), DataFrame)
     rename!(ref_pred, :predicted => :predicted_r, :quantile_level => :output_type_id)
     j = innerjoin(
         out,
         select(ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r);
-        on = [:location, :horizon, :target_date, :output_type_id],
+        on = [:location, :horizon, :target_date, :output_type_id]
     )
     @test nrow(j) == nrow(out)
     @test maximum(abs.(j.value .- j.predicted_r)) < 1e-3
