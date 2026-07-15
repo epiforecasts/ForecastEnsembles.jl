@@ -1,6 +1,6 @@
 name = "ForecastEnsembles"
 uuid = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
-version = "0.1.0-DEV"
+version = "0.1.1"
 authors = ["Sebastian Funk <sebastian.funk@lshtm.ac.uk>"]
 
 [deps]
