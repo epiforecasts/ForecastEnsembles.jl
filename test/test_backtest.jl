@@ -2,6 +2,7 @@
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
+    using ScoringRules
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent
@@ -44,6 +45,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
+    using ScoringRules
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent
@@ -89,6 +91,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
+    using ScoringRules
 
     using Distributions: Normal, quantile as dquantile
     rng = MersenneTwister(11)
@@ -133,6 +136,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
+    using ScoringRules
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent

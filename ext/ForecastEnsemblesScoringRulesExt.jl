@@ -41,7 +41,8 @@ function _quantile_scorer(forecast::ForecastTable, obs::AbstractDataFrame)
     d = innerjoin(forecast.data, obs[:, [tcols..., :observed]]; on = tcols)
     per = combine(groupby(d, tcols)) do g
         s = sort(g, :output_type_id)
-        (; s = mean(quantile_score(Float64.(s.output_type_id), Float64.(s.value),
+        (;
+            s = mean(quantile_score(Float64.(s.output_type_id), Float64.(s.value),
             Float64(first(s.observed)))))
     end
     return mean(per.s)
