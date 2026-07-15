@@ -4,34 +4,32 @@ Planned work, organised around the two axes (combination operations and
 weighting schemes) plus the workflow and ecosystem pieces. Cross-references
 to the issues that prompted items are in parentheses.
 
-## The enabling seam: internal scoring
+## Scoring: delegated to ScoringRules.jl ✅
 
-Several items below need "the CRPS or WIS of a forecast". We already
-compute both internally — CRPS-from-samples in `CRPSStacking`, WIS/pinball
-in `QRA`. The first step is to factor these into a small interface,
+Scoring lives upstream. `ScoringRules.jl` has landed, so the former in-house
+`score`/`CRPS`/`WIS` have been removed: users evaluate forecasts with
+ScoringRules directly (`crps`, `logs`, `quantile_score`, …). Because
+ScoringRules is GPL-2.0-or-later and this package is MIT, it enters as a **weak
+dependency** — the `ForecastEnsemblesScoringRulesExt` extension activates only
+when the user runs `using ScoringRules`, so the MIT core never links GPL code.
 
-```julia
-score(forecast, obs, CRPS())    # samples
-score(forecast, obs, WIS())     # quantiles
-score(forecast, obs, Coverage())
-```
-
-so the workflow items can consume it now, and it becomes the delegation
-point to `ScoringRules.jl` (see Ecosystem) once that lands — at which
-point the in-house estimators are swapped for its versions and generic
-stacking generalises.
+The two stacking specialisations keep their own closed-form kernels (so they
+stay dependency-free): CRPS-from-samples in `CRPSStacking`, WIS/pinball in `QRA`.
+`backtest` is now score-agnostic — it takes an injected `score_fn`, defaulting
+to a ScoringRules-based scorer via the extension.
 
 ## Weighting schemes (axis 2)
 
 The organising idea is **stacking with any target**: choose weights to
 minimise a proper score of the *combined* forecast on past observations.
 `CRPSStacking` (CRPS on samples) and constrained `QRA` (WIS on quantiles)
-are the two closed-form instances we already have; the general
-`Stacking{Score}` over an arbitrary score needs `ScoringRules.jl` and its
-optimisation is non-convex for some score/operation pairs (notably
-log-score on a mixture).
+are the closed-form specialisations; the generic **`Stacking{Score}`** now
+optimises simplex weights against *any* weighted-sample rule from
+ScoringRules (e.g. `Stacking(crps)`, `Stacking(es)`) — the extension supplies
+the `fit`. Optimisation is non-convex for some score/operation pairs (notably
+log-score on a mixture), so convergence is not guaranteed everywhere.
 
-Buildable now (reuse the scoring seam, no `ScoringRules.jl` dependency):
+Buildable now (reuse `CRPSStacking`'s machinery, no `ScoringRules.jl` dependency):
 
 - **Cheap baseline: inverse-score / softmax weights.** `wᵢ ∝ exp(−score of
   member i)`. Analytic, no optimiser. A strong, fast default.
@@ -46,14 +44,15 @@ Buildable now (reuse the scoring seam, no `ScoringRules.jl` dependency):
   cross-stratum shrinkage term. Genuinely novel for this space and matches
   hub data shape.
 
-Needs `ScoringRules.jl`:
+Via the ScoringRules extension:
 
-- **Generic `Stacking{Score}`.** One stacker parameterised by any proper
-  score, with the CRPS and WIS specialisations dispatched underneath.
-  Subsumes the old "generic scoringutils-score stacking" item.
+- **Generic `Stacking{Score}`** ✅ — one stacker parameterised by any
+  weighted-sample proper score, with the CRPS and WIS specialisations
+  (`CRPSStacking`, `QRA`) kept as dependency-free closed forms alongside it.
 - **Log-score stacking** and **BMA.** BMA is essentially log-score
   stacking of a mixture fitted by EM, so it folds into the generic stacker
-  rather than standing alone.
+  rather than standing alone. (Log score of a sample mixture needs a density
+  estimate, so this is a follow-up to the sample-CRPS path now in place.)
 
 ## Combination operations (axis 1)
 
