@@ -2,7 +2,7 @@
 // Build-time loader for the navbar StarUs widget: fetches the repo's live
 // GitHub star count. Runs on the docs builder (VitePress data loader), not in
 // the browser. A `GITHUB_TOKEN` in the environment raises the API rate limit.
-const REPO = "sbfnk/ForecastEnsembles.jl";
+const REPO = "epiforecasts/ForecastEnsembles.jl";
 
 export default {
   async load() {

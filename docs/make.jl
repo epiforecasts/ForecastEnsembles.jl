@@ -56,7 +56,7 @@ _cfg(sym, default) = isdefined(@__MODULE__, sym) ?
 
 build_docs(
     ForecastEnsembles;
-    repo = "sbfnk/ForecastEnsembles.jl",
+    repo = "epiforecasts/ForecastEnsembles.jl",
     authors = "Sebastian Funk",
     deploy_url = nothing,
     pages = _cfg(:pages, ["Home" => "index.md"]),

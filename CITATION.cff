@@ -4,5 +4,5 @@ title: "ForecastEnsembles.jl"
 type: software
 authors:
   - name: "Sebastian Funk"
-repository-code: "https://github.com/sbfnk/ForecastEnsembles.jl"
-url: "https://github.com/sbfnk/ForecastEnsembles.jl"
+repository-code: "https://github.com/epiforecasts/ForecastEnsembles.jl"
+url: "https://github.com/epiforecasts/ForecastEnsembles.jl"

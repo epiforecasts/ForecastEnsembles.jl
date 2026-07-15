@@ -3,7 +3,7 @@
 <!-- badges:start -->
 | **Documentation** | **Build Status** | **Code Quality** | **License & DOI** | **Downloads** |
 |:-----------------:|:----------------:|:----------------:|:-----------------:|:-------------:|
-| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sbfnk.github.io/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sbfnk.github.io/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/sbfnk/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/sbfnk/ForecastEnsembles.jl) | [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
+| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://epiforecasts.github.io/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://epiforecasts.github.io/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl) | [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
 <!-- badges:end -->
 
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
@@ -63,8 +63,8 @@ For an end-to-end walkthrough on real flu hospitalisation forecasts, see
 ## Documentation
 
 Full documentation — method reference, worked examples, and the API — is at
-[sbfnk.github.io/ForecastEnsembles.jl](https://sbfnk.github.io/ForecastEnsembles.jl/stable/).
-The [Methods](https://sbfnk.github.io/ForecastEnsembles.jl/stable/methods) page
+[epiforecasts.github.io/ForecastEnsembles.jl](https://epiforecasts.github.io/ForecastEnsembles.jl/stable/).
+The [Methods](https://epiforecasts.github.io/ForecastEnsembles.jl/stable/methods) page
 explains the two axes (combination operation and weighting scheme) that
 organise the methods.
 
@@ -75,11 +75,11 @@ organise the methods.
 
 ## Contributing
 
-We welcome contributions and new contributors! Please open an issue or pull request on [GitHub](https://github.com/sbfnk/ForecastEnsembles.jl). This package follows [ColPrac](https://github.com/SciML/ColPrac) and the [SciML style](https://github.com/SciML/SciMLStyle).
+We welcome contributions and new contributors! Please open an issue or pull request on [GitHub](https://github.com/epiforecasts/ForecastEnsembles.jl). This package follows [ColPrac](https://github.com/SciML/ColPrac) and the [SciML style](https://github.com/SciML/SciMLStyle).
 
 ## How to cite
 
-If you use ForecastEnsembles in your work, please cite it. Citation metadata lives in [`CITATION.cff`](https://github.com/sbfnk/ForecastEnsembles.jl/blob/main/CITATION.cff), which GitHub renders as a "Cite this repository" button on the repository page.
+If you use ForecastEnsembles in your work, please cite it. Citation metadata lives in [`CITATION.cff`](https://github.com/epiforecasts/ForecastEnsembles.jl/blob/main/CITATION.cff), which GitHub renders as a "Cite this repository" button on the repository page.
 
 ## Code of conduct
 

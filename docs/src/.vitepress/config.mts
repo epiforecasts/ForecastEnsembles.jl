@@ -108,7 +108,7 @@ export default defineConfig({
     sidebarDrawer: 'REPLACE_ME_DOCUMENTER_VITEPRESS_SIDEBAR_DRAWER',
     editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/sbfnk/ForecastEnsembles.jl' }
+      { icon: 'github', link: 'https://github.com/epiforecasts/ForecastEnsembles.jl' }
     ],
     footer: {
       message: 'Made with <a href="https://luxdl.github.io/DocumenterVitepress.jl/dev/" target="_blank"><strong>DocumenterVitepress.jl</strong></a><br>',

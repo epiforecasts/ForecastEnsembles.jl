@@ -9,7 +9,7 @@ import {data} from "./stargazers.data";
 const props = defineProps({
   repoUrl: {
     type: String,
-    default: "https://github.com/sbfnk/ForecastEnsembles.jl"
+    default: "https://github.com/epiforecasts/ForecastEnsembles.jl"
   }
 });
 
