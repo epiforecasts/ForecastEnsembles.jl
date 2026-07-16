@@ -37,6 +37,7 @@ export ForecastTable,
        FittedStacking,
        InverseScore,
        FittedInverseScore,
+       Windowed,
        combine,
        fit,
        weights,
@@ -53,6 +54,7 @@ include("qra.jl")
 include("crps_stacking.jl")
 include("stacking.jl")
 include("backtest.jl")
+include("windowed.jl")
 include("interop.jl")
 
 end # module

@@ -31,8 +31,10 @@ log-score on a mixture), so convergence is not guaranteed everywhere.
 
 Buildable now (dependency-free wrappers around the fitted methods):
 
-- **Window training.** Trailing-window wrapper around any estimator; the
-  coarse cousin of the recency `lambda` already in `CRPSStacking`.
+- **Window training** ✅ — `Windowed(method, window; time_col)`: a fit-time
+  wrapper that trains any `TrainedMethod` on only the most recent `window`
+  times (rolling window vs the expanding window `backtest` grows). The coarse
+  cousin of the recency `lambda` already in `CRPSStacking`.
 - **Online / adaptive weighting.** Exponentiated-gradient / Hedge:
   update weights from each round's per-member loss, with regret
   guarantees, no full refit. Natural fit for a weekly operational cadence.
