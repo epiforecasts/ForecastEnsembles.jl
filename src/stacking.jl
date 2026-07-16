@@ -71,3 +71,63 @@ function fit(::Stacking, args...)
                         "before fitting, or use CRPSStacking / QRA for the " *
                         "closed-form CRPS / WIS cases."))
 end
+
+"""
+    InverseScore(score; temperature = 1.0)
+
+Performance weighting: score each member independently and weight the better
+ones more heavily — `wᵢ ∝ exp(−temperature · sᵢ)`, where `sᵢ` is member `i`'s
+mean `score` over the training set (negatively oriented, so a lower score earns
+more weight). No optimisation, so it is fast and robust with few observations;
+but — unlike [`Stacking`](@ref) — it scores each member in isolation and never
+sees how they combine, so it is blind to redundancy between them.
+
+`fit(InverseScore(score), training, observations)` returns a
+[`FittedInverseScore`](@ref) that plugs into [`combine`](@ref) / [`weights`](@ref).
+`score` is any negatively-oriented weighted-sample rule from
+[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) (e.g.
+`ScoringRules.crps`), which must be loaded — it is a weak dependency.
+
+# Fields
+
+- `score`: the scoring-rule function (negatively oriented).
+- `temperature`: sharpness of the softmax over member scores. As it tends to
+  `0` the weights approach equal; large values approach winner-take-all. Must
+  be positive.
+"""
+struct InverseScore{F} <: TrainedMethod
+    score::F
+    temperature::Float64
+end
+
+function InverseScore(score; temperature::Real = 1.0)
+    temperature > 0 || throw(ArgumentError("temperature must be positive"))
+    return InverseScore{typeof(score)}(score, Float64(temperature))
+end
+
+"""
+    FittedInverseScore(weights, models, scores)
+
+Output of `fit(::InverseScore, …)`. Stores the simplex `weights` (a `DataFrame`
+with columns `model_id` and `weight`), the component `models` in weight order,
+and the per-member mean `scores` they were derived from. Plug into
+`combine(ft, fitted)` — internally a [`LinearPool`](@ref) with these weights.
+"""
+struct FittedInverseScore <: UnfittedMethod
+    weights::DataFrame
+    models::Vector{String}
+    scores::Vector{Float64}
+end
+
+function combine(ft::ForecastTable, m::FittedInverseScore; rng::AbstractRNG = default_rng())
+    return combine(ft, LinearPool(; weights = m.weights); rng = rng)
+end
+
+weights(m::FittedInverseScore) = EnsembleWeights(m.weights)
+
+# Fallback until ScoringRules (which supplies the score) is loaded; the
+# extension's concrete method is more specific.
+function fit(::InverseScore, args...)
+    throw(ArgumentError("InverseScore needs ScoringRules.jl for the score. Run " *
+                        "`using ScoringRules` (a weak dependency) before fitting."))
+end

@@ -29,10 +29,8 @@ ScoringRules (e.g. `Stacking(crps)`, `Stacking(es)`) — the extension supplies
 the `fit`. Optimisation is non-convex for some score/operation pairs (notably
 log-score on a mixture), so convergence is not guaranteed everywhere.
 
-Buildable now (reuse `CRPSStacking`'s machinery, no `ScoringRules.jl` dependency):
+Buildable now (dependency-free wrappers around the fitted methods):
 
-- **Cheap baseline: inverse-score / softmax weights.** `wᵢ ∝ exp(−score of
-  member i)`. Analytic, no optimiser. A strong, fast default.
 - **Window training.** Trailing-window wrapper around any estimator; the
   coarse cousin of the recency `lambda` already in `CRPSStacking`.
 - **Online / adaptive weighting.** Exponentiated-gradient / Hedge:
@@ -49,6 +47,10 @@ Via the ScoringRules extension:
 - **Generic `Stacking{Score}`** ✅ — one stacker parameterised by any
   weighted-sample proper score, with the CRPS and WIS specialisations
   (`CRPSStacking`, `QRA`) kept as dependency-free closed forms alongside it.
+- **Inverse-score weighting** ✅ — `InverseScore(score)`: score each member
+  independently and softmax the negative mean scores into simplex weights.
+  The cheap, robust, no-optimiser cousin of `Stacking` (blind to redundancy
+  between members, but hard to overfit).
 - **Log-score stacking** and **BMA.** BMA is essentially log-score
   stacking of a mixture fitted by EM, so it folds into the generic stacker
   rather than standing alone. (Log score of a sample mixture needs a density

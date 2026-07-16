@@ -6,7 +6,7 @@
 module ForecastEnsemblesScoringRulesExt
 
 using ForecastEnsembles: ForecastEnsembles, ForecastTable, Stacking, FittedStacking,
-                         output_type, task_id_cols
+                         InverseScore, FittedInverseScore, output_type, task_id_cols
 using ScoringRules: crps, quantile_score
 using DataFrames: DataFrame, AbstractDataFrame, innerjoin, groupby, combine, sort
 using Optim: optimize, LBFGS, minimizer, minimum
@@ -98,6 +98,36 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
     w_hat = _softmax(minimizer(res))
     return FittedStacking(DataFrame(model_id = models, weight = w_hat),
         String.(models), minimum(res))
+end
+
+# ---- inverse-score (performance) weighting ----------------------------------
+# Score each member independently over the training set, then softmax the
+# negative mean scores into simplex weights. No optimiser — one scoring pass.
+
+function fit(m::InverseScore, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "InverseScore supports :sample forecasts (weighted-sample scores)."))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    score = m.score
+
+    # Per (member, task) score, then the mean over tasks for each member.
+    per = combine(groupby(d, [mid, tcols...])) do g
+        (; s = score(Float64.(g.value), Float64(first(g.observed))))
+    end
+    mean_scores = [mean(per[per[!, mid] .== mm, :s]) for mm in models]
+
+    w = _softmax(-m.temperature .* mean_scores)
+    return FittedInverseScore(DataFrame(model_id = models, weight = w),
+        String.(models), mean_scores)
 end
 
 end # module
