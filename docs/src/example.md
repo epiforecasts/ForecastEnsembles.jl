@@ -166,6 +166,17 @@ backtest(training_ft, training_obs,
     time_col = :target_end_date, min_train = 4)
 ```
 
+## Recalibrated mixture (beta-transformed linear pool)
+
+`BLP` corrects the linear pool's tail underdispersion. Fit the Beta on past
+forecasts/observations (`training_ft` / `training_obs` as above), then apply it;
+it reweights the pool's quantile levels rather than the models:
+
+```julia
+fitted = fit(BLP(), training_ft, training_obs)
+combine(ft, fitted)
+```
+
 ## What's where in the data
 
 ```julia

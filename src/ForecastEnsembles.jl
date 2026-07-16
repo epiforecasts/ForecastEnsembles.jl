@@ -2,7 +2,7 @@ module ForecastEnsembles
 
 using DataFrames: DataFrames, AbstractDataFrame, DataFrame, Not, innerjoin,
                   leftjoin, nrow, rename!, select!, unstack
-using Distributions: Normal
+using Distributions: Normal, Beta, fit_mle, params
 using HiGHS: HiGHS
 using JuMP: JuMP, @constraint, @objective, @variable, AffExpr, MOI, Model,
             add_to_expression!, optimize!, set_silent, termination_status, value
@@ -34,6 +34,8 @@ export ForecastTable,
        FittedQRA,
        CRPSStacking,
        FittedCRPSStacking,
+       BLP,
+       FittedBLP,
        Stacking,
        FittedStacking,
        InverseScore,
@@ -57,6 +59,7 @@ include("methods.jl")
 include("simple.jl")
 include("distfromq.jl")
 include("linear_pool.jl")
+include("blp.jl")
 include("trimmed.jl")
 include("qra.jl")
 include("crps_stacking.jl")

@@ -120,6 +120,18 @@ and reach for `MixtureEnsemble` when you specifically want the mixture
 semantics, e.g. when the models represent distinct scenarios
 whose multimodality should survive into the ensemble.
 
+### Beta-transformed linear pool
+
+[`BLP`](@ref) addresses the linear-pool underdispersion noted above. It is a
+trained recalibration of the mixture (Gneiting & Ranjan 2013):
+`fit(BLP(), training, observations)` fits a Beta to the pool's PIT values on
+past data, and `combine` passes the mixture CDF through that Beta —
+equivalently, reads the linear pool's quantiles at Beta-remapped levels. `α = β
+= 1` leaves the pool unchanged; a U-shaped Beta widens an overconfident pool.
+Because it recalibrates rather than reweights, `weights(::FittedBLP)` is
+`nothing` — apply it with `combine(ft, fitted)`. Quantile forecasts only; it
+sits between combination (axis 1) and recalibration.
+
 ## Choosing the weights
 
 Both operations combine the members through a set of weights. Whichever

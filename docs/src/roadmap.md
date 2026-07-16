@@ -25,12 +25,6 @@ wrapper — leaves these still to do:
   and from convolution (the sum of independent variables); they coincide
   only for an equal-spread location family. A real third operation, but
   niche — lower priority.
-- **Trimmed / winsorised mean.** Drop the top/bottom k% of member values
-  per (task, τ) before averaging; robustness to outlier submissions. Sketch
-  already in [Extending](extending.md).
-- **Beta-transformed linear pool (BLP).** Gneiting & Ranjan's recalibrated
-  mixture; fixes LOP underdispersion. Sits between axis 1 and
-  recalibration (it maps the mixture CDF through a fitted Beta).
 
 ## Workflow: choosing a scheme
 
