@@ -37,9 +37,15 @@ wrapper — leaves these still to do:
 
 ## Workflow: choosing a scheme
 
-- **Weight & calibration diagnostics.** Effective number of models (weight
-  concentration), weight stability over time, PIT histograms of the
-  ensemble.
+- **Weight diagnostics.** Ensemble-internal summaries of a fitted weight
+  vector (or a `Hedge`/`PartialPooling` weight set): effective number of
+  models (weight concentration), weight stability over time. These need the
+  weights, so they live here rather than in the scoring stack.
+- **Calibration diagnostics** — PIT histograms, coverage, pairwise model
+  comparison — are general forecast-evaluation tools, not ensemble-specific,
+  so they belong in the scoring/evaluation layer
+  ([ForecastScoring.jl, ProjectProposals#2](https://github.com/EpiAware/ProjectProposals/issues/2)),
+  which we consume rather than reimplement.
 
 ## Recalibration
 

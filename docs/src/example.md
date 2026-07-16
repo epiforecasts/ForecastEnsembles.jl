@@ -1,7 +1,12 @@
 # Worked example: combining three flu hospitalisation forecasts
 
-This page runs every method in the package on a real hubverse forecast
-slice bundled with `ForecastEnsembles.jl`. Three models from the
+This page runs the combination operations and the quantile-based weight
+estimators on a real hubverse forecast slice bundled with
+`ForecastEnsembles.jl`. The sample-based stacking family (generic `Stacking`,
+`InverseScore`, `Hedge`, `PartialPooling`) needs sample-typed training
+forecasts with matching observations, which this single-date quantile slice
+does not carry; it is illustrated at the end and covered in
+[Methods](methods.md). Three models from the
 [example-complex-forecast-hub](https://github.com/hubverse-org/example-complex-forecast-hub),
 each predicting weekly flu hospitalisations on 2022-12-17 at horizon 1
 across five US locations (national plus CA, FL, NY, TX), at the standard
@@ -109,6 +114,47 @@ with an intercept, unconstrained fits, fits across multiple task groups —
 construction. You can still call `combine(ft, fitted)` directly: that
 applies the fitted regression coefficients and produces predicted
 quantiles.
+
+## Sample-based weight estimators
+
+On sample-typed training forecasts (a `:sample` `ForecastTable` plus an
+observations frame with an `:observed` column), the score-driven estimators
+optimise weights against a ScoringRules rule. They are a **weak dependency**:
+`using ScoringRules` activates them. Sketched here on a `training_ft` /
+`training_obs` pair shaped like the QRA section above:
+
+```julia
+using ScoringRules
+
+# Generic stacking against any weighted-sample score (crps, es, …).
+combine(ft, MixtureEnsemble(;
+    weights = fit(Stacking(ScoringRules.crps), training_ft, training_obs)))
+
+# Performance weighting — score each member independently, no optimiser.
+combine(ft, MixtureEnsemble(;
+    weights = fit(InverseScore(ScoringRules.crps), training_ft, training_obs)))
+
+# Online / adaptive — walk the time column, update weights each round.
+combine(ft, MixtureEnsemble(;
+    weights = fit(Hedge(ScoringRules.crps; time_col = :target_end_date),
+                  training_ft, training_obs)))
+
+# Hierarchical — a weight vector per location, shrunk toward a shared one.
+fitted = fit(PartialPooling(ScoringRules.crps; strata = [:location]),
+             training_ft, training_obs)
+combine(ft, fitted)   # applies each location's own weights
+```
+
+Wrap any estimator in `Windowed` to train on a trailing window only, and use
+`backtest` to compare schemes out-of-sample:
+
+```julia
+rolling = Windowed(CRPSStacking(), 8; time_col = :target_end_date)
+
+backtest(training_ft, training_obs,
+    ["expanding" => CRPSStacking(), "rolling" => rolling];
+    time_col = :target_end_date, min_train = 4)
+```
 
 ## What's where in the data
 

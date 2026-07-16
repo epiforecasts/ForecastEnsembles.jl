@@ -14,12 +14,21 @@ them:
 
 1. **How the members are combined** — the aggregation operation
    (`QuantileEnsemble`, `MixtureEnsemble`).
-2. **How the weights are chosen** — equal, user-supplied, or estimated by
-   optimising a score on past forecasts (`QRA`, `CRPSStacking`).
+2. **How the weights are chosen** — equal, user-supplied, or estimated from
+   past forecasts (`CRPSStacking`, `QRA`, generic `Stacking`, `InverseScore`,
+   `Hedge`, `PartialPooling`).
 
-`QRA` and `CRPSStacking` are not a third and fourth kind of ensemble; they
-are weight estimators that feed either operation. The two sections below
+These weight estimators are not extra kinds of ensemble; each produces a
+weight vector that feeds either combination operation. The two sections below
 follow the two axes.
+
+The score-driven estimators beyond the closed-form `CRPSStacking`/`QRA` —
+generic `Stacking`, `InverseScore`, `Hedge`, `PartialPooling` — optimise
+against a proper score from
+[`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl). Because
+ScoringRules is GPL-licensed and this package is MIT, it is a **weak
+dependency**: run `using ScoringRules` to activate them. `CRPSStacking`, `QRA`,
+and the `Windowed` wrapper need no extra package.
 
 This package covers the *combine* step of a forecasting pipeline
 (produce → combine → recalibrate → score). Recalibrating the combined
@@ -249,6 +258,73 @@ this regression and do not transfer to a mixture, so `weights` returns
 `nothing`. You still apply the fit with `combine(ft, fitted)`, which
 evaluates the fitted regression to produce predicted quantiles directly.
 
+#### Stacking (any score)
+
+[`Stacking`](@ref)`(score; dirichlet_alpha)` is the general form: it minimises
+the mean of *any* negatively-oriented weighted-sample rule from ScoringRules
+(e.g. `ScoringRules.crps`, `ScoringRules.es` for the energy score) over the
+simplex, in softmax space. `CRPSStacking` is the closed-form CRPS
+specialisation; reach for `Stacking` when you want a different score.
+Sample-typed forecasts only (weighted-sample scores); use `QRA` for
+quantile/WIS stacking. Optimisation is non-convex for some score/operation
+pairs, so convergence is not guaranteed everywhere.
+
+```julia
+using ScoringRules            # weak dependency; activates the estimators below
+fitted = fit(Stacking(ScoringRules.crps), training_ft, training_obs)
+combine(ft, MixtureEnsemble(; weights = fitted))
+```
+
+#### InverseScore
+
+[`InverseScore`](@ref)`(score; temperature)` is performance weighting: score
+each member independently over the training set and softmax the negative mean
+scores, ``w_i \propto \exp(-\text{temperature} \cdot s_i)``. No optimiser, so
+it is fast and hard to overfit — but, unlike stacking, it scores each member in
+isolation and never sees how they combine, so it is blind to redundancy between
+them. `temperature` sharpens the softmax (small → equal weights, large →
+winner-take-all).
+
+#### Hedge (online)
+
+[`Hedge`](@ref)`(score; eta, time_col)` updates weights online by the
+exponentiated-gradient / multiplicative-weights rule: walking `time_col` in
+order, it multiplies each member's weight by ``\exp(-\text{eta} \cdot s_t)`` at
+each step and renormalises. It adapts to *when* members did well — tracking
+regime change that a single pooled score misses — and needs no full refit. The
+fitted result keeps the whole weight `trajectory` for stability diagnostics.
+`eta` is the learning rate (scale it to the magnitude of your score).
+
+#### PartialPooling (hierarchical)
+
+[`PartialPooling`](@ref)`(score; strata, lambda)` learns a weight vector per
+stratum (a combination of the `strata` columns, e.g. `[:location]`) that
+shrinks toward a shared global vector, so a data-sparse stratum borrows
+strength. `lambda` sets the shrinkage: `0` fits each stratum independently,
+large values pool them onto one vector. `combine` applies each stratum's own
+weights and falls back to the global vector for a stratum unseen in training.
+It generalises `Stacking` — a single stratum, or `lambda → ∞`, recovers global
+stacking.
+
+### Training windows and rolling refits
+
+[`Windowed`](@ref)`(method, window; time_col)` wraps any weight estimator to
+train on only the most recent `window` values of `time_col`, then delegates to
+the inner method — so it composes with all of the above and is itself
+dependency-free. It is the hard-cutoff counterpart to `CRPSStacking`'s smooth
+`lambda` recency, and turns [`backtest`](@ref)'s default expanding window into a
+rolling one.
+
+### Choosing a scheme: `backtest`
+
+[`backtest`](@ref)`(ft, observations, schemes; time_col, min_train)` compares
+weighting schemes out-of-sample. For each time fold it refits every scheme on
+the earlier data and scores its combined forecast on the held-out step,
+returning a tidy frame of per-fold scores. The default scorer comes from the
+ScoringRules extension (CRPS for samples, mean quantile score for quantiles);
+pass `score_fn` to supply your own. Wrap a scheme in `Windowed` to backtest a
+rolling window against an expanding one.
+
 ### Composition through `weights`
 
 The two axes meet at one accessor:
@@ -270,10 +346,12 @@ QuantileEnsemble(:mean; weights = fitted)
 Two shapes appear:
 
 - *Per-model* (`:model_id, :weight`): a single weight vector applied at
-  every quantile level. Always returned for `FittedCRPSStacking`;
-  returned for `FittedQRA` when the fit is joint, simplex-constrained,
-  and has no intercept. Accepted by both `MixtureEnsemble` and
-  `QuantileEnsemble`.
+  every quantile level. Always returned for `FittedCRPSStacking`,
+  `FittedStacking`, `FittedInverseScore`, and `FittedHedge`; for
+  `FittedPartialPooling` it returns the pooled global vector (per-stratum
+  weights live in the fitted object and are applied by its own `combine`);
+  returned for `FittedQRA` when the fit is joint, simplex-constrained, and has
+  no intercept. Accepted by both `MixtureEnsemble` and `QuantileEnsemble`.
 - *Per-quantile* (`:model_id, :output_type_id, :weight`): weights vary
   across τ. Returned for `FittedQRA` in the per-τ, simplex-constrained,
   no-intercept case. Accepted by `QuantileEnsemble` only; `MixtureEnsemble`
