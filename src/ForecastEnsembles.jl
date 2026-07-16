@@ -39,6 +39,8 @@ export ForecastTable,
        FittedInverseScore,
        Hedge,
        FittedHedge,
+       PartialPooling,
+       FittedPartialPooling,
        Windowed,
        combine,
        fit,
@@ -56,6 +58,7 @@ include("qra.jl")
 include("crps_stacking.jl")
 include("stacking.jl")
 include("online.jl")
+include("partial_pooling.jl")
 include("backtest.jl")
 include("windowed.jl")
 include("interop.jl")

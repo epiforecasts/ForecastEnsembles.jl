@@ -9,14 +9,9 @@ to the issues that prompted items are in parentheses.
 The organising idea is **stacking with any target**: choose weights to
 minimise a proper score of the *combined* forecast on past observations. The
 built foundation — `CRPSStacking`/`QRA` (closed-form CRPS/WIS), generic
-`Stacking{Score}`, `InverseScore`, `Hedge`, and the `Windowed` wrapper — leaves
-these still to do:
+`Stacking{Score}`, `InverseScore`, `Hedge`, `PartialPooling`, and the `Windowed`
+wrapper — leaves these still to do:
 
-- **Partial pooling / hierarchical weights.** Share weights across strata
-  (locations, age groups) with shrinkage, so a data-sparse stratum
-  borrows strength. Extends the `CRPSStacking` objective with a
-  cross-stratum shrinkage term. Genuinely novel for this space and matches
-  hub data shape.
 - **Log-score stacking** and **BMA.** BMA is essentially log-score
   stacking of a mixture fitted by EM, so it folds into the generic stacker
   rather than standing alone. (Log score of a sample mixture needs a density
