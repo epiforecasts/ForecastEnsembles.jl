@@ -1,15 +1,33 @@
-<!-- Placeholder logo for ForecastEnsembles.jl, seeded once by `scaffold` and never
-     touched again by `scaffold_update` (package-owned, like LICENSE). Replace this
-     file with a real logo; the README title and docs build already point at
-     this exact path (see docs/make.jl's README -> index.md step), so no
-     other wiring changes are needed when it is swapped out. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"
-     viewBox="0 0 150 150" role="img"
-     aria-label="ForecastEnsembles logo placeholder">
-  <title>ForecastEnsembles logo placeholder</title>
-  <rect width="150" height="150" rx="18" fill="#389826"/>
-  <text x="75" y="95" font-family="sans-serif" font-size="72"
-        font-weight="700" fill="#ffffff" text-anchor="middle">
-    F
-  </text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1386"
+     viewBox="0 0 1200 1386" role="img" aria-label="ForecastEnsembles.jl logo">
+  <title>ForecastEnsembles.jl</title>
+  <desc>Three overlapping member forecast densities in the Julia colours,
+        combined into one ensemble curve, on a Julia hexagon.</desc>
+
+  <!-- Julia hexagon -->
+  <path d="M 600 0 L 0 346.5 L 0 1039.5 L 600 1386 L 1200 1039.5 L 1200 346.5 Z"
+        fill="#1a1a2e" stroke="#e8e8f0" stroke-width="20"
+        stroke-linejoin="miter"/>
+
+  <!-- forecast baseline -->
+  <line x1="130" y1="950" x2="1070" y2="950"
+        stroke="#e8e8f0" stroke-opacity="0.3" stroke-width="6"/>
+
+  <!-- three member forecast densities (Julia red / purple / green) -->
+  <g fill-opacity="0.75" stroke-linejoin="round">
+    <path d="M110 950 C245 950 326 480 380 480 C434 480 515 950 650 950 Z" fill="#cb3c33"/>
+    <path d="M300 950 C450 950 540 390 600 390 C660 390 750 950 900 950 Z" fill="#9558b2"/>
+    <path d="M550 950 C685 950 766 480 820 480 C874 480 955 950 1090 950 Z" fill="#389826"/>
+  </g>
+
+  <!-- the combined ensemble forecast -->
+  <path d="M130 950 C365 950 506 300 600 300 C694 300 835 950 1070 950"
+        fill="none" stroke="#e8e8f0" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- package name -->
+  <text x="600" y="1085" text-anchor="middle"
+        font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="76" font-weight="700" fill="#e8e8f0">ForecastEnsembles.jl</text>
 </svg>
