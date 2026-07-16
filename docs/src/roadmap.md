@@ -28,19 +28,12 @@ wrapper — leaves these still to do:
 - **Trimmed / winsorised mean.** Drop the top/bottom k% of member values
   per (task, τ) before averaging; robustness to outlier submissions. Sketch
   already in [Extending](extending.md).
-- **Spread / dispersion adjustment.** A one-parameter widen/narrow of the
-  combined forecast to hit nominal coverage. Cheap, and often more
-  effective than heavier recalibration.
 - **Beta-transformed linear pool (BLP).** Gneiting & Ranjan's recalibrated
   mixture; fixes LOP underdispersion. Sits between axis 1 and
   recalibration (it maps the mixture CDF through a fitted Beta).
 
 ## Workflow: choosing a scheme
 
-- **Weight diagnostics.** Ensemble-internal summaries of a fitted weight
-  vector (or a `Hedge`/`PartialPooling` weight set): effective number of
-  models (weight concentration), weight stability over time. These need the
-  weights, so they live here rather than in the scoring stack.
 - **Calibration diagnostics** — PIT histograms, coverage, pairwise model
   comparison — are general forecast-evaluation tools, not ensemble-specific,
   so they belong in the scoring/evaluation layer
@@ -68,11 +61,15 @@ increasing effort:
 - *Implement here* — IDR has a clean R reference in
   [isodistrreg](https://github.com/AlexanderHenzi/isodistrreg).
 
-Candidate methods: **IDR** (Henzi, Ziegel, Gneiting 2019,
-[arXiv:1909.03725](https://arxiv.org/abs/1909.03725)); **empirical PIT
-mapping** (simple enough to be the first `Recalibrator`, no upstream
-dependency); **CRPS-minimising parametric recalibration** (the
-`CRPSStacking` machinery applied one model at a time); **BLP**.
+Candidate methods: **spread / dispersion adjustment** (a one-parameter
+widen/narrow of the combined forecast around its median to hit nominal
+coverage — the simplest parametric `Recalibrator`, and distinct from
+PostForecasts.jl's five methods, which map *point* forecasts to quantiles
+rather than rescaling an existing distribution); **empirical PIT mapping**
+(also no upstream dependency); **IDR** (Henzi, Ziegel, Gneiting 2019,
+[arXiv:1909.03725](https://arxiv.org/abs/1909.03725)); **CRPS-minimising
+parametric recalibration** (the `CRPSStacking` machinery applied one model at
+a time); **BLP**.
 
 ## Ecosystem
 

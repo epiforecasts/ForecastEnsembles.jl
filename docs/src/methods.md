@@ -325,6 +325,20 @@ ScoringRules extension (CRPS for samples, mean quantile score for quantiles);
 pass `score_fn` to supply your own. Wrap a scheme in `Windowed` to backtest a
 rolling window against an expanding one.
 
+### Weight diagnostics
+
+Once a scheme is fitted, two diagnostics summarise the weights it produced.
+[`effective_num_models`](@ref) reports the participation ratio
+``1 / \sum_i p_i^2`` of a weight vector — `1` when all weight sits on one
+model, up to the model count when weights are equal — reading as "how many
+models is this ensemble really using". It accepts any fitted method that
+exposes [`weights`](@ref), an `EnsembleWeights`, or a raw vector, and returns a
+per-τ frame for per-quantile weights. [`weight_stability`](@ref) takes a fitted
+[`Hedge`](@ref) and returns each model's total weight variation along the
+training trajectory, flagging models whose weight swung over time. Calibration
+diagnostics (PIT, coverage) are general forecast-evaluation tools and live in
+the scoring stack, not here.
+
 ### Composition through `weights`
 
 The two axes meet at one accessor:

@@ -45,7 +45,9 @@ export ForecastTable,
        combine,
        fit,
        weights,
-       backtest
+       backtest,
+       effective_num_models,
+       weight_stability
 
 include("output_types.jl")
 include("forecast_table.jl")
@@ -59,6 +61,7 @@ include("crps_stacking.jl")
 include("stacking.jl")
 include("online.jl")
 include("partial_pooling.jl")
+include("diagnostics.jl")
 include("backtest.jl")
 include("windowed.jl")
 include("interop.jl")
