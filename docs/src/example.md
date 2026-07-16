@@ -53,6 +53,16 @@ combine(ft, MixtureEnsemble(; n_samples = 10_000))
 This produces a different distribution from Vincentization in general.
 Averaging quantile values is not the same operation as averaging the CDFs.
 
+## Robust mean (trimmed / winsorised)
+
+Drop or clamp the most extreme model at each (location, τ) before averaging —
+robustness to an outlier submission, tunable via `fraction`:
+
+```julia
+combine(ft, TrimmedMean(; fraction = 0.2))                    # drop the tails
+combine(ft, TrimmedMean(; fraction = 0.2, mode = :winsorise)) # clamp them
+```
+
 ## Hand-supplied weights
 
 Either method takes an `EnsembleWeights`:

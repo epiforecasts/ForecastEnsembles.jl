@@ -13,7 +13,7 @@ Combining forecasts has two independent axes, and the methods here map onto
 them:
 
 1. **How the members are combined** — the aggregation operation
-   (`QuantileEnsemble`, `MixtureEnsemble`).
+   (`QuantileEnsemble`, `MixtureEnsemble`, `TrimmedMean`).
 2. **How the weights are chosen** — equal, user-supplied, or estimated from
    past forecasts (`CRPSStacking`, `QRA`, generic `Stacking`, `InverseScore`,
    `Hedge`, `PartialPooling`).
@@ -77,6 +77,16 @@ differs from `hubEnsembles::linear_pool`, which samples from the
 reconstructed distributions and re-extracts empirical quantiles; the
 sampling approach carries Monte Carlo noise that grows in the tails,
 which is exactly where hubs ask for τ = 0.01 and 0.99.
+
+### TrimmedMean
+
+A robust variant of the quantile mean: at each task and `output_type_id`,
+order the per-model values and either drop (`mode = :trim`) or clamp
+(`mode = :winsorise`) the lowest and highest `fraction` before averaging. It
+guards against a few outlier submissions without the full robustness of the
+median ensemble, and `fraction` tunes how much tail is discarded (`0` is the
+plain mean, `→ 0.5` degenerates to the median). Comparable-across-models values
+only, so `:quantile` and `:cdf` but not `:sample`.
 
 ### Choosing between them
 

@@ -95,6 +95,8 @@ behaviour `FittedQRA` uses for unconstrained or per-τ-with-intercept fits.
 
 ## Worked sketch: a "trimmed-mean" ensemble
 
+This operation now ships as [`TrimmedMean`](@ref) (with an added winsorise
+mode); the sketch is kept as a minimal illustration of the extension pattern.
 Untrained method, no weight learning. Trims the top and bottom k% of
 model values per (task, τ) before averaging:
 
