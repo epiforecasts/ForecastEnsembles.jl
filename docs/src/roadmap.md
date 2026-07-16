@@ -4,55 +4,19 @@ Planned work, organised around the two axes (combination operations and
 weighting schemes) plus the workflow and ecosystem pieces. Cross-references
 to the issues that prompted items are in parentheses.
 
-## Scoring: delegated to ScoringRules.jl ✅
-
-Scoring lives upstream. `ScoringRules.jl` has landed, so the former in-house
-`score`/`CRPS`/`WIS` have been removed: users evaluate forecasts with
-ScoringRules directly (`crps`, `logs`, `quantile_score`, …). Because
-ScoringRules is GPL-2.0-or-later and this package is MIT, it enters as a **weak
-dependency** — the `ForecastEnsemblesScoringRulesExt` extension activates only
-when the user runs `using ScoringRules`, so the MIT core never links GPL code.
-
-The two stacking specialisations keep their own closed-form kernels (so they
-stay dependency-free): CRPS-from-samples in `CRPSStacking`, WIS/pinball in `QRA`.
-`backtest` is now score-agnostic — it takes an injected `score_fn`, defaulting
-to a ScoringRules-based scorer via the extension.
-
 ## Weighting schemes (axis 2)
 
 The organising idea is **stacking with any target**: choose weights to
-minimise a proper score of the *combined* forecast on past observations.
-`CRPSStacking` (CRPS on samples) and constrained `QRA` (WIS on quantiles)
-are the closed-form specialisations; the generic **`Stacking{Score}`** now
-optimises simplex weights against *any* weighted-sample rule from
-ScoringRules (e.g. `Stacking(crps)`, `Stacking(es)`) — the extension supplies
-the `fit`. Optimisation is non-convex for some score/operation pairs (notably
-log-score on a mixture), so convergence is not guaranteed everywhere.
+minimise a proper score of the *combined* forecast on past observations. The
+built foundation — `CRPSStacking`/`QRA` (closed-form CRPS/WIS), generic
+`Stacking{Score}`, `InverseScore`, `Hedge`, and the `Windowed` wrapper — leaves
+these still to do:
 
-Buildable now (dependency-free wrappers around the fitted methods):
-
-- **Window training** ✅ — `Windowed(method, window; time_col)`: a fit-time
-  wrapper that trains any `TrainedMethod` on only the most recent `window`
-  times (rolling window vs the expanding window `backtest` grows). The coarse
-  cousin of the recency `lambda` already in `CRPSStacking`.
-- **Online / adaptive weighting.** Exponentiated-gradient / Hedge:
-  update weights from each round's per-member loss, with regret
-  guarantees, no full refit. Natural fit for a weekly operational cadence.
 - **Partial pooling / hierarchical weights.** Share weights across strata
   (locations, age groups) with shrinkage, so a data-sparse stratum
   borrows strength. Extends the `CRPSStacking` objective with a
   cross-stratum shrinkage term. Genuinely novel for this space and matches
   hub data shape.
-
-Via the ScoringRules extension:
-
-- **Generic `Stacking{Score}`** ✅ — one stacker parameterised by any
-  weighted-sample proper score, with the CRPS and WIS specialisations
-  (`CRPSStacking`, `QRA`) kept as dependency-free closed forms alongside it.
-- **Inverse-score weighting** ✅ — `InverseScore(score)`: score each member
-  independently and softmax the negative mean scores into simplex weights.
-  The cheap, robust, no-optimiser cousin of `Stacking` (blind to redundancy
-  between members, but hard to overfit).
 - **Log-score stacking** and **BMA.** BMA is essentially log-score
   stacking of a mixture fitted by EM, so it folds into the generic stacker
   rather than standing alone. (Log score of a sample mixture needs a density
@@ -78,12 +42,6 @@ Via the ScoringRules extension:
 
 ## Workflow: choosing a scheme
 
-- **Backtesting / cross-validation harness.** Expanding-window or
-  leave-one-time-out, refit each scheme, compare out-of-sample scores.
-  This turns the package from a box of combiners into "here is how to pick
-  one on your data" — the biggest user-value gap, and buildable now on the
-  scoring seam. *Scoring* itself lives upstream (Ecosystem); the
-  *selection loop* is ensemble-specific and lives here.
 - **Weight & calibration diagnostics.** Effective number of models (weight
   concentration), weight stability over time, PIT histograms of the
   ensemble.
@@ -117,13 +75,6 @@ dependency); **CRPS-minimising parametric recalibration** (the
 
 ## Ecosystem
 
-- **ScoringRules.jl** — a Julia port of the R `scoringRules` (atomic
-  proper scoring rules dispatching on Distributions.jl), approved to be
-  built ([ProjectProposals#1](https://github.com/EpiAware/ProjectProposals/issues/1)).
-  It is the shared objective library for stacking *and* the evaluation
-  library for the ecosystem. Built neutral and transfer-portable, with
-  prominent attribution to the original authors (Jordan, Krüger & Lerch,
-  JSS 2019) and a clear statement that it is an LLM-assisted port.
 - **Shared forecast types** — an array-backed `Forecast`/`ForecastSet`
   layer (`ProbabilisticForecasts.jl`) that ForecastBaselines.jl,
   PostForecasts.jl, ForecastEnsembles.jl and the scoring stack all speak.

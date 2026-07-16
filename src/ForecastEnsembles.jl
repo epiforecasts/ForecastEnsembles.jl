@@ -37,6 +37,8 @@ export ForecastTable,
        FittedStacking,
        InverseScore,
        FittedInverseScore,
+       Hedge,
+       FittedHedge,
        Windowed,
        combine,
        fit,
@@ -53,6 +55,7 @@ include("linear_pool.jl")
 include("qra.jl")
 include("crps_stacking.jl")
 include("stacking.jl")
+include("online.jl")
 include("backtest.jl")
 include("windowed.jl")
 include("interop.jl")

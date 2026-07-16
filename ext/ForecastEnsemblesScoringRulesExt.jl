@@ -6,7 +6,8 @@
 module ForecastEnsemblesScoringRulesExt
 
 using ForecastEnsembles: ForecastEnsembles, ForecastTable, Stacking, FittedStacking,
-                         InverseScore, FittedInverseScore, output_type, task_id_cols
+                         InverseScore, FittedInverseScore, Hedge, FittedHedge,
+                         output_type, task_id_cols
 using ScoringRules: crps, quantile_score
 using DataFrames: DataFrame, AbstractDataFrame, innerjoin, groupby, combine, sort
 using Optim: optimize, LBFGS, minimizer, minimum
@@ -128,6 +129,58 @@ function fit(m::InverseScore, training::ForecastTable, observations::AbstractDat
     w = _softmax(-m.temperature .* mean_scores)
     return FittedInverseScore(DataFrame(model_id = models, weight = w),
         String.(models), mean_scores)
+end
+
+# ---- online / Hedge (exponentiated-gradient) weighting ----------------------
+# Walk the distinct `time_col` values in order; at each step multiply every
+# present member's weight by `exp(-eta · sₜ)` and renormalise to the simplex. A
+# member absent at a step keeps its weight (sleeping expert). Returns the final
+# weights plus the full trajectory for diagnostics.
+
+function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "Hedge supports :sample forecasts (weighted-sample scores)."))
+    m.time_col in task_id_cols(training) || throw(ArgumentError(
+        "time_col $(m.time_col) must be one of the task-id columns " *
+        "$(task_id_cols(training))"))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    M = length(models)
+    M >= 2 || throw(ArgumentError("need at least two models (got $M)"))
+    idx = Dict(mm => i for (i, mm) in enumerate(models))
+    score = m.score
+
+    # Per (member, time) mean score.
+    per = combine(groupby(d, [mid, m.time_col])) do g
+        (; s = score(Float64.(g.value), Float64(first(g.observed))))
+    end
+    times = sort(unique(per[!, m.time_col]))
+
+    w = fill(1.0 / M, M)
+    traj = [DataFrame() for _ in 1:0]
+    for t in times
+        rows = per[per[!, m.time_col] .== t, :]
+        for r in eachrow(rows)
+            i = idx[r[mid]]
+            w[i] *= exp(-m.eta * r.s)
+        end
+        w ./= sum(w)
+        step = DataFrame(model_id = String.(models), weight = copy(w))
+        step[!, m.time_col] .= t
+        push!(traj, step)
+    end
+
+    trajectory = isempty(traj) ? DataFrame() : reduce(vcat, traj)
+    return FittedHedge(DataFrame(model_id = String.(models), weight = w),
+        String.(models), trajectory)
 end
 
 end # module
