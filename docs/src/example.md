@@ -53,6 +53,15 @@ combine(ft, MixtureEnsemble(; n_samples = 10_000))
 This produces a different distribution from Vincentization in general.
 Averaging quantile values is not the same operation as averaging the CDFs.
 
+## Geometric (logarithmic) pool
+
+Multiply the member densities instead of averaging them — a product of experts,
+sharper than the linear pool where the models agree:
+
+```julia
+combine(ft, LogarithmicPool())
+```
+
 ## Robust mean (trimmed / winsorised)
 
 Drop or clamp the most extreme model at each (location, τ) before averaging —

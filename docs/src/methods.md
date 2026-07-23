@@ -13,7 +13,7 @@ Combining forecasts has two independent axes, and the methods here map onto
 them:
 
 1. **How the members are combined** — the aggregation operation
-   (`QuantileEnsemble`, `MixtureEnsemble`, `TrimmedMean`).
+   (`QuantileEnsemble`, `MixtureEnsemble`, `LogarithmicPool`, `TrimmedMean`).
 2. **How the weights are chosen** — equal, user-supplied, or estimated from
    past forecasts (`CRPSStacking`, `QRA`, generic `Stacking`, `InverseScore`,
    `Hedge`, `PartialPooling`).
@@ -87,6 +87,23 @@ guards against a few outlier submissions without the full robustness of the
 median ensemble, and `fraction` tunes how much tail is discarded (`0` is the
 plain mean, `→ 0.5` degenerates to the median). Comparable-across-models values
 only, so `:quantile` and `:cdf` but not `:sample`.
+
+### LogarithmicPool
+
+The geometric counterpart of the mixture. Where `MixtureEnsemble` averages the
+member densities, [`LogarithmicPool`](@ref) multiplies them:
+
+```math
+f_{\text{ens}}(x) \propto \prod_i f_i(x)^{w_i}.
+```
+
+This is a product of experts: mass survives only where every weighted member
+puts mass, so the pool is sharper than the linear pool and precision-weights
+toward the tightest member (for Gaussian members the pooled precision is the
+weighted sum of the member precisions). It has no closed form for reconstructed
+quantile forecasts, so the density product is formed on a grid, renormalised,
+and inverted — which also keeps the output quantiles monotone. Quantile
+forecasts only.
 
 ### Choosing between them
 

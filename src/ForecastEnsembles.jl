@@ -29,6 +29,7 @@ export ForecastTable,
        QuantileEnsemble,
        MixtureEnsemble,
        LinearPool,        # alias for MixtureEnsemble
+       LogarithmicPool,
        TrimmedMean,
        QRA,
        FittedQRA,
@@ -59,6 +60,7 @@ include("methods.jl")
 include("simple.jl")
 include("distfromq.jl")
 include("linear_pool.jl")
+include("logarithmic_pool.jl")
 include("blp.jl")
 include("trimmed.jl")
 include("qra.jl")

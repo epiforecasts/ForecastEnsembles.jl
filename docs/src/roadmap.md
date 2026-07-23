@@ -17,15 +17,6 @@ wrapper — leaves these still to do:
   rather than standing alone. (Log score of a sample mixture needs a density
   estimate, so this is a follow-up to the sample-CRPS path now in place.)
 
-## Combination operations (axis 1)
-
-- **Log / geometric opinion pool.** `f_ens ∝ Πᵢ fᵢ^wᵢ` — multiply the
-  densities (product of experts), precision-weighting toward the sharpest
-  member. Distinct from Vincentization (which averages quantile functions)
-  and from convolution (the sum of independent variables); they coincide
-  only for an equal-spread location family. A real third operation, but
-  niche — lower priority.
-
 ## Workflow: choosing a scheme
 
 - **Calibration diagnostics** — PIT histograms, coverage, pairwise model
