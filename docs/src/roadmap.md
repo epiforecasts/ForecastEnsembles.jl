@@ -74,9 +74,11 @@ a time); **BLP**.
 
 - **hubverse directory IO** — read a `model-output/` tree and write a
   valid submission directly.
-- **Benchmarks vs the R packages** — a small `benchmark/` on a realistic
-  hubverse `model_out_tbl`. Until it exists, the docs make no performance
-  claims.
+- **Benchmarks.** A `benchmark/` suite times the headline combine operations
+  and weight estimators on a realistic `model_out_tbl`
+  (`julia --project=benchmark benchmark/run.jl`). Still to do: wire it into
+  the docs performance-history page (needs a benchmark CI job), and a
+  head-to-head timing comparison against the R packages.
 
 ## Out of scope (for now)
 
