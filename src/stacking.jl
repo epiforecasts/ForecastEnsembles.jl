@@ -1,11 +1,9 @@
 # Generic score-optimal stacking. Learns simplex ensemble weights that minimise
-# the mean of an arbitrary proper scoring rule over the training set. The score,
-# and the automatic differentiation that optimises against it, come from
-# ScoringRules.jl — a GPL package — so `fit(::Stacking, …)` lives in the
-# `ForecastEnsemblesScoringRulesExt` extension. This file holds the MIT-clean
-# types, the fitted-result plumbing (identical to CRPSStacking: simplex weights
-# applied through a LinearPool), and the friendly error raised when the
-# extension is not loaded.
+# the mean of an arbitrary proper scoring rule over the training set. The score
+# is any callable the caller supplies — the `fit` never references a scoring
+# library — so this is plain MIT-core Julia. ScoringRules.jl is the natural
+# source of scores (`crps`, `es`, …); load it as a companion and pass e.g.
+# `Stacking(ScoringRules.crps)`.
 
 """
     Stacking(score; dirichlet_alpha = 1.0)
@@ -19,10 +17,11 @@ any negatively-oriented rule from
 `ScoringRules.crps`. The `FittedStacking` result plugs into [`combine`](@ref),
 or into [`LinearPool`](@ref)/[`QuantileEnsemble`](@ref) via [`weights`](@ref).
 
-`ScoringRules` must be loaded (`using ScoringRules`) for `fit` to work. It is a
-weak dependency, so the MIT core does not pull in its GPL code unless you opt in.
-[`CRPSStacking`](@ref) and [`QRA`](@ref) remain the dependency-free closed-form
-specialisations for CRPS and WIS respectively.
+`score` is any callable `score(samples, y; w)`;
+[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+companion for it (`using ScoringRules` then `Stacking(ScoringRules.crps)`), but
+it is not a dependency of this package. [`CRPSStacking`](@ref) and [`QRA`](@ref)
+remain the closed-form specialisations for CRPS and WIS respectively.
 
 # Fields
 
@@ -61,15 +60,56 @@ end
 
 weights(m::FittedStacking) = EnsembleWeights(m.weights)
 
-# Fallback when ScoringRules (which supplies the score and its gradient) is not
-# loaded. The extension defines the concrete
-# `fit(::Stacking, ::ForecastTable, ::AbstractDataFrame)`, which is more specific
-# than this varargs method and takes precedence once `using ScoringRules` runs.
-function fit(::Stacking, args...)
-    throw(ArgumentError("Stacking needs ScoringRules.jl for the score and its " *
-                        "gradient. Run `using ScoringRules` (a weak dependency) " *
-                        "before fitting, or use CRPSStacking / QRA for the " *
-                        "closed-form CRPS / WIS cases."))
+# Learns simplex weights minimising the mean weighted-sample score. Model `i`'s
+# samples in a task each carry weight `w[i] / nᵢ` so the model contributes `w[i]`
+# to the mixture; the score (`crps`, `es`, …) must accept a per-sample `w`. The
+# score is whatever callable the user supplied — this fit never touches any
+# scoring library, so it lives in the MIT core.
+function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "Stacking supports :sample forecasts (weighted-sample scores). Use QRA " *
+        "for quantile (WIS) stacking."))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    M = length(models)
+    M >= 2 || throw(ArgumentError("need at least two models to stack (got $M)"))
+    idx = Dict(mm => i for (i, mm) in enumerate(models))
+
+    # Per task: pooled samples, the model index of each sample, and y.
+    task_data = map(collect(DataFrames.groupby(d, tcols))) do g
+        midx = [idx[mm] for mm in g[!, mid]]
+        counts = [count(==(i), midx) for i in 1:M]
+        (samples = Float64.(g.value), midx = midx, counts = counts,
+            y = Float64(first(g.observed)))
+    end
+
+    score = m.score
+    α = m.dirichlet_alpha
+    ntask = length(task_data)
+
+    function loss(z)
+        w = _softmax(z)
+        total = zero(eltype(z))
+        for td in task_data
+            sw = [w[i] / td.counts[i] for i in td.midx]
+            total += score(td.samples, td.y; w = sw)
+        end
+        penalty = α > 1 ? -(α - 1) * sum(log, w) : zero(eltype(z))
+        return (total + penalty) / ntask
+    end
+
+    res = optimize(loss, zeros(M), LBFGS())
+    w_hat = _softmax(Optim.minimizer(res))
+    return FittedStacking(DataFrame(model_id = models, weight = w_hat),
+        String.(models), Optim.minimum(res))
 end
 
 """
@@ -84,9 +124,9 @@ sees how they combine, so it is blind to redundancy between them.
 
 `fit(InverseScore(score), training, observations)` returns a
 [`FittedInverseScore`](@ref) that plugs into [`combine`](@ref) / [`weights`](@ref).
-`score` is any negatively-oriented weighted-sample rule from
-[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) (e.g.
-`ScoringRules.crps`), which must be loaded — it is a weak dependency.
+`score` is any callable `score(samples, y; w)`;
+[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+companion (`InverseScore(ScoringRules.crps)`), not a dependency of this package.
 
 # Fields
 
@@ -125,9 +165,31 @@ end
 
 weights(m::FittedInverseScore) = EnsembleWeights(m.weights)
 
-# Fallback until ScoringRules (which supplies the score) is loaded; the
-# extension's concrete method is more specific.
-function fit(::InverseScore, args...)
-    throw(ArgumentError("InverseScore needs ScoringRules.jl for the score. Run " *
-                        "`using ScoringRules` (a weak dependency) before fitting."))
+# Score each member independently over the training set, then softmax the
+# negative mean scores into simplex weights. No optimiser — one scoring pass.
+# The score is the user's callable, so this stays in the MIT core.
+function fit(m::InverseScore, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "InverseScore supports :sample forecasts (weighted-sample scores)."))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    score = m.score
+
+    # Per (member, task) score, then the mean over tasks for each member.
+    per = combine(DataFrames.groupby(d, [mid, tcols...])) do g
+        (; s = score(Float64.(g.value), Float64(first(g.observed))))
+    end
+    mean_scores = [mean(per[per[!, mid] .== mm, :s]) for mm in models]
+
+    w = _softmax(-m.temperature .* mean_scores)
+    return FittedInverseScore(DataFrame(model_id = models, weight = w),
+        String.(models), mean_scores)
 end

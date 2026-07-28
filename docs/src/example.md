@@ -138,9 +138,10 @@ quantiles.
 
 On sample-typed training forecasts (a `:sample` `ForecastTable` plus an
 observations frame with an `:observed` column), the score-driven estimators
-optimise weights against a ScoringRules rule. They are a **weak dependency**:
-`using ScoringRules` activates them. Sketched here on a `training_ft` /
-`training_obs` pair shaped like the QRA section above:
+optimise weights against a score you supply. This package depends on no scoring
+library; [`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl) is the
+natural **companion** — load it and pass its rules. Sketched here on a
+`training_ft` / `training_obs` pair shaped like the QRA section above:
 
 ```julia
 using ScoringRules

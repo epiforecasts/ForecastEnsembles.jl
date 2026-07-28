@@ -23,12 +23,12 @@ weight vector that feeds either combination operation. The two sections below
 follow the two axes.
 
 The score-driven estimators beyond the closed-form `CRPSStacking`/`QRA` —
-generic `Stacking`, `InverseScore`, `Hedge`, `PartialPooling` — optimise
-against a proper score from
-[`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl). Because
-ScoringRules is GPL-licensed and this package is MIT, it is a **weak
-dependency**: run `using ScoringRules` to activate them. `CRPSStacking`, `QRA`,
-and the `Windowed` wrapper need no extra package.
+generic `Stacking`, `InverseScore`, `Hedge`, `PartialPooling` — take a score
+*you* supply: any callable `score(samples, y; w)`. The package depends on no
+scoring library;
+[`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+**companion** — `using ScoringRules` then `Stacking(ScoringRules.crps)` — but you
+can pass your own function just as well.
 
 This package covers the *combine* step of a forecasting pipeline
 (produce → combine → recalibrate → score). Recalibrating the combined
@@ -309,7 +309,7 @@ quantile/WIS stacking. Optimisation is non-convex for some score/operation
 pairs, so convergence is not guaranteed everywhere.
 
 ```julia
-using ScoringRules            # weak dependency; activates the estimators below
+using ScoringRules            # companion library that supplies the score
 fitted = fit(Stacking(ScoringRules.crps), training_ft, training_obs)
 combine(ft, MixtureEnsemble(; weights = fitted))
 ```
@@ -356,13 +356,13 @@ rolling one.
 
 ### Choosing a scheme: `backtest`
 
-[`backtest`](@ref)`(ft, observations, schemes; time_col, min_train)` compares
-weighting schemes out-of-sample. For each time fold it refits every scheme on
-the earlier data and scores its combined forecast on the held-out step,
-returning a tidy frame of per-fold scores. The default scorer comes from the
-ScoringRules extension (CRPS for samples, mean quantile score for quantiles);
-pass `score_fn` to supply your own. Wrap a scheme in `Windowed` to backtest a
-rolling window against an expanding one.
+[`backtest`](@ref)`(ft, observations, schemes; time_col, score_fn, min_train)`
+compares weighting schemes out-of-sample. For each time fold it refits every
+scheme on the earlier data and scores its combined forecast on the held-out
+step, returning a tidy frame of per-fold scores. You supply `score_fn(forecast,
+observations) -> Real` — there is no default; a CRPS-based scorer built from
+ScoringRules is a natural choice for sample forecasts. Wrap a scheme in
+`Windowed` to backtest a rolling window against an expanding one.
 
 ### Weight diagnostics
 

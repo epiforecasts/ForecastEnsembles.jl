@@ -4,11 +4,11 @@
 # logit space each stratum `s` has logits `zₛ`, a global `z₀` anchors them, and a
 # penalty `lambda · Σₛ‖zₛ − z₀‖²` controls the shrinkage: `lambda → 0` gives
 # independent per-stratum stacking, `lambda → ∞` collapses every stratum onto the
-# global weights. The score, and the optimisation against it, come from
-# ScoringRules.jl (GPL), so `fit(::PartialPooling, …)` lives in the
-# `ForecastEnsemblesScoringRulesExt` extension. This file holds the MIT-clean
-# type, the stratum-aware `combine` (each stratum gets its own weights, unseen
-# strata fall back to the global vector), and the friendly not-loaded error.
+# global weights. The score is any caller-supplied `score(samples, y; w)` — the
+# `fit` references no scoring library, so this is plain MIT-core Julia. This file
+# holds the type, the stratum-aware `combine` (each stratum gets its own weights,
+# unseen strata fall back to the global vector), and the fit. ScoringRules.jl is
+# the natural companion for the score.
 
 """
     PartialPooling(score; strata, lambda = 1.0, dirichlet_alpha = 1.0)
@@ -25,10 +25,10 @@ stratum toward the global vector. The [`FittedPartialPooling`](@ref) result
 plugs into [`combine`](@ref), which applies each stratum's own weights (an unseen
 stratum falls back to the global vector).
 
-`score` is any negatively-oriented weighted-sample rule from
-[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) (e.g.
-`ScoringRules.crps`), which must be loaded — it is a weak dependency. Generalises
-[`Stacking`](@ref): a single stratum, or `lambda → ∞`, recovers global stacking.
+`score` is any callable `score(samples, y; w)`;
+[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+companion, not a dependency of this package. Generalises [`Stacking`](@ref): a
+single stratum, or `lambda → ∞`, recovers global stacking.
 
 # Fields
 
@@ -119,9 +119,93 @@ end
 # The pooled global vector is the natural single-vector summary.
 weights(m::FittedPartialPooling) = EnsembleWeights(m.global_weights)
 
-# Fallback until ScoringRules (which supplies the score) is loaded; the
-# extension's concrete method is more specific.
-function fit(::PartialPooling, args...)
-    throw(ArgumentError("PartialPooling needs ScoringRules.jl for the score. Run " *
-                        "`using ScoringRules` (a weak dependency) before fitting."))
+# Per-stratum logits `zₛ` plus a global `z₀`, optimised jointly: the mean
+# weighted-sample score of each stratum's mixture, plus `lambda · Σₛ‖zₛ − z₀‖²`
+# shrinking strata toward the global vector. `lambda → 0` fits strata
+# independently; `lambda → ∞` pools them onto one vector (the optimum sets
+# `z₀ = meanₛ zₛ`). The score is the user's callable, so this stays in the core.
+function fit(m::PartialPooling, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "PartialPooling supports :sample forecasts (weighted-sample scores)."))
+    absent = setdiff(m.strata, task_id_cols(training))
+    isempty(absent) || throw(ArgumentError(
+        "strata $absent must be among the task-id columns $(task_id_cols(training))"))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    M = length(models)
+    M >= 2 || throw(ArgumentError("need at least two models to stack (got $M)"))
+    idx = Dict(mm => i for (i, mm) in enumerate(models))
+
+    # Distinct strata (as ordered tuples of the strata-column values).
+    skeys = [Tuple(r[s] for s in m.strata) for r in eachrow(unique(d[:, m.strata]))]
+    S = length(skeys)
+    sidx = Dict(k => i for (i, k) in enumerate(skeys))
+
+    # Per task: pooled samples, each sample's model index, per-model counts, y,
+    # and the stratum index (a task lies wholly in one stratum: strata ⊆ tcols).
+    task_data = map(collect(DataFrames.groupby(d, tcols))) do g
+        midx = [idx[mm] for mm in g[!, mid]]
+        counts = [count(==(i), midx) for i in 1:M]
+        s = sidx[Tuple(g[1, col] for col in m.strata)]
+        (samples = Float64.(g.value), midx = midx, counts = counts,
+            y = Float64(first(g.observed)), s = s)
+    end
+
+    score = m.score
+    α = m.dirichlet_alpha
+    λ = m.lambda
+    ntask = length(task_data)
+
+    # z packs the global logits (first M) then S per-stratum blocks of M.
+    gview(z) = @view z[1:M]
+    sview(z, s) = @view z[(M * s + 1):(M * (s + 1))]
+
+    function loss(z)
+        z0 = gview(z)
+        data = zero(eltype(z))
+        for td in task_data
+            w = _softmax(sview(z, td.s))
+            sw = [w[i] / td.counts[i] for i in td.midx]
+            data += score(td.samples, td.y; w = sw)
+        end
+        data /= ntask
+        shrink = zero(eltype(z))
+        penalty = zero(eltype(z))
+        for s in 1:S
+            zs = sview(z, s)
+            shrink += sum(abs2, zs .- z0)
+            if α > 1
+                penalty -= (α - 1) * sum(log, _softmax(zs))
+            end
+        end
+        shrink *= λ / S
+        penalty /= (S * ntask)
+        return data + shrink + penalty
+    end
+
+    res = optimize(loss, zeros(M * (S + 1)), LBFGS())
+    z_hat = Optim.minimizer(res)
+
+    # Per-stratum weights table (strata columns + model_id + weight).
+    on_rows = DataFrame[]
+    for (k, s) in sidx
+        w = _softmax(sview(z_hat, s))
+        df = DataFrame(model_id = String.(models), weight = w)
+        for (j, col) in enumerate(m.strata)
+            df[!, col] .= k[j]
+        end
+        push!(on_rows, df)
+    end
+    weights_df = reduce(vcat, on_rows)
+    global_df = DataFrame(model_id = String.(models), weight = _softmax(gview(z_hat)))
+    return FittedPartialPooling(weights_df, global_df, copy(m.strata),
+        String.(models), Optim.minimum(res))
 end

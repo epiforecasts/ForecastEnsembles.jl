@@ -46,7 +46,13 @@
         Windowed(CRPSStacking(), 5; time_col = :nope), train, obs)
 
     # Composes as a scheme in backtest — rolling vs expanding window.
-    using ScoringRules
+    using ScoringRules: crps
+    function sample_crps(fc, o)
+        d = innerjoin(DataFrame(fc), o; on = :t)
+        per = DataFrames.combine(DataFrames.groupby(d, :t),
+            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+        return mean(per.s)
+    end
     res = backtest(
         train,
         obs,
@@ -55,7 +61,8 @@
             "rolling" => Windowed(CRPSStacking(), 8; time_col = :t)
         ];
         time_col = :t,
-        min_train = 12
+        min_train = 12,
+        score_fn = sample_crps
     )
     @test Set(res.scheme) == Set(["expanding", "rolling"])
     @test all(isfinite, res.score)

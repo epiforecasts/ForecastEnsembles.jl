@@ -31,9 +31,18 @@
         return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
 
+    # A CRPS scorer over the fold's tasks, built from the ScoringRules companion.
+    function sample_crps(fc, o)
+        d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
+        per = DataFrames.combine(DataFrames.groupby(d, :t),
+            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+        return mean(per.s)
+    end
+
     ft, obs = _bt_sample_data(T = 10)
     schemes = Dict("equal" => MixtureEnsemble(; n_samples = 500), "crps" => CRPSStacking())
-    res = backtest(ft, obs, schemes; time_col = :t, min_train = 3, rng = MersenneTwister(1))
+    res = backtest(ft, obs, schemes; time_col = :t, min_train = 3,
+        rng = MersenneTwister(1), score_fn = sample_crps)
     @test sort(propertynames(res)) == sort([:scheme, :t, :score])
     # (10 − 3) folds × 2 schemes
     @test nrow(res) == (10 - 3) * 2
@@ -74,12 +83,20 @@ end
         return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
 
+    function sample_crps(fc, o)
+        d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
+        per = DataFrames.combine(DataFrames.groupby(d, :t),
+            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+        return mean(per.s)
+    end
+
     ft, obs = _bt_sample_data(T = 30)
     schemes = [
         "equal" => MixtureEnsemble(; n_samples = 1000),
         "crps_recency" => CRPSStacking(; lambda = 0.6, time_col = :t)
     ]
-    res = backtest(ft, obs, schemes; time_col = :t, min_train = 6, rng = MersenneTwister(7))
+    res = backtest(ft, obs, schemes; time_col = :t, min_train = 6,
+        rng = MersenneTwister(7), score_fn = sample_crps)
     agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score =>
         mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
@@ -118,11 +135,23 @@ end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
     obs = DataFrame(t = 1:T, observed = y)
 
+    # A mean-quantile-score (WIS kernel) scorer from the ScoringRules companion.
+    function qscore(fc, o)
+        d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
+        per = DataFrames.combine(DataFrames.groupby(d, :t)) do g
+            s = sort(g, :output_type_id)
+            (;
+                s = mean(quantile_score(Float64.(s.output_type_id), Float64.(s.value),
+                Float64(first(s.observed)))))
+        end
+        return mean(per.s)
+    end
+
     schemes = [
         "equal" => QuantileEnsemble(:mean),
         "qra" => QRA(; enforce_normalisation = true, intercept = false)
     ]
-    res = backtest(ft, obs, schemes; time_col = :t, min_train = 8)
+    res = backtest(ft, obs, schemes; time_col = :t, min_train = 8, score_fn = qscore)
     agg = DataFrames.combine(DataFrames.groupby(res, :scheme), :score =>
         mean => :mean_score)
     equal = agg[agg.scheme .== "equal", :mean_score][1]
@@ -136,7 +165,6 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent
@@ -165,18 +193,14 @@ end
         return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
 
+    dummy(fc, o) = 0.0
     ft, obs = _bt_sample_data(T = 5)
+    # Missing time_col throws before scoring; missing score_fn is itself an error.
     @test_throws ArgumentError backtest(
-        ft,
-        obs,
-        ["equal" => QuantileEnsemble(:mean)];
-        time_col = :nope
-    )
+        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :nope, score_fn = dummy)
     @test_throws ArgumentError backtest(
-        ft,
-        obs,
-        ["equal" => QuantileEnsemble(:mean)];
-        time_col = :t,
-        min_train = 10
-    )
+        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :t)
+    @test_throws ArgumentError backtest(
+        ft, obs, ["equal" => QuantileEnsemble(:mean)];
+        time_col = :t, min_train = 10, score_fn = dummy)
 end

@@ -1,16 +1,13 @@
 # Expanding-window backtesting: compare weighting schemes out-of-sample. The
 # loop here is the ensemble-specific part — refit each trained scheme on the
-# growing training window and apply it to the held-out time. Scoring is
-# delegated: a `score_fn` is injected, so the loop stays free of any particular
-# scoring rule (and of ScoringRules.jl's GPL code). `_default_score_fn` is a
-# hook with no method in the core; the `ForecastEnsemblesScoringRulesExt`
-# extension supplies one built on ScoringRules once `using ScoringRules` runs.
-
-function _default_score_fn end
+# growing training window and apply it to the held-out time. Scoring is the
+# caller's choice: a `score_fn` is required, so the loop stays free of any
+# particular scoring rule. ScoringRules.jl is a natural source of one (e.g. a
+# CRPS-based scorer), but any `(forecast, observations) -> Real` works.
 
 """
-    backtest(ft, observations, schemes; time_col, min_train = 1,
-             rng = default_rng(), score_fn = <ScoringRules default>) -> DataFrame
+    backtest(ft, observations, schemes; time_col, score_fn, min_train = 1,
+             rng = default_rng()) -> DataFrame
 
 Expanding-window backtest of ensemble schemes. The unique values of `time_col`
 are ordered; for each test time after the first `min_train`, every scheme is
@@ -29,10 +26,11 @@ one row per (scheme, test time) with columns `scheme`, the `time_col`, and
 Each scheme must match the table's `output_type`: `CRPSStacking` and sample
 combiners need `:sample` data, `QRA` and quantile combiners need `:quantile`.
 
-Scoring is injected via `score_fn(forecast::ForecastTable, observations) -> Real`
-(the mean score of one fold). Load `ScoringRules` (`using ScoringRules`) for a
-sensible default — CRPS for sample forecasts, the quantile score for quantile
-forecasts — or pass your own `score_fn`.
+Scoring is the caller's choice: pass
+`score_fn(forecast::ForecastTable, observations) -> Real` (the mean score of one
+fold). [`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl) is a
+natural source — e.g. a CRPS-based scorer for sample forecasts — but any
+function of that shape works.
 
 Aggregate across folds yourself, e.g.
 
@@ -54,9 +52,8 @@ combine(groupby(res, :scheme), :score => mean => :mean_score)
 - `time_col`: the column giving the time index to expand the window over.
 - `min_train`: number of initial times used only for training (default `1`).
 - `rng`: RNG used by sample-based schemes (default `default_rng()`).
-- `score_fn`: a scorer `(forecast, observations) -> Real`; defaults to the
-  ScoringRules-based rule for the table's `output_type` (needs `using
-  ScoringRules`).
+- `score_fn`: a scorer `(forecast, observations) -> Real`, returning the mean
+  score over the fold's tasks. Required — there is no default.
 
 # Examples
 
@@ -105,16 +102,10 @@ function backtest(
     hasproperty(obs, :observed) ||
         throw(ArgumentError("observations must have an :observed column"))
 
-    if score_fn === nothing
-        try
-            score_fn = _default_score_fn(ft)
-        catch e
-            e isa MethodError || rethrow()
-            throw(ArgumentError(
-                "backtest needs a scoring function. Run `using ScoringRules` for " *
-                "a default, or pass `score_fn = (forecast, observations) -> score`."))
-        end
-    end
+    score_fn === nothing && throw(ArgumentError(
+        "backtest needs a scoring function: pass " *
+        "`score_fn = (forecast, observations) -> score`. ScoringRules.jl is a " *
+        "natural source (e.g. a CRPS-based scorer over the fold's tasks)."))
 
     times = sort(unique(ft.data[!, time_col]))
     length(times) > min_train || throw(

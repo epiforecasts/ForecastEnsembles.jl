@@ -2,11 +2,9 @@
 # exponentiated-gradient) algorithm. Weights are updated sequentially over time:
 # each round multiplies a member's weight by `exp(-eta · loss)` and renormalises,
 # so members that have scored well recently gain weight without a full refit. The
-# per-round loss is a proper score from ScoringRules.jl (a GPL package), so
-# `fit(::Hedge, …)` lives in the `ForecastEnsemblesScoringRulesExt` extension.
-# This file holds the MIT-clean type, its fitted-result plumbing (final simplex
-# weights applied through a LinearPool, plus the weight trajectory), and the
-# friendly error raised when the extension is not loaded.
+# per-round loss is any caller-supplied score `score(samples, y; w)` — the `fit`
+# references no scoring library, so this is plain MIT-core Julia. ScoringRules.jl
+# is the natural companion for the score.
 
 """
     Hedge(score; eta = 1.0, time_col)
@@ -23,10 +21,10 @@ weight-stability diagnostics.
 
 Unlike [`InverseScore`](@ref) (one pooled score per member) this adapts to *when*
 members did well, so it tracks regime change; unlike [`Stacking`](@ref) it needs
-no optimiser and updates incrementally. `score` is any negatively-oriented
-weighted-sample rule from
-[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) (e.g.
-`ScoringRules.crps`), which must be loaded — it is a weak dependency.
+no optimiser and updates incrementally. `score` is any callable
+`score(samples, y; w)`;
+[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+companion (`Hedge(ScoringRules.crps; time_col)`), not a dependency of this package.
 
 # Fields
 
@@ -69,9 +67,52 @@ end
 
 weights(m::FittedHedge) = EnsembleWeights(m.weights)
 
-# Fallback until ScoringRules (which supplies the per-round score) is loaded; the
-# extension's concrete method is more specific.
-function fit(::Hedge, args...)
-    throw(ArgumentError("Hedge needs ScoringRules.jl for the per-round score. Run " *
-                        "`using ScoringRules` (a weak dependency) before fitting."))
+# Walk the distinct `time_col` values in order; at each step multiply every
+# present member's weight by `exp(-eta · sₜ)` and renormalise to the simplex. A
+# member absent at a step keeps its weight (sleeping expert). The per-round score
+# is the user's callable, so this stays in the MIT core.
+function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
+    output_type(training) === :sample || throw(ArgumentError(
+        "Hedge supports :sample forecasts (weighted-sample scores)."))
+    m.time_col in task_id_cols(training) || throw(ArgumentError(
+        "time_col $(m.time_col) must be one of the task-id columns " *
+        "$(task_id_cols(training))"))
+
+    tcols = task_id_cols(training)
+    mid = training.model_id_col
+    obs = DataFrame(observations)
+    hasproperty(obs, :observed) ||
+        throw(ArgumentError("observations must have an :observed column"))
+
+    d = innerjoin(training.data, obs[:, [tcols..., :observed]]; on = tcols)
+    isempty(d) && throw(ArgumentError("no overlap between forecasts and observations"))
+    models = sort(unique(d[!, mid]))
+    M = length(models)
+    M >= 2 || throw(ArgumentError("need at least two models (got $M)"))
+    idx = Dict(mm => i for (i, mm) in enumerate(models))
+    score = m.score
+
+    # Per (member, time) mean score.
+    per = combine(DataFrames.groupby(d, [mid, m.time_col])) do g
+        (; s = score(Float64.(g.value), Float64(first(g.observed))))
+    end
+    times = sort(unique(per[!, m.time_col]))
+
+    w = fill(1.0 / M, M)
+    traj = [DataFrame() for _ in 1:0]
+    for t in times
+        rows = per[per[!, m.time_col] .== t, :]
+        for r in eachrow(rows)
+            i = idx[r[mid]]
+            w[i] *= exp(-m.eta * r.s)
+        end
+        w ./= sum(w)
+        step = DataFrame(model_id = String.(models), weight = copy(w))
+        step[!, m.time_col] .= t
+        push!(traj, step)
+    end
+
+    trajectory = isempty(traj) ? DataFrame() : reduce(vcat, traj)
+    return FittedHedge(DataFrame(model_id = String.(models), weight = w),
+        String.(models), trajectory)
 end
