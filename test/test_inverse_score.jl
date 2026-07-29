@@ -1,8 +1,8 @@
-@testitem "InverseScore (ScoringRules)" begin
+@testitem "InverseScore (any score function)" begin
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules: crps
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # m_good scores well, m_noisy scores badly; performance weighting should
     # favour m_good without ever looking at how they combine.

@@ -1,8 +1,8 @@
-@testitem "Stacking{Score} via ScoringRules" begin
+@testitem "Stacking{Score} (any score function)" begin
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules: crps
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # Two sample models: m_good predicts y with unit noise, m_noisy is wide and
     # uninformative. Score-optimal stacking against CRPS should load onto m_good.

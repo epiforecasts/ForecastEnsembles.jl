@@ -46,7 +46,7 @@
         Windowed(CRPSStacking(), 5; time_col = :nope), train, obs)
 
     # Composes as a scheme in backtest — rolling vs expanding window.
-    using ScoringRules: crps
+    include(joinpath(@__DIR__, "score_helpers.jl"))
     function sample_crps(fc, o)
         d = innerjoin(DataFrame(fc), o; on = :t)
         per = DataFrames.combine(DataFrames.groupby(d, :t),

@@ -1,8 +1,8 @@
-@testitem "Hedge online weighting (ScoringRules)" begin
+@testitem "Hedge online weighting (any score function)" begin
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules: crps
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # Helper: build a sample ForecastTable from per-(model, time) samplers.
     function build(samplers, obs; K = 80, rng = MersenneTwister(0))

@@ -1,8 +1,8 @@
-@testitem "PartialPooling hierarchical stacking (ScoringRules)" begin
+@testitem "PartialPooling hierarchical stacking (any score function)" begin
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules: crps
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # Two strata with opposite preferences: in loc A, m1 is sharp and m2 wide;
     # in loc B the roles swap. Independent stacking should split them; strong

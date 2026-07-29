@@ -2,7 +2,7 @@
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent
@@ -31,7 +31,7 @@
         return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
     end
 
-    # A CRPS scorer over the fold's tasks, built from the ScoringRules companion.
+    # A CRPS scorer over the fold's tasks, using the local weighted-sample CRPS.
     function sample_crps(fc, o)
         d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
         per = DataFrames.combine(DataFrames.groupby(d, :t),
@@ -54,7 +54,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     # Non-stationary regime: model A is sharp in the first half of the time
     # window, model B in the second. A scheme that learns weights from recent
@@ -108,7 +108,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-    using ScoringRules
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     using Distributions: Normal, quantile as dquantile
     rng = MersenneTwister(11)
@@ -135,7 +135,7 @@ end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
     obs = DataFrame(t = 1:T, observed = y)
 
-    # A mean-quantile-score (WIS kernel) scorer from the ScoringRules companion.
+    # A mean-quantile-score (WIS kernel) scorer, using the local quantile score.
     function qscore(fc, o)
         d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
         per = DataFrames.combine(DataFrames.groupby(d, :t)) do g
