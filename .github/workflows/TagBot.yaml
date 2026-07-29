@@ -13,7 +13,7 @@ on:
 jobs:
   TagBot:
     if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
-    uses: EpiAware/.github/.github/workflows/tagbot.yml@6fcdcde033ec670ac3832b239427fd2ded591bbc
+    uses: EpiAware/.github/.github/workflows/tagbot.yml@0db77a6b64d4fcc27cbb4df37025a2080ea6cd9d
     with:
       lookback: ${{ github.event.inputs.lookback || '3' }}
     secrets: inherit  # pragma: allowlist secret
