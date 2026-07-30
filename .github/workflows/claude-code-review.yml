@@ -1,5 +1,4 @@
-# Based on EpiAwarePackageTools.scaffold, customised for this repo
-# (inline review comments; sbfnk/sbfnk-bot gate). template-sync is not enabled.
+# MANAGED by EpiAwarePackageTools.scaffold — do not edit by hand.
 name: Claude Code Review
 
 on:
@@ -14,13 +13,13 @@ on:
 
 jobs:
   claude-review:
-    # Only run for PRs authored by the maintainer or the automation bot
-    if: contains(fromJson('["sbfnk", "sbfnk-bot"]'), github.event.pull_request.user.login)
+    # Only run for PRs from the configured reviewer handle
+    if: github.event.pull_request.user.login == 'sbfnk'
 
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write  # post inline review comments
+      pull-requests: read
       issues: read
       id-token: write
 
@@ -39,22 +38,19 @@ jobs:
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
 
-          # Post inline, line-level review comments (needs pull-requests: write).
-          allowed_tools: "mcp__github_inline_comment__create_inline_comment"
-
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
-            Review this pull request and leave inline comments on the specific
-            lines that need attention, using the inline comment tool. Cover:
+            Please review this pull request and provide feedback on:
             - Code quality and best practices
             - Potential bugs or issues
             - Performance considerations
             - Security concerns
             - Test coverage
 
-            Attach each point to the relevant line as an inline comment rather
-            than one summary comment. Be constructive; if a line is fine, do not
-            comment on it.
+            Be constructive and helpful in your feedback.
+
+          # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
+          use_sticky_comment: true
 
           # Optional: Customize review based on file types
           # direct_prompt: |
