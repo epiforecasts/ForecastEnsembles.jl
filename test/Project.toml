@@ -27,6 +27,7 @@ ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 # they carry no compat entry. Add a bound for each test-only dep you add.
 # This is the no-AD variant, so no AD-harness deps appear.
 [compat]
+EpiAwarePackageTools = "0.3"
 Aqua = "0.8"
 BenchmarkTools = "1"
 CSV = "0.10"
@@ -45,7 +46,3 @@ TestItems = "1"
 
 [sources]
 ForecastEnsembles = {path = ".."}
-# Until EpiAwarePackageTools is registered, it is pinned by git so
-# the env resolves out of the box. Switch to a local path to
-# develop the kit alongside this package.
-EpiAwarePackageTools = {url = "https://github.com/EpiAware/EpiAwarePackageTools.jl", rev = "main"}

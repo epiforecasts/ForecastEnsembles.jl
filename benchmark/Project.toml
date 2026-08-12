@@ -15,8 +15,8 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ForecastEnsembles = {path = ".."}
 # Until EpiAwarePackageTools is registered, it is pinned by git so the env
 # resolves out of the box. Switch to a local path to develop the kit alongside.
-EpiAwarePackageTools = {url = "https://github.com/EpiAware/EpiAwarePackageTools.jl", rev = "main"}
 
 [compat]
+EpiAwarePackageTools = "0.3"
 BenchmarkTools = "1"
 DataFrames = "1"
