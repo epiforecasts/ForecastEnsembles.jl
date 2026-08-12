@@ -60,6 +60,19 @@ combine(ft, QuantileEnsemble(:mean))
 For an end-to-end walkthrough on real flu hospitalisation forecasts, see
 `docs/src/example.md`.
 
+## Related packages
+
+- [ScoringRules.jl](https://github.com/EpiAware/ScoringRules.jl) supplies the
+  proper scoring rules that the score-driven weighting schemes (`Stacking`,
+  `InverseScore`, `Hedge`, `PartialPooling`) and `backtest` optimise against.
+- ForecastEnsembles unifies the ensemble methods of the R packages
+  [hubEnsembles](https://github.com/hubverse-org/hubEnsembles),
+  [qrensemble](https://github.com/epiforecasts/qrensemble), and
+  [lopensemble](https://github.com/epiforecasts/lopensemble) behind one
+  `fit`/`combine` interface.
+- [EasyModelAnalysis.jl](https://docs.sciml.ai/EasyModelAnalysis/stable/tutorials/ensemble_modeling/)
+  takes a dynamical-systems angle on ensemble modelling in the SciML ecosystem.
+
 ## Documentation
 
 Full documentation — method reference, worked examples, and the API — is at
