@@ -66,8 +66,12 @@ For an end-to-end walkthrough on real flu hospitalisation forecasts, see
   proper scoring rules that the score-driven weighting schemes (`Stacking`,
   `InverseScore`, `Hedge`, `PartialPooling`) and `backtest` optimise against.
 - ForecastEnsembles unifies the ensemble methods of the R packages
-  `hubEnsembles`, `qrensemble`, and `lopensemble` behind one `fit`/`combine`
-  interface.
+  [hubEnsembles](https://github.com/hubverse-org/hubEnsembles),
+  [qrensemble](https://github.com/epiforecasts/qrensemble), and
+  [lopensemble](https://github.com/epiforecasts/lopensemble) behind one
+  `fit`/`combine` interface.
+- [EasyModelAnalysis.jl](https://docs.sciml.ai/EasyModelAnalysis/stable/tutorials/ensemble_modeling/)
+  takes a dynamical-systems angle on ensemble modelling in the SciML ecosystem.
 
 ## Documentation
 
