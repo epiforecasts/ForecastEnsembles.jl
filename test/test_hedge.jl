@@ -160,9 +160,10 @@ end
     rows = DataFrame[]
     for (mid, sd) in (("m_good", 20.0), ("m_bad", 200.0))
         for t in 1:T
-            push!(rows, DataFrame(model_id = mid, output_type = "sample",
-                output_type_id = 1:K, t = t,
-                value = obs.observed[t] .+ sd .* randn(srng, K)))
+            push!(rows,
+                DataFrame(model_id = mid, output_type = "sample",
+                    output_type_id = 1:K, t = t,
+                    value = obs.observed[t] .+ sd .* randn(srng, K)))
         end
     end
     train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
