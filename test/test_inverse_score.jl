@@ -67,3 +67,29 @@
     )
     @test_throws ArgumentError fit(InverseScore(crps), qtrain, obs)
 end
+
+@testitem "InverseScore scores members without the w keyword" begin
+    using Random: MersenneTwister
+    using DataFrames
+    # A score with NO `w` keyword: InverseScore must call it as score(samples, y),
+    # not score(samples, y; w = ...). (Stacking, by contrast, requires the w path.)
+    naive(samples, y) = abs(sum(samples) / length(samples) - y)
+
+    rng = MersenneTwister(3)
+    T, K = 20, 40
+    obs = DataFrame(t = 1:T, observed = randn(rng, T))
+    rows = DataFrame[]
+    for (mid, sd) in (("good", 0.5), ("bad", 3.0))
+        for t in 1:T
+            push!(rows, DataFrame(model_id = mid, output_type = "sample",
+                output_type_id = 1:K, t = t,
+                value = obs.observed[t] .+ sd .* randn(rng, K)))
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+
+    fitted = fit(InverseScore(naive), train, obs)
+    gw = fitted.weights[fitted.weights.model_id .== "good", :weight][1]
+    bw = fitted.weights[fitted.weights.model_id .== "bad", :weight][1]
+    @test gw > bw
+end

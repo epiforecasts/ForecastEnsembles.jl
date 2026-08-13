@@ -192,6 +192,10 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
     end
 
     res = optimize(loss, zeros(M * (S + 1)), LBFGS())
+    Optim.converged(res) || @warn("PartialPooling: L-BFGS did not converge " *
+          "($(Optim.iterations(res)) iterations) over the $(M * (S + 1))-parameter " *
+          "space; weights are the best iterate found. Consider more training data " *
+          "per stratum, stronger shrinkage (`lambda`), or fewer models.")
     z_hat = Optim.minimizer(res)
 
     # Per-stratum weights table (strata columns + model_id + weight).

@@ -23,6 +23,15 @@ companion for it (`using ScoringRules` then `Stacking(ScoringRules.crps)`), but
 it is not a dependency of this package. [`CRPSStacking`](@ref) and [`QRA`](@ref)
 remain the closed-form specialisations for CRPS and WIS respectively.
 
+!!! note "The `w` in `score(samples, y; w)`"
+    The stack is evaluated by pooling every member's samples for a task into one
+    vector `samples` and passing per-sample weights `w` that encode the mixture:
+    member `i` with weight `wᵢ` and `Kᵢ` samples contributes `wᵢ / Kᵢ` to each of
+    its samples, so `w` sums to one over the whole pool. `score` must therefore
+    treat `w` as a weighted-sample rule over the combined vector — which is
+    exactly what `ScoringRules.crps(samples, y; w)` does. A scorer that ignores
+    `w`, or that renormalises it per member, breaks the weighting silently.
+
 # Fields
 
 - `score`: the scoring-rule function to minimise (negatively oriented).
@@ -107,6 +116,10 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
     end
 
     res = optimize(loss, zeros(M), LBFGS())
+    Optim.converged(res) || @warn("Stacking: L-BFGS did not converge " *
+          "($(Optim.iterations(res)) iterations); weights are the best iterate " *
+          "found. The score may be poorly conditioned — try a different score or " *
+          "fewer models.")
     w_hat = _softmax(Optim.minimizer(res))
     return FittedStacking(DataFrame(model_id = models, weight = w_hat),
         String.(models), Optim.minimum(res))
@@ -124,9 +137,11 @@ sees how they combine, so it is blind to redundancy between them.
 
 `fit(InverseScore(score), training, observations)` returns a
 [`FittedInverseScore`](@ref) that plugs into [`combine`](@ref) / [`weights`](@ref).
-`score` is any callable `score(samples, y; w)`;
-[`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
-companion (`InverseScore(ScoringRules.crps)`), not a dependency of this package.
+`score` is called as `score(memberᵢ_samples, y)` — each member is scored on its
+own samples in isolation, so (unlike [`Stacking`](@ref)) the `w` keyword is not
+used. [`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
+companion (`InverseScore(ScoringRules.crps)`, which accepts but does not require
+`w`), not a dependency of this package.
 
 # Fields
 
