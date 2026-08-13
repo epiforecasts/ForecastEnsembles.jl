@@ -24,5 +24,5 @@ Suggests:
 Remotes:
     sbfnk/juliaready
 Config/testthat/edition: 3
-SystemRequirements: Julia (>= 1.10)
+SystemRequirements: Julia (>= 1.11)
 RoxygenNote: 7.3.3
