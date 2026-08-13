@@ -140,3 +140,40 @@ end
         @test issorted(sorted.value)
     end
 end
+
+@testitem "QRA handles partially-missing model submissions" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
+    rng = MersenneTwister(7)
+
+    n_train = 120
+    levels = [0.1, 0.5, 0.9]
+    y = randn(rng, n_train)
+
+    rows = DataFrame[]
+    for (mid, prediction) in (("m_good", y), ("m_noisy", randn(rng, n_train)))
+        for τ in levels
+            zτ = quantile(Normal(0, 1), τ)
+            df = DataFrame(model_id = mid, output_type = "quantile",
+                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ)
+            # m_noisy skips the last 20 tasks — a partial submission.
+            mid == "m_noisy" && (df = df[df.t .<= n_train - 20, :])
+            push!(rows, df)
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+    obs = DataFrame(t = 1:n_train, observed = y)
+
+    # Fitting drops the incomplete tasks (complete-case) instead of erroring.
+    fitted = fit(QRA(; enforce_normalisation = true, intercept = false), train, obs)
+    @test isa(fitted, FittedQRA)
+
+    # Combining an input where a model is absent at one quantile level → a clear
+    # ArgumentError (was a BoundsError before the per-τ check).
+    bad_rows = train.data[(train.data.t .<= 3) .&
+                          .!((train.data.model_id .== "m_noisy") .&
+                             (train.data.output_type_id .== 0.5)), :]
+    bad = ForecastTable(bad_rows; task_id_cols = [:t])
+    @test_throws ArgumentError combine(bad, fitted)
+end

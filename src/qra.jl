@@ -203,7 +203,16 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         values = Float64[]
         for τ in levels_present
             sub = tg[tg.output_type_id .== τ, :]
-            x = [first(sub[sub[!, ft.model_id_col] .== mod, :value]) for mod in m.models]
+            x = Float64[]
+            for mod in m.models
+                vals = sub[sub[!, ft.model_id_col] .== mod, :value]
+                isempty(vals) && throw(ArgumentError(
+                    "FittedQRA cannot combine: model $mod is missing at " *
+                    "output_type_id $τ for group $gkey. QRA needs every model at " *
+                    "every quantile level; supply a complete input or drop the model.",
+                ))
+                push!(x, first(vals))
+            end
             β = m.coefs[(gkey, τ)]
             β0 = m.intercepts[(gkey, τ)]
             push!(values, β0 + sum(β .* x))
@@ -318,12 +327,26 @@ function _design_matrix(
     other_cols = setdiff(propertynames(df), [
         model_id_col, :output_type, :output_type_id, :value])
     wide = unstack(df, other_cols, model_id_col, :value)
-    # Ensure model columns are present in expected order; missing models →
-    # zero columns (defensive — should not happen given construction).
+    # A model with no forecasts anywhere in this slice has no column after
+    # unstack; add it as all-missing so the complete-case filter below drops the
+    # affected rows rather than silently treating the absent model as zero.
     for mod in models
-        hasproperty(wide, Symbol(mod)) || (wide[!, Symbol(mod)] = zeros(nrow(wide)))
+        hasproperty(wide, Symbol(mod)) || (wide[!, Symbol(mod)] = fill(missing, nrow(wide)))
     end
-    X = Matrix{Float64}(wide[:, Symbol.(models)])
+    cols = Symbol.(models)
+    # Complete-case: keep only tasks where every model submitted a value. A model
+    # that skips some tasks (partial submission) would otherwise leave `missing`
+    # cells that break the numeric conversion; dropping the incomplete rows is the
+    # standard regression treatment. Callers wanting imputation must do it first.
+    keep = [all(!ismissing, row) for row in eachrow(wide[:, cols])]
+    any(keep) || throw(ArgumentError(
+        "QRA has no training tasks where all of $(models) submitted a forecast; " *
+        "supply complete cases or drop the incomplete models."))
+    wide = wide[keep, :]
+    X = Matrix{Float64}(undef, nrow(wide), length(cols))
+    for (j, c) in enumerate(cols)
+        X[:, j] = Float64.(wide[!, c])
+    end
     y = Float64.(wide.observed)
     return X, y
 end
