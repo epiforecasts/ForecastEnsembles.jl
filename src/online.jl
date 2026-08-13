@@ -7,7 +7,7 @@
 # is the natural companion for the score.
 
 """
-    Hedge(score; eta = 1.0, time_col)
+    Hedge(score; eta = nothing, time_col)
 
 Online ensemble weighting by the Hedge / exponentiated-gradient rule.
 
@@ -31,18 +31,34 @@ companion (`Hedge(ScoringRules.crps; time_col)`), not a dependency of this packa
 - `score`: the scoring-rule function (negatively oriented).
 - `eta`: learning rate. Larger values adapt faster and concentrate weight more
   aggressively on recent winners; as it tends to `0` the weights stay uniform.
-  Scale it to the magnitude of your score. Must be positive.
+  Defaults to `nothing`, meaning it is chosen automatically at `fit` time from
+  the score scale — the regret-style `√(8·ln M / T) / B`, where `M` is the model
+  count, `T` the number of update steps and `B` the largest per-round score. This
+  keeps the update stable whatever the magnitude of the score (a raw `eta` tuned
+  for CRPS in `[0, 1]` would collapse to one model in a single step on counts in
+  the hundreds). Pass a positive number to override.
 - `time_col`: the task-id column defining the update order.
 """
 struct Hedge{F} <: TrainedMethod
     score::F
-    eta::Float64
+    eta::Union{Nothing, Float64}
     time_col::Symbol
 end
 
-function Hedge(score; eta::Real = 1.0, time_col::Symbol)
-    eta > 0 || throw(ArgumentError("eta must be positive (got $eta)"))
-    return Hedge{typeof(score)}(score, Float64(eta), time_col)
+function Hedge(score; eta::Union{Nothing, Real} = nothing, time_col::Symbol)
+    eta === nothing || eta > 0 ||
+        throw(ArgumentError("eta must be positive (got $eta)"))
+    return Hedge{typeof(score)}(
+        score, eta === nothing ? nothing : Float64(eta), time_col)
+end
+
+# Regret-optimal Hedge step size for losses in [0, B] over T rounds and M
+# experts (Cesa-Bianchi & Lugosi): η = √(8 ln M / T) / B. Falls back to 0 (no
+# updating, weights stay uniform) when every score is zero.
+function _auto_eta(scores::AbstractVector, M::Integer, T::Integer)
+    B = isempty(scores) ? 0.0 : maximum(abs, scores)
+    (B > 0 && T > 0) || return 0.0
+    return sqrt(8 * log(M) / T) / B
 end
 
 """
@@ -104,13 +120,16 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     end
     times = sort(unique(per[!, m.time_col]))
 
+    # Auto-scale the learning rate to the score magnitude unless the caller set one.
+    eta = m.eta === nothing ? _auto_eta(per.s, M, length(times)) : m.eta
+
     w = fill(1.0 / M, M)
     traj = [DataFrame() for _ in 1:0]
     for t in times
         rows = per[per[!, m.time_col] .== t, :]
         for r in eachrow(rows)
             i = idx[r[mid]]
-            w[i] *= exp(-m.eta * r.s)
+            w[i] *= exp(-eta * r.s)
         end
         w ./= sum(w)
         step = DataFrame(model_id = String.(models), weight = copy(w))
