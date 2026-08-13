@@ -37,6 +37,11 @@ single stratum, or `lambda → ∞`, recovers global stacking.
   `[:location]`, `[:location, :age_group]`).
 - `lambda`: shrinkage strength toward the global vector. `0` fits each stratum
   independently; large values pool them toward one shared vector. Must be `≥ 0`.
+  The objective weights `lambda` as a per-stratum-averaged penalty against a
+  per-task-averaged data loss, so it is the trade-off between a stratum's typical
+  squared logit distance from the global vector and the typical per-task score —
+  a scale that does not drift with the number of strata. Tune it on held-out
+  score (e.g. via [`backtest`](@ref)); there is no universally correct value.
 - `dirichlet_alpha`: strength of a symmetric-Dirichlet prior on each stratum's
   weights, pulling them toward the simplex centre; `1.0` applies no prior.
 """

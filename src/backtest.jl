@@ -6,7 +6,7 @@
 # CRPS-based scorer), but any `(forecast, observations) -> Real` works.
 
 """
-    backtest(ft, observations, schemes; time_col, score_fn, min_train = 1,
+    backtest(ft, observations, schemes; time_col, min_train, score_fn,
              rng = default_rng()) -> DataFrame
 
 Expanding-window backtest of ensemble schemes. The unique values of `time_col`
@@ -36,7 +36,7 @@ Aggregate across folds yourself, e.g.
 
 ```julia
 using DataFrames
-res = backtest(ft, obs, schemes; time_col = :target_date)
+res = backtest(ft, obs, schemes; time_col = :target_date, min_train = 8)
 combine(groupby(res, :scheme), :score => mean => :mean_score)
 ```
 
@@ -50,7 +50,10 @@ combine(groupby(res, :scheme), :score => mean => :mean_score)
 # Keyword Arguments
 
 - `time_col`: the column giving the time index to expand the window over.
-- `min_train`: number of initial times used only for training (default `1`).
+- `min_train`: number of initial times used only for training. Required — there
+  is no default, because too small a training window silently yields degenerate
+  weights (a single training time over-determines every estimator). Choose a
+  value large enough that the schemes you compare are well-determined.
 - `rng`: RNG used by sample-based schemes (default `default_rng()`).
 - `score_fn`: a scorer `(forecast, observations) -> Real`, returning the mean
   score over the fold's tasks. Required — there is no default.
@@ -89,7 +92,7 @@ function backtest(
         observations::AbstractDataFrame,
         schemes;
         time_col::Symbol,
-        min_train::Integer = 1,
+        min_train::Integer,
         rng::AbstractRNG = default_rng(),
         score_fn = nothing
 )

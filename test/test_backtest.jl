@@ -197,10 +197,14 @@ end
     ft, obs = _bt_sample_data(T = 5)
     # Missing time_col throws before scoring; missing score_fn is itself an error.
     @test_throws ArgumentError backtest(
-        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :nope, score_fn = dummy)
+        ft, obs, ["equal" => QuantileEnsemble(:mean)];
+        time_col = :nope, min_train = 2, score_fn = dummy)
     @test_throws ArgumentError backtest(
-        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :t)
+        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :t, min_train = 2)
     @test_throws ArgumentError backtest(
         ft, obs, ["equal" => QuantileEnsemble(:mean)];
         time_col = :t, min_train = 10, score_fn = dummy)
+    # min_train is required (no default) — omitting it is a keyword error.
+    @test_throws UndefKeywordError backtest(
+        ft, obs, ["equal" => QuantileEnsemble(:mean)]; time_col = :t, score_fn = dummy)
 end
