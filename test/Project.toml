@@ -2,7 +2,7 @@
 # The test environment (no-AD variant: the package opted out of the AD harness,
 # so the AD deps are absent). Seeded with the deps the shared QA helpers need;
 # add the package's own test-only deps here. EpiAwarePackageTools supplies the
-# helpers; until it is registered, pin it via `[sources]` below.
+# helpers.
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -23,8 +23,8 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 
 # Bounded compat for the seeded QA deps (mirrors CensoredDistributions.jl).
-# The package under test and EpiAwarePackageTools are pinned by `[sources]`, so
-# they carry no compat entry. Add a bound for each test-only dep you add.
+# The package under test is pinned by `[sources]`, so it carries no compat
+# entry. Add a bound for each test-only dep you add.
 # This is the no-AD variant, so no AD-harness deps appear.
 [compat]
 EpiAwarePackageTools = "0.3"
