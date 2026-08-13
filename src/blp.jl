@@ -146,9 +146,15 @@ function _fit_beta(u::AbstractVector{<:Real})
     try
         return params(fit_mle(Beta, u))
     catch
+        @warn "BLP: Beta MLE fit failed; falling back to method of moments. This " *
+              "often signals systematic miscalibration of the input PIT values." maxlog = 1
         m = Statistics.mean(u)
         v = Statistics.var(u)
-        (v <= 0 || v >= m * (1 - m)) && return (1.0, 1.0)
+        if v <= 0 || v >= m * (1 - m)
+            @warn "BLP: PIT moments are degenerate; using Beta(1, 1) — no " *
+                  "recalibration is applied." maxlog = 1
+            return (1.0, 1.0)
+        end
         c = m * (1 - m) / v - 1
         return (m * c, (1 - m) * c)
     end

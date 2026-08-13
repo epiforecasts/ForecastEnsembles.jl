@@ -101,6 +101,9 @@ function _log_pool_quantiles(
 )
     lo = minimum(quantile(d, 1e-4) for d in dists)
     hi = maximum(quantile(d, 1 - 1e-4) for d in dists)
+    hi > lo || throw(ArgumentError(
+        "logarithmic pool: the component distributions are degenerate (all mass at " *
+        "a single point $lo), so no integration grid can be built."))
     pad = 0.05 * (hi - lo)
     xs = range(lo - pad, hi + pad; length = ngrid)
     dx = step(xs)
