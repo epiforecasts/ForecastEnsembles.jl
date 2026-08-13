@@ -13,8 +13,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
 ForecastEnsembles = {path = ".."}
-# Until EpiAwarePackageTools is registered, it is pinned by git so the env
-# resolves out of the box. Switch to a local path to develop the kit alongside.
 
 [compat]
 EpiAwarePackageTools = "0.3"
