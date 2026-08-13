@@ -171,9 +171,8 @@ end
 
     # Combining an input where a model is absent at one quantile level → a clear
     # ArgumentError (was a BoundsError before the per-τ check).
-    bad_rows = train.data[(train.data.t .<= 3) .&
-                          .!((train.data.model_id .== "m_noisy") .&
-                             (train.data.output_type_id .== 0.5)), :]
+    bad_rows = train.data[
+        (train.data.t .<= 3) .& .!((train.data.model_id .== "m_noisy") .& (train.data.output_type_id .== 0.5)), :]
     bad = ForecastTable(bad_rows; task_id_cols = [:t])
     @test_throws ArgumentError combine(bad, fitted)
 end
