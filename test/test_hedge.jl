@@ -122,13 +122,16 @@ end
     rows = DataFrame[]
     obsrows = DataFrame[]
     for loc in ("A", "B"), t in 1:T
+
         y = level[loc] + 0.1 * randn(rng)
         push!(obsrows, DataFrame(location = loc, t = t, observed = y))
-        push!(rows, DataFrame(model_id = "m_good", output_type = "sample",
-            output_type_id = 1:K, location = loc, t = t, value = y .+ randn(rng, K)))
-        push!(rows, DataFrame(model_id = "m_bad", output_type = "sample",
-            output_type_id = 1:K, location = loc, t = t,
-            value = y .+ 10.0 .+ randn(rng, K)))
+        push!(rows,
+            DataFrame(model_id = "m_good", output_type = "sample",
+                output_type_id = 1:K, location = loc, t = t, value = y .+ randn(rng, K)))
+        push!(rows,
+            DataFrame(model_id = "m_bad", output_type = "sample",
+                output_type_id = 1:K, location = loc, t = t,
+                value = y .+ 10.0 .+ randn(rng, K)))
     end
     train = ForecastTable(reduce(vcat, rows); task_id_cols = [:location, :t])
     observations = reduce(vcat, obsrows)
