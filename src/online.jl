@@ -92,9 +92,15 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     idx = Dict(mm => i for (i, mm) in enumerate(models))
     score = m.score
 
-    # Per (member, time) mean score.
-    per = combine(DataFrames.groupby(d, [mid, m.time_col])) do g
+    # Score each (member, task) on its own samples and observation, then take the
+    # per-(member, time) mean across tasks. Scoring by `[mid, time_col]` alone
+    # would pool samples from every non-time task (e.g. all locations at a date)
+    # into one vector and score them against a single arbitrary observation.
+    per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
+    end
+    per = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
+        (; s = mean(g.s))
     end
     times = sort(unique(per[!, m.time_col]))
 

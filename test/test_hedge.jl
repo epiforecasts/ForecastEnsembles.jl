@@ -104,3 +104,39 @@
     )
     @test_throws ArgumentError fit(Hedge(crps; eta = 1.0, time_col = :t), qtrain, obs)
 end
+
+@testitem "Hedge scores per (model, task), not per (model, time)" begin
+    using Random: MersenneTwister
+    using DataFrames
+    include(joinpath(@__DIR__, "score_helpers.jl"))
+
+    # Two locations with far-apart observed levels. `m_good` is centred and sharp
+    # at BOTH locations; `m_bad` is offset by 10 at both. Scoring correctly (per
+    # location) sees m_good as excellent everywhere. Scoring by (model, time)
+    # alone pools each model's samples across the two locations into one vector
+    # and scores it against a single arbitrary observation, so the score is
+    # dominated by the between-location spread and the model ordering scrambles.
+    rng = MersenneTwister(11)
+    T, K = 20, 200
+    level = Dict("A" => 0.0, "B" => 100.0)
+    rows = DataFrame[]
+    obsrows = DataFrame[]
+    for loc in ("A", "B"), t in 1:T
+        y = level[loc] + 0.1 * randn(rng)
+        push!(obsrows, DataFrame(location = loc, t = t, observed = y))
+        push!(rows, DataFrame(model_id = "m_good", output_type = "sample",
+            output_type_id = 1:K, location = loc, t = t, value = y .+ randn(rng, K)))
+        push!(rows, DataFrame(model_id = "m_bad", output_type = "sample",
+            output_type_id = 1:K, location = loc, t = t,
+            value = y .+ 10.0 .+ randn(rng, K)))
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:location, :t])
+    observations = reduce(vcat, obsrows)
+
+    fitted = fit(Hedge(crps; eta = 1.0, time_col = :t), train, observations)
+    gw = fitted.weights[fitted.weights.model_id .== "m_good", :weight][1]
+    @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
+    @test gw > 0.9
+    # One trajectory row per (time, model) regardless of the extra task column.
+    @test nrow(fitted.trajectory) == T * 2
+end
