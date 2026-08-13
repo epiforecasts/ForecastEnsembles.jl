@@ -66,10 +66,22 @@ The kernel is dispatched on the table's `output_type`:
 
 The quantile path uses the [`ForecastEnsembles.QuantileDistribution`](@ref)
 helper. The interior interpolation is Fritsch–Carlson PCHIP (monotone,
-parameter-free); the tails are Normals fitted to the two outermost knots.
-This matches `distfromq`'s default `tail_dist = "norm"` qualitatively;
+parameter-free); the tails are Normals fitted to the two outermost *distinct*
+knots. This matches `distfromq`'s default `tail_dist = "norm"` qualitatively;
 the interiors differ (PCHIP here, splines there) by amounts small
 relative to typical quantile spacing.
+
+!!! note "Count / discrete forecasts"
+    Reconstructing a continuous distribution from quantiles is an
+    approximation: it smooths over the atoms of a genuinely discrete (count)
+    forecast, and a run of tied outer quantiles (e.g. `Q(0.1) = Q(0.25) = 0`
+    for a forecast piling at zero) is treated as a step rather than a point
+    mass. This is accurate when counts are moderate-to-large, where treating
+    the forecast as continuous is standard. For small counts / heavy zeros —
+    and especially for [`BLP`](@ref), whose PIT calibration assumption does not
+    hold for discrete forecasts — prefer the quantile-native methods
+    ([`QuantileEnsemble`](@ref), [`QRA`](@ref)), which never reconstruct a
+    distribution.
 
 The mixture quantile at each level is computed by bisection on
 ``\sum_i w_i F_i(x) = \tau`` — deterministic, no Monte Carlo error. This

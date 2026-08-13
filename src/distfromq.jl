@@ -46,8 +46,8 @@ function QuantileDistribution(probs::AbstractVector, vals::AbstractVector)
     fwd_d = _pchip_slopes(p, v)
     inv_d = _pchip_slopes(v, p)
 
-    lt = _fit_normal_tail(p[1], v[1], p[2], v[2])
-    rt = _fit_normal_tail(p[end - 1], v[end - 1], p[end], v[end])
+    lt = _left_tail(p, v)
+    rt = _right_tail(p, v)
 
     return QuantileDistribution(p, v, fwd_d, inv_d, lt, rt)
 end
@@ -62,6 +62,30 @@ function _fit_normal_tail(p1, v1, p2, v2)
     σ = (v2 - v1) / (z2 - z1)
     μ = v1 - z1 * σ
     return Normal(μ, σ)
+end
+
+# Fit the outer Normal tails from the outermost pair of *distinct* knot values.
+# When the outer two quantiles tie (e.g. Q(0.1) = Q(0.25) for a count forecast
+# piling at a value), fitting the tail from the tied pair gives a degenerate
+# spike whose median lands at the knot, so `cdf` at the boundary wrongly returns
+# 0.5. Reaching to the first distinct knot instead makes `cdf(boundary) = p` at
+# that knot and lets the interior spline carry the step up to the next level.
+# For a non-tied boundary this is exactly the original two-closest-knots fit.
+# NOTE: reconstructing a continuous distribution from the quantiles of a
+# genuinely discrete (count) forecast is an approximation — for small counts /
+# heavy zeros, prefer the quantile-native methods (QRA, simple ensembles) over
+# the reconstruction-based ones (BLP, logarithmic pool). See the methods docs.
+function _left_tail(p::AbstractVector, v::AbstractVector)
+    j = findfirst(k -> v[k] != v[1], eachindex(v))
+    j === nothing && return Normal(v[1], eps(float(v[1])))  # fully degenerate
+    return _fit_normal_tail(p[1], v[1], p[j], v[j])
+end
+
+function _right_tail(p::AbstractVector, v::AbstractVector)
+    n = length(v)
+    j = findlast(k -> v[k] != v[n], eachindex(v))
+    j === nothing && return Normal(v[n], eps(float(v[n])))
+    return _fit_normal_tail(p[j], v[j], p[n], v[n])
 end
 
 # Fritsch–Carlson monotone cubic Hermite slopes for (x, y) with strictly
