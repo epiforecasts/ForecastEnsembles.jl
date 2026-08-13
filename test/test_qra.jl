@@ -140,3 +140,11 @@ end
         @test issorted(sorted.value)
     end
 end
+
+@testitem "QRA defaults are the hub-safe simplex config" begin
+    m = QRA()
+    @test m.enforce_normalisation == true
+    @test m.intercept == false
+    @test m.noncross == false
+    @test m.per_quantile_weights == false
+end

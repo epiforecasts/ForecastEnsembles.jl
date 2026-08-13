@@ -118,12 +118,20 @@ is_per_quantile_weights(::Nothing) = false
 is_per_quantile_weights(w::EnsembleWeights) = is_per_quantile(w)
 
 """
-    QRA(; per_quantile_weights = false, intercept = true,
-          enforce_normalisation = false, noncross = false,
+    QRA(; per_quantile_weights = false, intercept = false,
+          enforce_normalisation = true, noncross = false,
           group = Symbol[])
 
 Quantile Regression Averaging. `group` lists task dimensions over which a
 separate regression is fitted. Mirrors `qrensemble::qra`.
+
+The defaults fit a simplex-constrained, intercept-free combination
+(`enforce_normalisation = true`, `intercept = false`), matching `qrensemble` and
+guaranteeing non-crossing quantiles for the shared-weight fit. Set
+`intercept = true` and/or `enforce_normalisation = false` for an unconstrained
+regression, but note that combination can then produce weights outside `[0, 1]`
+and crossing quantiles. `noncross` only takes effect with
+`per_quantile_weights = true` (the shared-weight fit is already monotone in τ).
 """
 struct QRA <: TrainedMethod
     per_quantile_weights::Bool
@@ -135,11 +143,15 @@ end
 
 function QRA(;
         per_quantile_weights::Bool = false,
-        intercept::Bool = true,
-        enforce_normalisation::Bool = false,
+        intercept::Bool = false,
+        enforce_normalisation::Bool = true,
         noncross::Bool = false,
         group = Symbol[]
 )
+    if noncross && !per_quantile_weights
+        @warn "QRA(noncross = true) has no effect unless per_quantile_weights = true; " *
+              "the shared-weight fit is already monotone in τ." maxlog = 1
+    end
     return QRA(
         per_quantile_weights,
         intercept,
