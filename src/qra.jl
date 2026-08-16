@@ -211,8 +211,12 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
                     "output_type_id $τ for group $gkey. QRA needs every model at " *
                     "every quantile level; supply a complete input or drop the model.",
                 ))
-                # A model should appear exactly once per (τ, group); duplicate
-                # rows are not checked here, so `first` picks one arbitrarily.
+                # A model must appear exactly once per (τ, group); flag duplicate
+                # rows rather than silently picking one.
+                length(vals) == 1 || throw(ArgumentError(
+                    "FittedQRA cannot combine: model $mod appears $(length(vals)) " *
+                    "times at output_type_id $τ for group $gkey; expected exactly " *
+                    "one row per model per level."))
                 push!(x, first(vals))
             end
             β = m.coefs[(gkey, τ)]
