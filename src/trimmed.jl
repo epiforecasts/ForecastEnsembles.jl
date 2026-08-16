@@ -16,8 +16,9 @@ extremes to the surviving boundary values, then average all of them.
 least one value always survives (so `fraction → 0.5` degenerates to the median,
 `fraction = 0` to the plain mean). Because `k` is a rounded count, small
 ensembles need a large enough `fraction` to trim anything at all: with the
-default `fraction = 0.1`, `round(0.1 · n) = 0` for `n ≤ 4` and rises to 1 only at
-`n = 5`, so for a typical hub ensemble of a handful of models the result equals
+default `fraction = 0.1`, `round(0.1 · n) = 0` for `n ≤ 5` and rises to 1 only at
+`n = 6` (Julia rounds half to even, so `round(Int, 0.1 · 5) = round(Int, 0.5) = 0`),
+so for a typical hub ensemble of a handful of models the result equals
 the plain mean until `fraction` is raised. This is the robust cousin of
 [`QuantileEnsemble`](@ref)`(:mean)`: cheaper than a full median ensemble to
 reason about, and tunable in how much of the tail it discards. It aggregates

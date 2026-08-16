@@ -60,7 +60,9 @@ function PartialPooling(
 )
     lambda >= 0 || throw(ArgumentError("lambda (shrinkage) must be >= 0 (got $lambda)"))
     dirichlet_alpha >= 1 ||
-        throw(ArgumentError("dirichlet_alpha must be >= 1 (a proper Dirichlet prior)"))
+        throw(ArgumentError("dirichlet_alpha must be >= 1 (1 is the flat, " *
+                            "uninformative prior; larger values pull the weights " *
+                            "toward the simplex centre)"))
     st = Symbol.(collect(strata))
     isempty(st) && throw(ArgumentError("strata must name at least one task-id column"))
     return PartialPooling{typeof(score)}(score, st, Float64(lambda), Float64(dirichlet_alpha))
