@@ -99,9 +99,12 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     # into one vector and score them against a single arbitrary observation.
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
         # One observation per (member, task); the join can only violate this if
-        # `observations` carries duplicate task keys, so assert it explicitly.
-        @assert allequal(g.observed) "multiple observations for one task — check " *
-                                     "observations for duplicate task keys"
+        # `observations` carries duplicate task keys. Check with an explicit throw
+        # (not `@assert`, which optimised builds may elide) so the invariant always
+        # holds.
+        allequal(g.observed) || throw(ArgumentError(
+            "multiple observations for one task — check observations for " *
+            "duplicate task keys"))
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
     end
     # Per-step loss is the unweighted mean of the per-task scores at that time, so
