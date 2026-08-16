@@ -43,7 +43,8 @@ single stratum, or `lambda → ∞`, recovers global stacking.
   a scale that does not drift with the number of strata. Tune it on held-out
   score (e.g. via [`backtest`](@ref)); there is no universally correct value.
 - `dirichlet_alpha`: strength of a symmetric-Dirichlet prior on each stratum's
-  weights, pulling them toward the simplex centre; `1.0` applies no prior.
+  weights, pulling them toward the simplex centre; `1.0` is the flat,
+  uninformative prior.
 """
 struct PartialPooling{F} <: TrainedMethod
     score::F
