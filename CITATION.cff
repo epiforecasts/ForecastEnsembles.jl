@@ -7,6 +7,6 @@ authors:
     family-names: "Funk"
     orcid: "https://orcid.org/0000-0002-2842-3406"
 repository-code: "https://github.com/epiforecasts/ForecastEnsembles.jl"
-url: "https://github.com/epiforecasts/ForecastEnsembles.jl"
+url: "https://epiforecasts.io/ForecastEnsembles.jl/"
 license: "MIT"
 # Add `version`, `date-released`, and a Zenodo `doi` when cutting a citable release.
