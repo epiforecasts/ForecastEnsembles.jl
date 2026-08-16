@@ -37,7 +37,9 @@ companion (`Hedge(ScoringRules.crps; time_col)`), not a dependency of this packa
   (which assumes the score is non-negative, as a negatively-oriented rule is). This
   keeps the update stable whatever the magnitude of the score (a raw `eta` tuned
   for CRPS in `[0, 1]` would collapse to one model in a single step on counts in
-  the hundreds). Pass a positive number to override.
+  the hundreds). `B` is estimated from the full training set, not online, so the
+  auto-scaling is a batch fit — not directly transferable to a streaming setting
+  where `B` must be bounded a priori. Pass a positive number to override.
 - `time_col`: the task-id column defining the update order.
 """
 struct Hedge{F} <: TrainedMethod
@@ -60,6 +62,9 @@ end
 # score that returns negatives by inflating `B` and under-scaling η. Falls back
 # to 0 (no updating, weights stay uniform) when every score is zero.
 function _auto_eta(scores::AbstractVector, M::Integer, T::Integer)
+    # `fit` guarantees M ≥ 2, but guard here too: at M = 1, `log(M) = 0` would
+    # silently freeze the weights, hiding a bypassed caller's mistake.
+    M >= 2 || throw(ArgumentError("_auto_eta needs at least two models (got $M)"))
     B = isempty(scores) ? 0.0 : maximum(scores)
     B > 0 || return 0.0   # T ≥ 1 is guaranteed by the caller
     return sqrt(8 * log(M) / T) / B
