@@ -61,6 +61,8 @@ end
 
 function _weighted_mean(v::AbstractVector, w::AbstractVector)
     sw = sum(w)
+    isnan(sw) && throw(ArgumentError(
+        "ensemble weights contain NaN; all weights must be finite"))
     sw > 0 || throw(ArgumentError(
         "ensemble weights sum to $sw; a positive sum is required to combine"))
     return dot(v, w) / sw
@@ -74,6 +76,8 @@ function _weighted_median(v::AbstractVector, w::AbstractVector)
     vs = v[perm]
     ws = w[perm]
     total = sum(ws)
+    isnan(total) && throw(ArgumentError(
+        "ensemble weights contain NaN; all weights must be finite"))
     total > 0 || throw(ArgumentError(
         "ensemble weights sum to $total; a positive sum is required to combine"))
     cw = 0.0
