@@ -149,6 +149,9 @@ function QRA(;
         group = Symbol[]
 )
     if noncross && !per_quantile_weights
+        # `maxlog = 1` suppresses this after the first firing per Julia session
+        # (keyed to this source line), so a sweep constructing many such no-op
+        # configs warns only once — enough to flag the mistake without flooding.
         @warn "QRA(noncross = true) has no effect unless per_quantile_weights = true; " *
               "the shared-weight fit is already monotone in τ." maxlog = 1
     end
