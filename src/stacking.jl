@@ -27,7 +27,8 @@ remain the closed-form specialisations for CRPS and WIS respectively.
     The stack is evaluated by pooling every member's samples for a task into one
     vector `samples` and passing per-sample weights `w` that encode the mixture:
     member `i` with weight `wᵢ` and `Kᵢ` samples contributes `wᵢ / Kᵢ` to each of
-    its samples, so `w` sums to one over the whole pool. `score` must therefore
+    its samples, so `w` sums to one over the whole pool (assuming every member
+    contributes at least one sample to the task). `score` must therefore
     treat `w` as a weighted-sample rule over the combined vector — which is
     exactly what `ScoringRules.crps(samples, y; w)` does. A scorer that ignores
     `w`, or that renormalises it per member, breaks the weighting silently.
@@ -108,6 +109,10 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
         w = _softmax(z)
         total = zero(eltype(z))
         for td in task_data
+            # `midx` only ever lists model indices that actually appear in this
+            # task, and `counts[i]` counts those appearances, so every divisor
+            # here is positive — a model with no samples in the task is never
+            # indexed.
             sw = [w[i] / td.counts[i] for i in td.midx]
             total += score(td.samples, td.y; w = sw)
         end
@@ -118,8 +123,8 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
     res = optimize(loss, zeros(M), LBFGS())
     Optim.converged(res) || @warn("Stacking: L-BFGS did not converge " *
           "($(Optim.iterations(res)) iterations); weights are the best iterate " *
-          "found. The score may be poorly conditioned — try a different score or " *
-          "fewer models.")
+          "found. The score may be poorly conditioned — try more training data, a " *
+          "different score, or fewer models.")
     w_hat = _softmax(Optim.minimizer(res))
     return FittedStacking(DataFrame(model_id = models, weight = w_hat),
         String.(models), Optim.minimum(res))
