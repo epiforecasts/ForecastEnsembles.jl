@@ -14,7 +14,8 @@ Online ensemble weighting by the Hedge / exponentiated-gradient rule.
 `fit(Hedge(score; time_col), training, observations)` walks the distinct
 `time_col` values in order and, at each step, multiplies every member's weight by
 `exp(-eta · sₜ)` — where `sₜ` is that member's mean `score` on the current step
-(negatively oriented, so a lower score keeps more weight) — then renormalises to
+(the unweighted mean of its per-task scores, so every task counts equally;
+negatively oriented, so a lower score keeps more weight) — then renormalises to
 the simplex. A member absent at a step keeps its weight (a "sleeping expert").
 The final weights plug into [`combine`](@ref); the full trajectory is kept for
 weight-stability diagnostics.
@@ -97,8 +98,16 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     # would pool samples from every non-time task (e.g. all locations at a date)
     # into one vector and score them against a single arbitrary observation.
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
+        # One observation per (member, task); the join can only violate this if
+        # `observations` carries duplicate task keys, so assert it explicitly.
+        @assert allequal(g.observed) "multiple observations for one task — check " *
+                                     "observations for duplicate task keys"
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
     end
+    # Per-step loss is the unweighted mean of the per-task scores at that time, so
+    # every task (e.g. every location) counts equally regardless of its scale. A
+    # member missing at some tasks in a step is averaged over the tasks it did
+    # cover — the "sleeping expert" policy applied within a step as well as across.
     per = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
         (; s = mean(g.s))
     end
