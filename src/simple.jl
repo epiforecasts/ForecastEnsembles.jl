@@ -74,6 +74,8 @@ function _weighted_median(v::AbstractVector, w::AbstractVector)
     vs = v[perm]
     ws = w[perm]
     total = sum(ws)
+    total > 0 || throw(ArgumentError(
+        "ensemble weights sum to $total; a positive sum is required to combine"))
     cw = 0.0
     @inbounds for i in eachindex(vs)
         cw += ws[i]

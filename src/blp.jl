@@ -145,7 +145,8 @@ function _fit_beta(u::AbstractVector{<:Real})
         throw(ArgumentError("BLP needs at least two observations to fit the Beta"))
     try
         return params(fit_mle(Beta, u))
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         @warn "BLP: Beta MLE fit failed; falling back to method of moments. This " *
               "often signals systematic miscalibration of the input PIT values." maxlog = 1
         m = Statistics.mean(u)
