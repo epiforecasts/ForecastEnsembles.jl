@@ -33,7 +33,8 @@ companion (`Hedge(ScoringRules.crps; time_col)`), not a dependency of this packa
   aggressively on recent winners; as it tends to `0` the weights stay uniform.
   Defaults to `nothing`, meaning it is chosen automatically at `fit` time from
   the score scale — the regret-style `√(8·ln M / T) / B`, where `M` is the model
-  count, `T` the number of update steps and `B` the largest per-round score. This
+  count, `T` the number of update steps and `B` the largest per-round score
+  (which assumes the score is non-negative, as a negatively-oriented rule is). This
   keeps the update stable whatever the magnitude of the score (a raw `eta` tuned
   for CRPS in `[0, 1]` would collapse to one model in a single step on counts in
   the hundreds). Pass a positive number to override.
@@ -53,11 +54,14 @@ function Hedge(score; eta::Union{Nothing, Real} = nothing, time_col::Symbol)
 end
 
 # Regret-optimal Hedge step size for losses in [0, B] over T rounds and M
-# experts (Cesa-Bianchi & Lugosi): η = √(8 ln M / T) / B. Falls back to 0 (no
-# updating, weights stay uniform) when every score is zero.
+# experts (Cesa-Bianchi & Lugosi): η = √(8 ln M / T) / B. The bound assumes
+# non-negative losses, so `B` is the plain maximum (a negatively-oriented score
+# like CRPS is always ≥ 0); `maximum(abs, …)` would instead hide a misconfigured
+# score that returns negatives by inflating `B` and under-scaling η. Falls back
+# to 0 (no updating, weights stay uniform) when every score is zero.
 function _auto_eta(scores::AbstractVector, M::Integer, T::Integer)
-    B = isempty(scores) ? 0.0 : maximum(abs, scores)
-    (B > 0 && T > 0) || return 0.0
+    B = isempty(scores) ? 0.0 : maximum(scores)
+    B > 0 || return 0.0   # T ≥ 1 is guaranteed by the caller
     return sqrt(8 * log(M) / T) / B
 end
 
@@ -120,7 +124,10 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     end
     times = sort(unique(per[!, m.time_col]))
 
-    # Auto-scale the learning rate to the score magnitude unless the caller set one.
+    # Auto-scale the learning rate to the score magnitude unless the caller set
+    # one. `B` here is a hindsight estimate — the max score over all T rounds, so
+    # round 1 is already scaled by scores it has not yet seen. Fine for this batch
+    # fit; a true streaming deployment would need `B` bounded a priori.
     eta = m.eta === nothing ? _auto_eta(per.s, M, length(times)) : m.eta
 
     w = fill(1.0 / M, M)
