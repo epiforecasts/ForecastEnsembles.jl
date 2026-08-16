@@ -211,6 +211,8 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
                     "output_type_id $τ for group $gkey. QRA needs every model at " *
                     "every quantile level; supply a complete input or drop the model.",
                 ))
+                # A model should appear exactly once per (τ, group); duplicate
+                # rows are not checked here, so `first` picks one arbitrarily.
                 push!(x, first(vals))
             end
             β = m.coefs[(gkey, τ)]
@@ -338,11 +340,14 @@ function _design_matrix(
     # that skips some tasks (partial submission) would otherwise leave `missing`
     # cells that break the numeric conversion; dropping the incomplete rows is the
     # standard regression treatment. Callers wanting imputation must do it first.
-    keep = [all(!ismissing, row) for row in eachrow(wide[:, cols])]
+    keep = completecases(wide[:, cols])
     any(keep) || throw(ArgumentError(
         "QRA has no training tasks where all of $(models) submitted a forecast; " *
         "supply complete cases or drop the incomplete models."))
     wide = wide[keep, :]
+    # Columns carry a `Union{Missing, Float64}` eltype after the all-missing
+    # fill above, so copy each into a concrete `Float64` matrix column by column;
+    # a single `Matrix{Float64}(…)` conversion cannot narrow the union.
     X = Matrix{Float64}(undef, nrow(wide), length(cols))
     for (j, c) in enumerate(cols)
         X[:, j] = Float64.(wide[!, c])
@@ -408,7 +413,11 @@ function _per_quantile_regression_noncross(
     K = length(levels)
     n = size(first(Xs), 1)
     all(size(X, 1) == n for X in Xs) ||
-        throw(ArgumentError("noncross requires same number of training points across τ"))
+        throw(ArgumentError(
+            "noncross requires the same training tasks at every quantile level; " *
+            "got mismatched sizes $(map(X -> size(X, 1), Xs)). This can happen with " *
+            "partial submissions where a model skips some tasks at some levels — " *
+            "ensure every model submits at every level, or drop the incomplete models."))
 
     model = Model(HiGHS.Optimizer)
     set_silent(model)
