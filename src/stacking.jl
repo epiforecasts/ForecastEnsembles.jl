@@ -28,7 +28,8 @@ remain the closed-form specialisations for CRPS and WIS respectively.
     vector `samples` and passing per-sample weights `w` that encode the mixture:
     member `i` with weight `wᵢ` and `Kᵢ` samples contributes `wᵢ / Kᵢ` to each of
     its samples, so `w` sums to one over the whole pool (assuming every member
-    contributes at least one sample to the task). `score` must therefore
+    contributes at least one sample to the task; a member absent from a task is
+    excluded by the `innerjoin`, so this always holds in practice). `score` must therefore
     treat `w` as a weighted-sample rule over the combined vector — which is
     exactly what `ScoringRules.crps(samples, y; w)` does. A scorer that ignores
     `w`, or that renormalises it per member, breaks the weighting silently.
