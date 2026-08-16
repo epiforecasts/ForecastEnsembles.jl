@@ -340,7 +340,7 @@ function _design_matrix(
     # that skips some tasks (partial submission) would otherwise leave `missing`
     # cells that break the numeric conversion; dropping the incomplete rows is the
     # standard regression treatment. Callers wanting imputation must do it first.
-    keep = completecases(wide[:, cols])
+    keep = DataFrames.completecases(wide[:, cols])
     any(keep) || throw(ArgumentError(
         "QRA has no training tasks where all of $(models) submitted a forecast; " *
         "supply complete cases or drop the incomplete models."))
