@@ -75,17 +75,23 @@ end
 # genuinely discrete (count) forecast is an approximation — for small counts /
 # heavy zeros, prefer the quantile-native methods (QRA, simple ensembles) over
 # the reconstruction-based ones (BLP, logarithmic pool). See the methods docs.
+# Fully-degenerate input (every quantile value equal) is unsupported: there is
+# no distinct knot to fit a tail from, so both tails fall back to a near-point
+# spike centred on that value. Its median is the value itself, so `cdf` at the
+# value reads ≈ 0.5 — the same behaviour the distinct-knot scan fixes for the
+# partially-tied case, but here there is no better answer from quantiles alone.
 function _left_tail(p::AbstractVector, v::AbstractVector)
-    j = findfirst(k -> v[k] != v[1], eachindex(v))
-    j === nothing && return Normal(v[1], eps(float(v[1])))  # fully degenerate
-    return _fit_normal_tail(p[1], v[1], p[j], v[j])
+    lo = firstindex(v)
+    j = findfirst(k -> v[k] != v[lo], eachindex(v))
+    j === nothing && return Normal(v[lo], eps(float(v[lo])))  # fully degenerate
+    return _fit_normal_tail(p[lo], v[lo], p[j], v[j])
 end
 
 function _right_tail(p::AbstractVector, v::AbstractVector)
-    n = length(v)
-    j = findlast(k -> v[k] != v[n], eachindex(v))
-    j === nothing && return Normal(v[n], eps(float(v[n])))
-    return _fit_normal_tail(p[j], v[j], p[n], v[n])
+    hi = lastindex(v)
+    j = findlast(k -> v[k] != v[hi], eachindex(v))
+    j === nothing && return Normal(v[hi], eps(float(v[hi])))  # fully degenerate
+    return _fit_normal_tail(p[j], v[j], p[hi], v[hi])
 end
 
 # Fritsch–Carlson monotone cubic Hermite slopes for (x, y) with strictly
