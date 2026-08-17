@@ -91,10 +91,9 @@ end
 # ---- accessors ----
 
 # Defensive copy: callers must not be able to mutate the table's backing store
-# (which would bypass the constructor's validation) through the accessor. This
-# is a shallow copy — the returned frame owns its own column vector so replacing
-# or reordering columns is isolated, but the element storage is shared, so an
-# in-place element write (`d.value[1] = …`) would still reach `ft.data`.
+# (which would bypass the constructor's validation) through the accessor.
+# `copy` copies the column vectors (copycols = true), so both column replacement
+# and in-place element writes on the returned frame leave `ft.data` untouched.
 DataFrames.DataFrame(ft::ForecastTable) = copy(ft.data)
 
 """
