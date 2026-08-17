@@ -83,14 +83,14 @@ end
 function _left_tail(p::AbstractVector, v::AbstractVector)
     lo = firstindex(v)
     j = findfirst(k -> v[k] != v[lo], eachindex(v))
-    j === nothing && return Normal(v[lo], eps(float(v[lo])))  # fully degenerate
+    j === nothing && return Normal(v[lo], eps(one(float(v[lo]))))  # fully degenerate
     return _fit_normal_tail(p[lo], v[lo], p[j], v[j])
 end
 
 function _right_tail(p::AbstractVector, v::AbstractVector)
     hi = lastindex(v)
     j = findlast(k -> v[k] != v[hi], eachindex(v))
-    j === nothing && return Normal(v[hi], eps(float(v[hi])))  # fully degenerate
+    j === nothing && return Normal(v[hi], eps(one(float(v[hi]))))  # fully degenerate
     return _fit_normal_tail(p[j], v[j], p[hi], v[hi])
 end
 
