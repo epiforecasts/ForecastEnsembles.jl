@@ -160,7 +160,7 @@ function QRA(;
         intercept,
         enforce_normalisation,
         noncross,
-        Symbol.(collect(group))
+        Symbol.(group)
     )
 end
 
