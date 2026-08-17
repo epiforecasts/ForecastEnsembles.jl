@@ -104,7 +104,7 @@ function _log_pool_quantiles(
     hi > lo || throw(ArgumentError(
         "logarithmic pool: the combined forecast range is degenerate (the span " *
         "between the lowest 0.01th and highest 99.99th percentile across components " *
-        "is zero, lo = $lo), so no integration grid can be built."))
+        "is zero, lo = hi = $lo), so no integration grid can be built."))
     pad = 0.05 * (hi - lo)
     xs = range(lo - pad, hi + pad; length = ngrid)
     dx = step(xs)
