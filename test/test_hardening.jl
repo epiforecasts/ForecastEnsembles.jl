@@ -74,7 +74,6 @@ end
 end
 
 @testitem "Hardening: BLP Beta MLE fallback warns and returns the identity" begin
-    using Logging: Warn
     # A constant PIT vector makes the Beta MLE fail and its moments degenerate,
     # exercising both warn branches; the fit falls back to Beta(1, 1) (no transform).
     a, b = @test_logs (:warn, r"MLE fit failed") (:warn, r"moments are degenerate") ForecastEnsembles._fit_beta(fill(
