@@ -35,10 +35,10 @@ function EnsembleWeights(df; shape::Symbol = :auto)
     ),
     )
 
-    all(w -> !ismissing(w) && w >= 0, df.weight) || throw(
+    all(w -> !ismissing(w) && isfinite(w) && w >= 0, df.weight) || throw(
         ArgumentError(
-        "EnsembleWeights requires non-negative, non-missing weights; " *
-        "mixing operations are undefined for negative weights.",
+        "EnsembleWeights requires finite, non-negative, non-missing weights; " *
+        "mixing operations are undefined for negative or non-finite weights.",
     ),
     )
 
