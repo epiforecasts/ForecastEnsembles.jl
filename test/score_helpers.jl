@@ -19,6 +19,17 @@ function crps(dat::AbstractVector, y::Real; w = nothing)
     return ex - 0.5 * ee
 end
 
+# Mean weighted-sample CRPS of an ensemble `fc` against observations `o` (joined
+# on :t): score each task then average — the scorer shape `backtest` expects.
+# `include`d into each backtest testitem, which brings `DataFrame` and `mean`
+# into scope alongside `crps` above.
+function sample_crps(fc, o)
+    d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
+    per = DataFrames.combine(DataFrames.groupby(d, :t),
+        [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+    return mean(per.s)
+end
+
 # Pinball (quantile) loss at each level — the WIS kernel. Returns one value per
 # level, matching ScoringRules' `quantile_score(levels, forecasts, y)` shape.
 function quantile_score(levels::AbstractVector, forecasts::AbstractVector, y::Real)

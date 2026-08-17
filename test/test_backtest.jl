@@ -4,14 +4,6 @@
     using DataFrames
     include(joinpath(@__DIR__, "score_helpers.jl"))
 
-    # A CRPS scorer over the fold's tasks, using the local weighted-sample CRPS.
-    function sample_crps(fc, o)
-        d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
-        per = DataFrames.combine(DataFrames.groupby(d, :t),
-            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
-        return mean(per.s)
-    end
-
     ft, obs = _bt_sample_data(T = 10)
     schemes = Dict("equal" => MixtureEnsemble(; n_samples = 500), "crps" => CRPSStacking())
     res = backtest(ft, obs, schemes; time_col = :t, min_train = 3,
@@ -28,13 +20,6 @@ end
     using Statistics: mean
     using DataFrames
     include(joinpath(@__DIR__, "score_helpers.jl"))
-
-    function sample_crps(fc, o)
-        d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
-        per = DataFrames.combine(DataFrames.groupby(d, :t),
-            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
-        return mean(per.s)
-    end
 
     ft, obs = _bt_sample_data(T = 30)
     schemes = [
