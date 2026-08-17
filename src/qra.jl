@@ -194,6 +194,9 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         ),
         )
 
+        # Catches a model entirely absent from the input; the complementary case
+        # (a model present but missing at a specific τ) is caught in the per-τ loop
+        # below with a more specific message.
         models_present = unique(tg[!, ft.model_id_col])
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
@@ -348,8 +351,8 @@ function _design_matrix(
     # standard regression treatment. Callers wanting imputation must do it first.
     keep = DataFrames.completecases(wide[:, cols])
     any(keep) || throw(ArgumentError(
-        "QRA has no training tasks where all of $(models) submitted a forecast; " *
-        "supply complete cases or drop the incomplete models."))
+        "QRA has no training tasks where all of $(join(models, ", ")) submitted a " *
+        "forecast; supply complete cases or drop the incomplete models."))
     wide = wide[keep, :]
     # Columns carry a `Union{Missing, Float64}` eltype after the all-missing
     # fill above, so copy each into a concrete `Float64` matrix column by column;
