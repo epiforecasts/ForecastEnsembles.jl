@@ -92,5 +92,12 @@ end
     fitted = fit(InverseScore(naive), train, obs)
     gw = fitted.weights[fitted.weights.model_id .== "good", :weight][1]
     bw = fitted.weights[fitted.weights.model_id .== "bad", :weight][1]
-    @test gw > bw
+    @test gw > bw + 0.05   # explicit margin guards against a near-tie in unlucky draws
+
+    # Sentinel: a scorer that accepts `w` but errors if it is ever passed. Fitting
+    # must succeed, proving InverseScore calls the score without the `w` keyword.
+    strict(samples, y; w = nothing) = w === nothing ?
+                                      abs(sum(samples) / length(samples) - y) :
+                                      error("InverseScore must not forward w")
+    @test fit(InverseScore(strict), train, obs) isa FittedInverseScore
 end
