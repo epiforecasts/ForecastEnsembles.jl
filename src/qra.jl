@@ -201,7 +201,7 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
             ArgumentError(
-            "FittedQRA models $missing_models are absent from the input table.",
+            "FittedQRA models $(join(missing_models, ", ")) are absent from the input table.",
         ),
         )
 
