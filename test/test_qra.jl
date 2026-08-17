@@ -224,4 +224,7 @@ end
     end
     @test err isa ArgumentError
     @test occursin("noncross", err.msg)
+    # The message lists the per-level task counts, so the diagnostic is useful:
+    # the dropped level shows 100 alongside the full 120.
+    @test occursin("100", err.msg)
 end
