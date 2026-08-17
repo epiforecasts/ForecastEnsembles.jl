@@ -100,6 +100,12 @@ end
 function _pchip_slopes(x::AbstractVector, y::AbstractVector)
     n = length(x)
     h = diff(x)
+    # The inverse map passes the quantile *values* as `x`; tied values (a count
+    # forecast piling at one point) give a zero-width interval, so `s = Inf`
+    # there and the slope at a tied knot can stay `Inf`. That is safe because
+    # such a knot is never evaluated: `cdf`/`quantile` serve the tied region
+    # from the outer tail or the neighbouring distinct interval, so no `Inf`
+    # slope reaches a Hermite evaluation and the reconstruction has no NaN.
     s = diff(y) ./ h
     d = zeros(Float64, n)
 
