@@ -35,10 +35,25 @@ end
     # cdf at the tied boundary is the step probability at that knot, not the
     # median (0.5) of a degenerate spike.
     @test ForecastEnsembles.cdf(qd, 0.0) ≈ 0.1 atol = 1e-8
-    # Just above the tie, cdf has jumped toward the next level (the atom mass).
+    # Just above the tie, cdf has jumped toward the next level. The atom mass on
+    # the step from p = 0.1 to p = 0.25 is 0.15, so cdf(0⁺) approaches ~0.25; a
+    # loose `> 0.2` bound catches a regression back to the old 0.1 without being
+    # brittle to the interpolation detail.
     @test ForecastEnsembles.cdf(qd, 1e-6) > 0.2
     # Still a valid CDF: monotone and in [0, 1].
     cs = [ForecastEnsembles.cdf(qd, x) for x in range(-2.0, 12.0; length = 60)]
     @test issorted(cs)
     @test all(0 .<= cs .<= 1)
+end
+
+@testitem "QuantileDistribution: fully-degenerate input is unsupported (pinned)" begin
+    # Every quantile value identical: there is no distinct knot to fit a tail from,
+    # so both tails fall back to a near-point spike centred on the value. This is
+    # documented as unsupported — cdf at the value reads ≈ 0.5 (the spike's median).
+    # Pin that behaviour so a future reader does not mistake it for a real tail
+    # probability.
+    probs = [0.1, 0.25, 0.5, 0.9]
+    vals = fill(3.0, 4)
+    qd = ForecastEnsembles.QuantileDistribution(probs, vals)
+    @test ForecastEnsembles.cdf(qd, 3.0) ≈ 0.5 atol = 1e-8
 end
