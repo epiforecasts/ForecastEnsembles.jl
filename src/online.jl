@@ -115,15 +115,15 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     # every task (e.g. every location) counts equally regardless of its scale. A
     # member missing at some tasks in a step is averaged over the tasks it did
     # cover — the "sleeping expert" policy applied within a step as well as across.
-    per = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
+    per_step = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
         (; s = mean(g.s))
     end
-    times = sort(unique(per[!, m.time_col]))
+    times = sort(unique(per_step[!, m.time_col]))
 
     w = fill(1.0 / M, M)
     traj = [DataFrame() for _ in 1:0]
     for t in times
-        rows = per[per[!, m.time_col] .== t, :]
+        rows = per_step[per_step[!, m.time_col] .== t, :]
         for r in eachrow(rows)
             i = idx[r[mid]]
             w[i] *= exp(-m.eta * r.s)
