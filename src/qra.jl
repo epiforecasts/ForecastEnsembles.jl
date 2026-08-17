@@ -176,6 +176,8 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
 
     for tg in DataFrames.groupby(df, other_cols)
         gkey = isempty(m.group_cols) ? () : NamedTuple(c => tg[1, c] for c in m.group_cols)
+        # Readable label for error messages: `()` is opaque for an ungrouped fit.
+        group_label = isempty(m.group_cols) ? "the ungrouped fit" : "group $gkey"
         levels_present = sort(unique(Float64.(tg.output_type_id)))
 
         unseen = setdiff(levels_present, m.levels)
@@ -208,14 +210,14 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
                 vals = sub[sub[!, ft.model_id_col] .== mod, :value]
                 isempty(vals) && throw(ArgumentError(
                     "FittedQRA cannot combine: model $mod is missing at " *
-                    "output_type_id $τ for group $gkey. QRA needs every model at " *
+                    "output_type_id $τ for $group_label. QRA needs every model at " *
                     "every quantile level; supply a complete input or drop the model.",
                 ))
                 # A model must appear exactly once per (τ, group); flag duplicate
                 # rows rather than silently picking one.
                 length(vals) == 1 || throw(ArgumentError(
                     "FittedQRA cannot combine: model $mod appears $(length(vals)) " *
-                    "times at output_type_id $τ for group $gkey; expected exactly " *
+                    "times at output_type_id $τ for $group_label; expected exactly " *
                     "one row per model per level."))
                 push!(x, first(vals))
             end
