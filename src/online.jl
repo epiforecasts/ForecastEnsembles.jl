@@ -20,6 +20,10 @@ the simplex. A member absent at a step keeps its weight (a "sleeping expert").
 The final weights plug into [`combine`](@ref); the full trajectory is kept for
 weight-stability diagnostics.
 
+Because the per-step loss weights every task equally, a scale-dependent rule like
+CRPS lets a high-magnitude task (e.g. a location with values near 100 next to one
+near 0) dominate the step — rescale or stratify such tasks if that is not wanted.
+
 Unlike [`InverseScore`](@ref) (one pooled score per member) this adapts to *when*
 members did well, so it tracks regime change; unlike [`Stacking`](@ref) it needs
 no optimiser and updates incrementally. `score` is any callable
