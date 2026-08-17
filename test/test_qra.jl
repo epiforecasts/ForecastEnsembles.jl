@@ -147,4 +147,14 @@ end
     @test m.intercept == false
     @test m.noncross == false
     @test m.per_quantile_weights == false
+    @test m.group == Symbol[]
+end
+
+@testitem "QRA(noncross = true) warns only without per_quantile_weights" begin
+    using Logging: Warn
+    # `@test_logs` installs a fresh TestLogger with its own maxlog counter, so the
+    # source-level `maxlog = 1` does not suppress the warning here regardless of
+    # test order. The warning fires only for the no-op combination.
+    @test_logs (:warn, r"noncross.*no effect") QRA(noncross = true)
+    @test_logs min_level = Warn QRA(noncross = true, per_quantile_weights = true)
 end
