@@ -4,33 +4,6 @@
     using DataFrames
     include(joinpath(@__DIR__, "score_helpers.jl"))
 
-    # Non-stationary regime: model A is sharp in the first half of the time
-    # window, model B in the second. A scheme that learns weights from recent
-    # performance should beat equal weighting out of sample.
-    function _bt_sample_data(; T = 30, K = 80, seed = 4)
-        rng = MersenneTwister(seed)
-        obs = DataFrame(t = 1:T, observed = randn(rng, T))
-        rows = DataFrame[]
-        for t in 1:T
-            y = obs.observed[t]
-            a_good = t <= T ÷ 2
-            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
-                sd = sharp ? 0.4 : 3.0
-                push!(
-                    rows,
-                    DataFrame(
-                        model_id = mid,
-                        output_type = "sample",
-                        output_type_id = 1:K,
-                        t = t,
-                        value = y .+ sd .* randn(rng, K)
-                    )
-                )
-            end
-        end
-        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
-    end
-
     # A CRPS scorer over the fold's tasks, using the local weighted-sample CRPS.
     function sample_crps(fc, o)
         d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
@@ -55,33 +28,6 @@ end
     using Statistics: mean
     using DataFrames
     include(joinpath(@__DIR__, "score_helpers.jl"))
-
-    # Non-stationary regime: model A is sharp in the first half of the time
-    # window, model B in the second. A scheme that learns weights from recent
-    # performance should beat equal weighting out of sample.
-    function _bt_sample_data(; T = 30, K = 80, seed = 4)
-        rng = MersenneTwister(seed)
-        obs = DataFrame(t = 1:T, observed = randn(rng, T))
-        rows = DataFrame[]
-        for t in 1:T
-            y = obs.observed[t]
-            a_good = t <= T ÷ 2
-            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
-                sd = sharp ? 0.4 : 3.0
-                push!(
-                    rows,
-                    DataFrame(
-                        model_id = mid,
-                        output_type = "sample",
-                        output_type_id = 1:K,
-                        t = t,
-                        value = y .+ sd .* randn(rng, K)
-                    )
-                )
-            end
-        end
-        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
-    end
 
     function sample_crps(fc, o)
         d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
@@ -165,33 +111,7 @@ end
     using Random: MersenneTwister
     using Statistics: mean
     using DataFrames
-
-    # Non-stationary regime: model A is sharp in the first half of the time
-    # window, model B in the second. A scheme that learns weights from recent
-    # performance should beat equal weighting out of sample.
-    function _bt_sample_data(; T = 30, K = 80, seed = 4)
-        rng = MersenneTwister(seed)
-        obs = DataFrame(t = 1:T, observed = randn(rng, T))
-        rows = DataFrame[]
-        for t in 1:T
-            y = obs.observed[t]
-            a_good = t <= T ÷ 2
-            for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
-                sd = sharp ? 0.4 : 3.0
-                push!(
-                    rows,
-                    DataFrame(
-                        model_id = mid,
-                        output_type = "sample",
-                        output_type_id = 1:K,
-                        t = t,
-                        value = y .+ sd .* randn(rng, K)
-                    )
-                )
-            end
-        end
-        return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
-    end
+    include(joinpath(@__DIR__, "score_helpers.jl"))
 
     dummy(fc, o) = 0.0
     ft, obs = _bt_sample_data(T = 5)

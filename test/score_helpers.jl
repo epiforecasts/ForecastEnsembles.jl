@@ -25,3 +25,32 @@ function quantile_score(levels::AbstractVector, forecasts::AbstractVector, y::Re
     return [(y - forecasts[i]) * (levels[i] - (y < forecasts[i] ? 1.0 : 0.0))
             for i in eachindex(levels)]
 end
+
+# Shared backtest fixture: a non-stationary regime where model A is sharp in the
+# first half of the time window and model B in the second. A scheme that learns
+# weights from recent performance should beat equal weighting out of sample.
+# `include`d into each backtest testitem, which brings `DataFrame`, `MersenneTwister`
+# and `ForecastTable` into scope.
+function _bt_sample_data(; T = 30, K = 80, seed = 4)
+    rng = MersenneTwister(seed)
+    obs = DataFrame(t = 1:T, observed = randn(rng, T))
+    rows = DataFrame[]
+    for t in 1:T
+        y = obs.observed[t]
+        a_good = t <= T ÷ 2
+        for (mid, sharp) in (("m_a", a_good), ("m_b", !a_good))
+            sd = sharp ? 0.4 : 3.0
+            push!(
+                rows,
+                DataFrame(
+                    model_id = mid,
+                    output_type = "sample",
+                    output_type_id = 1:K,
+                    t = t,
+                    value = y .+ sd .* randn(rng, K)
+                )
+            )
+        end
+    end
+    return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
+end
