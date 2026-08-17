@@ -109,7 +109,8 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
         allequal(g.observed) || throw(ArgumentError(
             "multiple observations for one task — check observations for " *
             "duplicate task keys"))
-        (; s = score(Float64.(g.value), Float64(first(g.observed))))
+        vals = eltype(g.value) === Float64 ? g.value : Float64.(g.value)
+        (; s = score(vals, Float64(first(g.observed))))
     end
     # Per-step loss is the unweighted mean of the per-task scores at that time, so
     # every task (e.g. every location) counts equally regardless of its scale. A
@@ -121,7 +122,7 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     times = sort(unique(per_step[!, m.time_col]))
 
     w = fill(1.0 / M, M)
-    traj = [DataFrame() for _ in 1:0]
+    traj = DataFrame[]
     for t in times
         rows = per_step[per_step[!, m.time_col] .== t, :]
         for r in eachrow(rows)
