@@ -124,21 +124,21 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
     end
-    per = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
+    per_step = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
         (; s = mean(g.s))
     end
-    times = sort(unique(per[!, m.time_col]))
+    times = sort(unique(per_step[!, m.time_col]))
 
     # Auto-scale the learning rate to the score magnitude unless the caller set
     # one. `B` here is a hindsight estimate — the max score over all T rounds, so
     # round 1 is already scaled by scores it has not yet seen. Fine for this batch
     # fit; a true streaming deployment would need `B` bounded a priori.
-    eta = m.eta === nothing ? _auto_eta(per.s, M, length(times)) : m.eta
+    eta = m.eta === nothing ? _auto_eta(per_step.s, M, length(times)) : m.eta
 
     w = fill(1.0 / M, M)
     traj = [DataFrame() for _ in 1:0]
     for t in times
-        rows = per[per[!, m.time_col] .== t, :]
+        rows = per_step[per_step[!, m.time_col] .== t, :]
         for r in eachrow(rows)
             i = idx[r[mid]]
             w[i] *= exp(-eta * r.s)
