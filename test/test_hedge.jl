@@ -138,8 +138,13 @@ end
 
     fitted = fit(Hedge(crps; eta = 1.0, time_col = :t), train, observations)
     gw = fitted.weights[fitted.weights.model_id .== "m_good", :weight][1]
+    bw = fitted.weights[fitted.weights.model_id .== "m_bad", :weight][1]
     @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
+    # With MersenneTwister(11), T = 20 and m_bad offset by ~10σ at every step,
+    # correct per-task scoring drives almost all weight to m_good; > 0.9 is a
+    # comfortable bound that would fail if the scoring reverted to per-(model, time).
     @test gw > 0.9
+    @test bw < 0.1
     # One trajectory row per (time, model) regardless of the extra task column.
     @test nrow(fitted.trajectory) == T * 2
 end
