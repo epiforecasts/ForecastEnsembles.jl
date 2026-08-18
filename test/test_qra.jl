@@ -140,3 +140,91 @@ end
         @test issorted(sorted.value)
     end
 end
+
+@testitem "QRA handles partially-missing model submissions" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
+    rng = MersenneTwister(7)
+
+    n_train = 120
+    levels = [0.1, 0.5, 0.9]
+    y = randn(rng, n_train)
+
+    rows = DataFrame[]
+    for (mid, prediction) in (("m_good", y), ("m_noisy", randn(rng, n_train)))
+        for τ in levels
+            zτ = quantile(Normal(0, 1), τ)
+            df = DataFrame(model_id = mid, output_type = "quantile",
+                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ)
+            # m_noisy skips the last 20 tasks — a partial submission.
+            mid == "m_noisy" && (df = df[df.t .<= n_train - 20, :])
+            push!(rows, df)
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+    obs = DataFrame(t = 1:n_train, observed = y)
+
+    # Fitting drops the incomplete tasks (complete-case) instead of erroring.
+    fitted = fit(QRA(; enforce_normalisation = true, intercept = false), train, obs)
+    @test isa(fitted, FittedQRA)
+
+    # Drop m_noisy at τ = 0.5 only: present in the table (top-level check passes)
+    # but missing at that level, so the per-τ check fires with a clear
+    # ArgumentError rather than a BoundsError.
+    noisy_at_half = (train.data.model_id .== "m_noisy") .&
+                    (train.data.output_type_id .== 0.5)
+    bad_rows = train.data[(train.data.t .<= 3) .& .!noisy_at_half, :]
+    bad = ForecastTable(bad_rows; task_id_cols = [:t])
+    err = try
+        combine(bad, fitted)
+        nothing
+    catch e
+        e
+    end
+    @test err isa ArgumentError
+    # The message must be the specific per-τ one, naming the model and level.
+    @test occursin("m_noisy", err.msg)
+    @test occursin("0.5", err.msg)
+end
+
+@testitem "QRA noncross rejects partial submissions with per-τ size mismatch" begin
+    using Random: MersenneTwister
+    using Distributions: Normal, quantile
+    using DataFrames
+    rng = MersenneTwister(7)
+    n_train = 120
+    levels = [0.1, 0.5, 0.9]
+    y = randn(rng, n_train)
+
+    rows = DataFrame[]
+    for (mid, prediction) in (("m_good", y), ("m_noisy", randn(rng, n_train)))
+        for τ in levels
+            zτ = quantile(Normal(0, 1), τ)
+            df = DataFrame(model_id = mid, output_type = "quantile",
+                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ)
+            # m_noisy drops the last 20 tasks at τ = 0.5 only, so the complete-case
+            # count differs across τ — which the noncross joint LP cannot align.
+            (mid == "m_noisy" && τ == 0.5) && (df = df[df.t .<= n_train - 20, :])
+            push!(rows, df)
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+    obs = DataFrame(t = 1:n_train, observed = y)
+
+    err = try
+        fit(
+            QRA(; per_quantile_weights = true, noncross = true,
+                enforce_normalisation = true, intercept = false),
+            train, obs)
+        nothing
+    catch e
+        e
+    end
+    @test err isa ArgumentError
+    @test occursin("noncross", err.msg)
+    # The message lists the per-level task counts, so the diagnostic is useful:
+    # `sizes` names the field and the dropped level's reduced count appears.
+    @test occursin("sizes", err.msg)
+    @test occursin(string(n_train - 20), err.msg)
+end
