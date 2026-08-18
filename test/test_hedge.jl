@@ -145,3 +145,75 @@ end
     # One trajectory row per (time, model) regardless of the extra task column.
     @test nrow(fitted.trajectory) == T * 2
 end
+
+@testitem "Hedge auto-scales eta to the score magnitude" begin
+    using Random: MersenneTwister
+    using DataFrames
+    include(joinpath(@__DIR__, "score_helpers.jl"))
+
+    # Large-magnitude forecasts (scores in the tens–hundreds): a raw eta = 1 would
+    # underflow exp(-eta·s) and collapse to one model in a step. The auto default
+    # picks a stable, regret-scaled step size.
+    T = 15
+    K = 60
+    rng = MersenneTwister(5)
+    obs = DataFrame(t = 1:T, observed = 100.0 .* randn(rng, T))
+    srng = MersenneTwister(6)
+    rows = DataFrame[]
+    for (mid, sd) in (("m_good", 20.0), ("m_bad", 200.0))
+        for t in 1:T
+            push!(rows,
+                DataFrame(model_id = mid, output_type = "sample",
+                    output_type_id = 1:K, t = t,
+                    value = obs.observed[t] .+ sd .* randn(srng, K)))
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+
+    # eta = nothing → chosen from the score scale at fit time.
+    @test Hedge(crps; time_col = :t).eta === nothing
+    auto = fit(Hedge(crps; time_col = :t), train, obs)
+    gw = auto.weights[auto.weights.model_id .== "m_good", :weight][1]
+    bw = auto.weights[auto.weights.model_id .== "m_bad", :weight][1]
+    @test all(isfinite, auto.weights.weight)
+    @test sum(auto.weights.weight) ≈ 1.0 atol = 1e-8
+    @test gw > bw
+    # Auto-scaling keeps the update graded: with MersenneTwister(5)/(6) and T = 15
+    # gw lands well below 1 (≈0.6–0.8), so the loose < 0.999 bound just asserts it
+    # did not collapse to a single model in one step.
+    @test gw < 0.999
+
+    # Contrast: a raw eta = 1 on this score scale does collapse.
+    raw = fit(Hedge(crps; eta = 1.0, time_col = :t), train, obs)
+    @test raw.weights[raw.weights.model_id .== "m_good", :weight][1] ≈ 1.0 atol = 1e-6
+    # ...and m_bad is driven to zero (guards against a NaN surviving renormalisation).
+    @test raw.weights[raw.weights.model_id .== "m_bad", :weight][1] ≈ 0.0 atol = 1e-6
+
+    # An explicit eta still overrides.
+    @test Hedge(crps; eta = 0.5, time_col = :t).eta == 0.5
+    @test_throws ArgumentError Hedge(crps; eta = 0.0, time_col = :t)
+end
+
+@testitem "Hedge auto-eta stays uniform when every score is zero" begin
+    using DataFrames
+    include(joinpath(@__DIR__, "score_helpers.jl"))
+
+    # Degenerate case: both members forecast a point mass at the observed value, so
+    # every per-round CRPS is exactly 0. `_auto_eta` then sees B = 0 and returns 0,
+    # so no update is applied and the weights must remain the uniform prior.
+    T, K = 8, 50
+    obs = DataFrame(t = 1:T, observed = Float64.(1:T))
+    rows = DataFrame[]
+    for mid in ("m1", "m2")
+        for t in 1:T
+            push!(rows,
+                DataFrame(model_id = mid, output_type = "sample",
+                    output_type_id = 1:K, t = t, value = fill(obs.observed[t], K)))
+        end
+    end
+    train = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
+
+    fitted = fit(Hedge(crps; time_col = :t), train, obs)
+    @test all(isfinite, fitted.weights.weight)
+    @test all(abs.(fitted.weights.weight .- 0.5) .< 1e-9)
+end

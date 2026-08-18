@@ -7,7 +7,7 @@
 # is the natural companion for the score.
 
 """
-    Hedge(score; eta = 1.0, time_col)
+    Hedge(score; eta = nothing, time_col)
 
 Online ensemble weighting by the Hedge / exponentiated-gradient rule.
 
@@ -36,18 +36,43 @@ companion (`Hedge(ScoringRules.crps; time_col)`), not a dependency of this packa
 - `score`: the scoring-rule function (negatively oriented).
 - `eta`: learning rate. Larger values adapt faster and concentrate weight more
   aggressively on recent winners; as it tends to `0` the weights stay uniform.
-  Scale it to the magnitude of your score. Must be positive.
+  Defaults to `nothing`, meaning it is chosen automatically at `fit` time from
+  the score scale — the regret-style `√(8·ln M / T) / B`, where `M` is the model
+  count, `T` the number of update steps and `B` the largest per-round score
+  (which assumes the score is non-negative, as a negatively-oriented rule is). This
+  keeps the update stable whatever the magnitude of the score (a raw `eta` tuned
+  for CRPS in `[0, 1]` would collapse to one model in a single step on counts in
+  the hundreds). `B` is estimated from the full training set, not online, so the
+  auto-scaling is a batch fit — not directly transferable to a streaming setting
+  where `B` must be bounded a priori. Pass a positive number to override.
 - `time_col`: the task-id column defining the update order.
 """
 struct Hedge{F} <: TrainedMethod
     score::F
-    eta::Float64
+    eta::Union{Nothing, Float64}
     time_col::Symbol
 end
 
-function Hedge(score; eta::Real = 1.0, time_col::Symbol)
-    eta > 0 || throw(ArgumentError("eta must be positive (got $eta)"))
-    return Hedge{typeof(score)}(score, Float64(eta), time_col)
+function Hedge(score; eta::Union{Nothing, Real} = nothing, time_col::Symbol)
+    eta === nothing || eta > 0 ||
+        throw(ArgumentError("eta must be positive (got $eta)"))
+    return Hedge{typeof(score)}(
+        score, eta === nothing ? nothing : Float64(eta), time_col)
+end
+
+# Regret-optimal Hedge step size for losses in [0, B] over T rounds and M
+# experts (Cesa-Bianchi & Lugosi): η = √(8 ln M / T) / B. The bound assumes
+# non-negative losses, so `B` is the plain maximum (a negatively-oriented score
+# like CRPS is always ≥ 0); `maximum(abs, …)` would instead hide a misconfigured
+# score that returns negatives by inflating `B` and under-scaling η. Falls back
+# to 0 (no updating, weights stay uniform) when every score is zero.
+function _auto_eta(scores::AbstractVector, M::Integer, T::Integer)
+    # `fit` guarantees M ≥ 2, but guard here too: at M = 1, `log(M) = 0` would
+    # silently freeze the weights, hiding a bypassed caller's mistake.
+    M >= 2 || throw(ArgumentError("_auto_eta needs at least two models (got $M)"))
+    B = isempty(scores) ? 0.0 : maximum(scores)
+    B > 0 || return 0.0   # T ≥ 1 is guaranteed by the caller
+    return sqrt(8 * log(M) / T) / B
 end
 
 """
@@ -111,13 +136,19 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     end
     times = sort(unique(per_step[!, m.time_col]))
 
+    # Auto-scale the learning rate to the score magnitude unless the caller set
+    # one. `B` here is a hindsight estimate — the max score over all T rounds, so
+    # round 1 is already scaled by scores it has not yet seen. Fine for this batch
+    # fit; a true streaming deployment would need `B` bounded a priori.
+    eta = m.eta === nothing ? _auto_eta(per_step.s, M, length(times)) : m.eta
+
     w = fill(1.0 / M, M)
     traj = DataFrame[]
     for t in times
         rows = per_step[per_step[!, m.time_col] .== t, :]
         for r in eachrow(rows)
             i = idx[r[mid]]
-            w[i] *= exp(-m.eta * r.s)
+            w[i] *= exp(-eta * r.s)
         end
         w ./= sum(w)
         step = DataFrame(model_id = String.(models), weight = copy(w))
