@@ -27,10 +27,7 @@ remain the closed-form specialisations for CRPS and WIS respectively.
     The stack is evaluated by pooling every member's samples for a task into one
     vector `samples` and passing per-sample weights `w` that encode the mixture:
     member `i` with weight `wᵢ` and `Kᵢ` samples contributes `wᵢ / Kᵢ` to each of
-    its samples, so `w` sums to one over the whole pool (assuming every member
-    contributes at least one sample to the task; a member absent from a task is
-    excluded by the `innerjoin`, so this always holds in practice).
-    `score` must therefore
+    its samples, so `w` sums to one over the whole pool. `score` must therefore
     treat `w` as a weighted-sample rule over the combined vector — which is
     exactly what `ScoringRules.crps(samples, y; w)` does. A scorer that ignores
     `w`, or that renormalises it per member, breaks the weighting silently.
@@ -111,10 +108,8 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
         w = _softmax(z)
         total = zero(eltype(z))
         for td in task_data
-            # `midx` only ever lists model indices that actually appear in this
-            # task, and `counts[i]` counts those appearances, so every divisor
-            # here is positive — a model with no samples in the task is never
-            # indexed.
+            # `midx` lists only models present in this task and `counts[i]` their
+            # sample count, so every divisor is positive.
             sw = [w[i] / td.counts[i] for i in td.midx]
             total += score(td.samples, td.y; w = sw)
         end
