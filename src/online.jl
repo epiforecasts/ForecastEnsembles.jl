@@ -14,10 +14,15 @@ Online ensemble weighting by the Hedge / exponentiated-gradient rule.
 `fit(Hedge(score; time_col), training, observations)` walks the distinct
 `time_col` values in order and, at each step, multiplies every member's weight by
 `exp(-eta · sₜ)` — where `sₜ` is that member's mean `score` on the current step
-(negatively oriented, so a lower score keeps more weight) — then renormalises to
+(the unweighted mean of its per-task scores, so every task counts equally;
+negatively oriented, so a lower score keeps more weight) — then renormalises to
 the simplex. A member absent at a step keeps its weight (a "sleeping expert").
 The final weights plug into [`combine`](@ref); the full trajectory is kept for
 weight-stability diagnostics.
+
+Because the per-step loss weights every task equally, a scale-dependent rule like
+CRPS lets a high-magnitude task (e.g. a location with values near 100 next to one
+near 0) dominate the step — rescale or stratify such tasks if that is not wanted.
 
 Unlike [`InverseScore`](@ref) (one pooled score per member) this adapts to *when*
 members did well, so it tracks regime change; unlike [`Stacking`](@ref) it needs
@@ -92,10 +97,6 @@ end
 
 weights(m::FittedHedge) = EnsembleWeights(m.weights)
 
-# Walk the distinct `time_col` values in order; at each step multiply every
-# present member's weight by `exp(-eta · sₜ)` and renormalise to the simplex. A
-# member absent at a step keeps its weight (sleeping expert). The per-round score
-# is the user's callable, so this stays in the MIT core.
 function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample || throw(ArgumentError(
         "Hedge supports :sample forecasts (weighted-sample scores)."))
@@ -117,13 +118,19 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     idx = Dict(mm => i for (i, mm) in enumerate(models))
     score = m.score
 
-    # Score each (member, task) on its own samples and observation, then take the
-    # per-(member, time) mean across tasks. Scoring by `[mid, time_col]` alone
-    # would pool samples from every non-time task (e.g. all locations at a date)
-    # into one vector and score them against a single arbitrary observation.
+    # Score each (member, task) on its own observation; grouping by
+    # `[mid, time_col]` alone would pool every task at a date (e.g. all locations)
+    # and score them against one arbitrary observation.
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
+        allequal(g.observed) || throw(ArgumentError(
+            "multiple observations for one task — check observations for " *
+            "duplicate task keys"))
+        # Copy into a fresh vector (as Stacking/InverseScore do) so a score that
+        # sorts or otherwise mutates its input in place cannot corrupt the join.
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
     end
+    # Per-step loss is the unweighted mean over tasks, so each task counts equally
+    # and a member missing at some tasks is averaged over those it covered.
     per_step = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
         (; s = mean(g.s))
     end
@@ -136,7 +143,7 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     eta = m.eta === nothing ? _auto_eta(per_step.s, M, length(times)) : m.eta
 
     w = fill(1.0 / M, M)
-    traj = [DataFrame() for _ in 1:0]
+    traj = DataFrame[]
     for t in times
         rows = per_step[per_step[!, m.time_col] .== t, :]
         for r in eachrow(rows)
