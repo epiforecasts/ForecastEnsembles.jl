@@ -141,6 +141,22 @@ end
     end
 end
 
+@testitem "QRA defaults are the hub-safe simplex config" begin
+    m = QRA()
+    @test m.enforce_normalisation == true
+    @test m.intercept == false
+    @test m.noncross == false
+    @test m.per_quantile_weights == false
+    @test m.group == Symbol[]
+end
+
+@testitem "QRA(noncross = true) warns only without per_quantile_weights" begin
+    # `@test_logs` installs a fresh TestLogger, so the source-level `maxlog = 1`
+    # does not suppress the warning here regardless of test order.
+    @test_logs (:warn, r"noncross.*no effect.*per_quantile_weights") QRA(noncross = true)
+    @test_logs QRA(noncross = true, per_quantile_weights = true)
+end
+
 @testitem "QRA handles partially-missing model submissions" begin
     using Random: MersenneTwister
     using Distributions: Normal, quantile
