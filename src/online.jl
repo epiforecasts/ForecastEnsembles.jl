@@ -100,8 +100,9 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
         allequal(g.observed) || throw(ArgumentError(
             "multiple observations for one task — check observations for " *
             "duplicate task keys"))
-        vals = eltype(g.value) === Float64 ? g.value : Float64.(g.value)
-        (; s = score(vals, Float64(first(g.observed))))
+        # Copy into a fresh vector (as Stacking/InverseScore do) so a score that
+        # sorts or otherwise mutates its input in place cannot corrupt the join.
+        (; s = score(Float64.(g.value), Float64(first(g.observed))))
     end
     # Per-step loss is the unweighted mean over tasks, so each task counts equally
     # and a member missing at some tasks is averaged over those it covered.
