@@ -72,10 +72,6 @@ end
 
 weights(m::FittedHedge) = EnsembleWeights(m.weights)
 
-# Walk the distinct `time_col` values in order; at each step multiply every
-# present member's weight by `exp(-eta · sₜ)` and renormalise to the simplex. A
-# member absent at a step keeps its weight (sleeping expert). The per-round score
-# is the user's callable, so this stays in the MIT core.
 function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample || throw(ArgumentError(
         "Hedge supports :sample forecasts (weighted-sample scores)."))
@@ -97,25 +93,18 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     idx = Dict(mm => i for (i, mm) in enumerate(models))
     score = m.score
 
-    # Score each (member, task) on its own samples and observation, then take the
-    # per-(member, time) mean across tasks. Scoring by `[mid, time_col]` alone
-    # would pool samples from every non-time task (e.g. all locations at a date)
-    # into one vector and score them against a single arbitrary observation.
+    # Score each (member, task) on its own observation; grouping by
+    # `[mid, time_col]` alone would pool every task at a date (e.g. all locations)
+    # and score them against one arbitrary observation.
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
-        # One observation per (member, task); the join can only violate this if
-        # `observations` carries duplicate task keys. Check with an explicit throw
-        # (not `@assert`, which optimised builds may elide) so the invariant always
-        # holds.
         allequal(g.observed) || throw(ArgumentError(
             "multiple observations for one task — check observations for " *
             "duplicate task keys"))
         vals = eltype(g.value) === Float64 ? g.value : Float64.(g.value)
         (; s = score(vals, Float64(first(g.observed))))
     end
-    # Per-step loss is the unweighted mean of the per-task scores at that time, so
-    # every task (e.g. every location) counts equally regardless of its scale. A
-    # member missing at some tasks in a step is averaged over the tasks it did
-    # cover — the "sleeping expert" policy applied within a step as well as across.
+    # Per-step loss is the unweighted mean over tasks, so each task counts equally
+    # and a member missing at some tasks is averaged over those it covered.
     per_step = combine(DataFrames.groupby(per_task, [mid, m.time_col])) do g
         (; s = mean(g.s))
     end

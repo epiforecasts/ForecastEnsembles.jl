@@ -110,12 +110,10 @@ end
     using DataFrames
     include(joinpath(@__DIR__, "score_helpers.jl"))
 
-    # Two locations with far-apart observed levels. `m_good` is centred and sharp
-    # at BOTH locations; `m_bad` is offset by 10 at both. Scoring correctly (per
-    # location) sees m_good as excellent everywhere. Scoring by (model, time)
-    # alone pools each model's samples across the two locations into one vector
-    # and scores it against a single arbitrary observation, so the score is
-    # dominated by the between-location spread and the model ordering scrambles.
+    # Two locations at far-apart levels: `m_good` is sharp at both, `m_bad` offset
+    # by 10. Per-location scoring favours m_good; pooling both locations into one
+    # vector (per-(model, time)) would let the between-location spread scramble the
+    # ordering. This is the regression guard for that bug.
     rng = MersenneTwister(11)
     T, K = 20, 200
     level = Dict("A" => 0.0, "B" => 100.0)
@@ -140,9 +138,8 @@ end
     gw = fitted.weights[fitted.weights.model_id .== "m_good", :weight][1]
     bw = fitted.weights[fitted.weights.model_id .== "m_bad", :weight][1]
     @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
-    # With MersenneTwister(11), T = 20 and m_bad offset by ~10σ at every step,
-    # correct per-task scoring drives almost all weight to m_good; > 0.9 is a
-    # comfortable bound that would fail if the scoring reverted to per-(model, time).
+    # Per-task scoring drives almost all weight to m_good; > 0.9 would fail if
+    # scoring reverted to per-(model, time).
     @test gw > 0.9
     @test bw < 0.1
     # One trajectory row per (time, model) regardless of the extra task column.
