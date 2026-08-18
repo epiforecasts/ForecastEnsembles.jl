@@ -169,10 +169,9 @@ end
     fitted = fit(QRA(; enforce_normalisation = true, intercept = false), train, obs)
     @test isa(fitted, FittedQRA)
 
-    # Combining an input where a model is absent at one quantile level → a clear
-    # ArgumentError (was a BoundsError before the per-τ check). Keep tasks 1–3 but
-    # drop m_noisy at τ = 0.5, so m_noisy is present in the table (top-level check
-    # passes) yet missing at that level (per-τ check fires).
+    # Drop m_noisy at τ = 0.5 only: present in the table (top-level check passes)
+    # but missing at that level, so the per-τ check fires with a clear
+    # ArgumentError rather than a BoundsError.
     noisy_at_half = (train.data.model_id .== "m_noisy") .&
                     (train.data.output_type_id .== 0.5)
     bad_rows = train.data[(train.data.t .<= 3) .& .!noisy_at_half, :]

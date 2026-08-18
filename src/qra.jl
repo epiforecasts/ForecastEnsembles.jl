@@ -194,9 +194,8 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         ),
         )
 
-        # Catches a model entirely absent from the input; the complementary case
-        # (a model present but missing at a specific τ) is caught in the per-τ loop
-        # below with a more specific message.
+        # A model entirely absent from the input; the per-τ loop below catches a
+        # model that is present but missing at a specific level.
         models_present = unique(tg[!, ft.model_id_col])
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
@@ -338,25 +337,23 @@ function _design_matrix(
     other_cols = setdiff(propertynames(df), [
         model_id_col, :output_type, :output_type_id, :value])
     wide = unstack(df, other_cols, model_id_col, :value)
-    # A model with no forecasts anywhere in this slice has no column after
-    # unstack; add it as all-missing so the complete-case filter below drops the
-    # affected rows rather than silently treating the absent model as zero.
+    # A model with no forecasts in this slice has no column after unstack; add it
+    # as all-missing so the complete-case filter drops those rows rather than
+    # treating the absent model as zero.
     for mod in models
         hasproperty(wide, Symbol(mod)) || (wide[!, Symbol(mod)] = fill(missing, nrow(wide)))
     end
     cols = Symbol.(models)
-    # Complete-case: keep only tasks where every model submitted a value. A model
-    # that skips some tasks (partial submission) would otherwise leave `missing`
-    # cells that break the numeric conversion; dropping the incomplete rows is the
-    # standard regression treatment. Callers wanting imputation must do it first.
+    # Complete-case: keep only tasks where every model submitted a value; partial
+    # submissions leave `missing` cells that break the numeric conversion. Callers
+    # wanting imputation must do it first.
     keep = DataFrames.completecases(wide[:, cols])
     any(keep) || throw(ArgumentError(
         "QRA has no training tasks where all of $(join(models, ", ")) submitted a " *
         "forecast; supply complete cases or drop the incomplete models."))
     wide = wide[keep, :]
-    # Columns carry a `Union{Missing, Float64}` eltype after the all-missing
-    # fill above, so copy each into a concrete `Float64` matrix column by column;
-    # a single `Matrix{Float64}(…)` conversion cannot narrow the union.
+    # Columns carry a `Union{Missing, Float64}` eltype, so fill the matrix column
+    # by column; a single `Matrix{Float64}(…)` cannot narrow the union.
     X = Matrix{Float64}(undef, nrow(wide), length(cols))
     for (j, c) in enumerate(cols)
         X[:, j] = Float64.(wide[!, c])
