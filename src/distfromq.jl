@@ -46,8 +46,8 @@ function QuantileDistribution(probs::AbstractVector, vals::AbstractVector)
     fwd_d = _pchip_slopes(p, v)
     inv_d = _pchip_slopes(v, p)
 
-    lt = _fit_normal_tail(p[1], v[1], p[2], v[2])
-    rt = _fit_normal_tail(p[end - 1], v[end - 1], p[end], v[end])
+    lt = _left_tail(p, v)
+    rt = _right_tail(p, v)
 
     return QuantileDistribution(p, v, fwd_d, inv_d, lt, rt)
 end
@@ -64,12 +64,38 @@ function _fit_normal_tail(p1, v1, p2, v2)
     return Normal(μ, σ)
 end
 
+# Fit the outer Normal tails from the outermost pair of *distinct* knot values.
+# When the outer two quantiles tie (e.g. Q(0.1) = Q(0.25) for a count forecast),
+# fitting from the tied pair gives a degenerate spike whose median lands at the
+# knot, so `cdf` at the boundary wrongly reads 0.5. Reaching to the first distinct
+# knot instead makes `cdf(boundary) = p`; a non-tied boundary is unchanged.
+# Fully-degenerate input (all values equal) has no distinct knot, so both tails
+# fall back to a near-point spike and `cdf` at the value reads ≈ 0.5 — unsupported,
+# but no better answer exists from quantiles alone.
+function _left_tail(p::AbstractVector, v::AbstractVector)
+    lo = firstindex(v)
+    j = findnext(k -> v[k] != v[lo], eachindex(v), lo + 1)
+    j === nothing && return Normal(v[lo], eps(one(float(v[lo]))))  # fully degenerate
+    return _fit_normal_tail(p[lo], v[lo], p[j], v[j])
+end
+
+function _right_tail(p::AbstractVector, v::AbstractVector)
+    hi = lastindex(v)
+    j = findprev(k -> v[k] != v[hi], eachindex(v), hi - 1)
+    j === nothing && return Normal(v[hi], eps(one(float(v[hi]))))  # fully degenerate
+    return _fit_normal_tail(p[j], v[j], p[hi], v[hi])
+end
+
 # Fritsch–Carlson monotone cubic Hermite slopes for (x, y) with strictly
 # increasing x and non-decreasing y. Returns the derivative `d_i` at each
 # knot. References: Fritsch & Carlson 1980 SIAM JNA.
 function _pchip_slopes(x::AbstractVector, y::AbstractVector)
     n = length(x)
     h = diff(x)
+    # The inverse map passes quantile *values* as `x`; tied values give a
+    # zero-width interval, so `s = Inf` at a tied knot. That is safe: `cdf`/
+    # `quantile` never evaluate such a knot (the tail or neighbouring interval
+    # covers it), so no `Inf` slope reaches a Hermite evaluation.
     s = diff(y) ./ h
     d = zeros(Float64, n)
 
