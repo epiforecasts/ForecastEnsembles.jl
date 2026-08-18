@@ -21,8 +21,6 @@ end
 
 # Mean weighted-sample CRPS of an ensemble `fc` against observations `o` (joined
 # on :t): score each task then average — the scorer shape `backtest` expects.
-# `include`d into each backtest testitem, which brings `DataFrame` and `mean`
-# into scope alongside `crps` above.
 function sample_crps(fc, o)
     d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
     per = DataFrames.combine(DataFrames.groupby(d, :t),
@@ -40,8 +38,6 @@ end
 # Shared backtest fixture: a non-stationary regime where model A is sharp in the
 # first half of the time window and model B in the second. A scheme that learns
 # weights from recent performance should beat equal weighting out of sample.
-# `include`d into each backtest testitem, which brings `DataFrame`, `MersenneTwister`
-# and `ForecastTable` into scope.
 function _bt_sample_data(; T = 30, K = 80, seed = 4)
     rng = MersenneTwister(seed)
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
