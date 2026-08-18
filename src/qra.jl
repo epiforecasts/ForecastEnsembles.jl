@@ -176,6 +176,8 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
 
     for tg in DataFrames.groupby(df, other_cols)
         gkey = isempty(m.group_cols) ? () : NamedTuple(c => tg[1, c] for c in m.group_cols)
+        # Readable label for error messages: `()` is opaque for an ungrouped fit.
+        group_label = isempty(m.group_cols) ? "the ungrouped fit" : "group $gkey"
         levels_present = sort(unique(Float64.(tg.output_type_id)))
 
         unseen = setdiff(levels_present, m.levels)
@@ -192,18 +194,35 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         ),
         )
 
+        # A model entirely absent from the input; the per-τ loop below catches a
+        # model that is present but missing at a specific level.
         models_present = unique(tg[!, ft.model_id_col])
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
             ArgumentError(
-            "FittedQRA models $missing_models are absent from the input table.",
+            "FittedQRA models $(join(missing_models, ", ")) are absent from the input table.",
         ),
         )
 
         values = Float64[]
         for τ in levels_present
             sub = tg[tg.output_type_id .== τ, :]
-            x = [first(sub[sub[!, ft.model_id_col] .== mod, :value]) for mod in m.models]
+            x = Float64[]
+            for mod in m.models
+                vals = sub[sub[!, ft.model_id_col] .== mod, :value]
+                isempty(vals) && throw(ArgumentError(
+                    "FittedQRA cannot combine: model $mod is missing at " *
+                    "output_type_id $τ for $group_label. QRA needs every model at " *
+                    "every quantile level; supply a complete input or drop the model.",
+                ))
+                # A model must appear exactly once per (τ, group); flag duplicate
+                # rows rather than silently picking one.
+                length(vals) == 1 || throw(ArgumentError(
+                    "FittedQRA cannot combine: model $mod appears $(length(vals)) " *
+                    "times at output_type_id $τ for $group_label; expected exactly " *
+                    "one row per model per level."))
+                push!(x, first(vals))
+            end
             β = m.coefs[(gkey, τ)]
             β0 = m.intercepts[(gkey, τ)]
             push!(values, β0 + sum(β .* x))
@@ -318,12 +337,27 @@ function _design_matrix(
     other_cols = setdiff(propertynames(df), [
         model_id_col, :output_type, :output_type_id, :value])
     wide = unstack(df, other_cols, model_id_col, :value)
-    # Ensure model columns are present in expected order; missing models →
-    # zero columns (defensive — should not happen given construction).
+    # A model with no forecasts in this slice has no column after unstack; add it
+    # as all-missing so the complete-case filter drops those rows rather than
+    # treating the absent model as zero.
     for mod in models
-        hasproperty(wide, Symbol(mod)) || (wide[!, Symbol(mod)] = zeros(nrow(wide)))
+        hasproperty(wide, Symbol(mod)) || (wide[!, Symbol(mod)] = fill(missing, nrow(wide)))
     end
-    X = Matrix{Float64}(wide[:, Symbol.(models)])
+    cols = Symbol.(models)
+    # Complete-case: keep only tasks where every model submitted a value; partial
+    # submissions leave `missing` cells that break the numeric conversion. Callers
+    # wanting imputation must do it first.
+    keep = DataFrames.completecases(wide[:, cols])
+    any(keep) || throw(ArgumentError(
+        "QRA has no training tasks where all of $(join(models, ", ")) submitted a " *
+        "forecast; supply complete cases or drop the incomplete models."))
+    wide = wide[keep, :]
+    # Columns carry a `Union{Missing, Float64}` eltype, so fill the matrix column
+    # by column; a single `Matrix{Float64}(…)` cannot narrow the union.
+    X = Matrix{Float64}(undef, nrow(wide), length(cols))
+    for (j, c) in enumerate(cols)
+        X[:, j] = Float64.(wide[!, c])
+    end
     y = Float64.(wide.observed)
     return X, y
 end
@@ -385,7 +419,11 @@ function _per_quantile_regression_noncross(
     K = length(levels)
     n = size(first(Xs), 1)
     all(size(X, 1) == n for X in Xs) ||
-        throw(ArgumentError("noncross requires same number of training points across τ"))
+        throw(ArgumentError(
+            "noncross requires the same training tasks at every quantile level; " *
+            "got mismatched sizes $(map(X -> size(X, 1), Xs)). This can happen with " *
+            "partial submissions where a model skips some tasks at some levels — " *
+            "ensure every model submits at every level, or drop the incomplete models."))
 
     model = Model(HiGHS.Optimizer)
     set_silent(model)

@@ -90,7 +90,11 @@ end
 
 # ---- accessors ----
 
-DataFrames.DataFrame(ft::ForecastTable) = ft.data
+# Defensive copy: callers must not be able to mutate the table's backing store
+# (which would bypass the constructor's validation) through the accessor.
+# `copy` copies the column vectors (copycols = true), so both column replacement
+# and in-place element writes on the returned frame leave `ft.data` untouched.
+DataFrames.DataFrame(ft::ForecastTable) = copy(ft.data)
 
 """
     task_id_cols(ft::ForecastTable) -> Vector{Symbol}

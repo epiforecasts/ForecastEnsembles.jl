@@ -37,8 +37,14 @@ single stratum, or `lambda → ∞`, recovers global stacking.
   `[:location]`, `[:location, :age_group]`).
 - `lambda`: shrinkage strength toward the global vector. `0` fits each stratum
   independently; large values pool them toward one shared vector. Must be `≥ 0`.
+  The objective weights `lambda` as a per-stratum-averaged penalty against a
+  per-task-averaged data loss, so it is the trade-off between a stratum's typical
+  squared logit distance from the global vector and the typical per-task score —
+  a scale that does not drift with the number of strata. Tune it on held-out
+  score (e.g. via [`backtest`](@ref)); there is no universally correct value.
 - `dirichlet_alpha`: strength of a symmetric-Dirichlet prior on each stratum's
-  weights, pulling them toward the simplex centre; `1.0` applies no prior.
+  weights, pulling them toward the simplex centre; `1.0` is the flat,
+  uninformative prior.
 """
 struct PartialPooling{F} <: TrainedMethod
     score::F
@@ -55,7 +61,9 @@ function PartialPooling(
 )
     lambda >= 0 || throw(ArgumentError("lambda (shrinkage) must be >= 0 (got $lambda)"))
     dirichlet_alpha >= 1 ||
-        throw(ArgumentError("dirichlet_alpha must be >= 1 (a proper Dirichlet prior)"))
+        throw(ArgumentError("dirichlet_alpha must be >= 1 (1 is the flat, " *
+                            "uninformative prior; larger values pull the weights " *
+                            "toward the simplex centre)"))
     st = Symbol.(collect(strata))
     isempty(st) && throw(ArgumentError("strata must name at least one task-id column"))
     return PartialPooling{typeof(score)}(score, st, Float64(lambda), Float64(dirichlet_alpha))
@@ -173,6 +181,8 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
         data = zero(eltype(z))
         for td in task_data
             w = _softmax(sview(z, td.s))
+            # `midx` only lists model indices present in this task and
+            # `counts[i]` counts those appearances, so every divisor is positive.
             sw = [w[i] / td.counts[i] for i in td.midx]
             data += score(td.samples, td.y; w = sw)
         end
@@ -192,6 +202,11 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
     end
 
     res = optimize(loss, zeros(M * (S + 1)), LBFGS())
+    Optim.converged(res) || @warn("PartialPooling: L-BFGS did not converge " *
+          "($(Optim.iterations(res)) iterations) over the $(M * (S + 1))-parameter " *
+          "logit space; weights are the best iterate found. Consider " *
+          "more training data " *
+          "per stratum, stronger shrinkage (`lambda`), or fewer models.")
     z_hat = Optim.minimizer(res)
 
     # Per-stratum weights table (strata columns + model_id + weight).

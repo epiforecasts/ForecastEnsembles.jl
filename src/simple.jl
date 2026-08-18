@@ -59,7 +59,14 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
     )
 end
 
-_weighted_mean(v::AbstractVector, w::AbstractVector) = dot(v, w) / sum(w)
+function _weighted_mean(v::AbstractVector, w::AbstractVector)
+    sw = sum(w)
+    isfinite(sw) || throw(ArgumentError(
+        "ensemble weights sum to $sw; all weights must be finite"))
+    sw > 0 || throw(ArgumentError(
+        "ensemble weights sum to $sw; a positive sum is required to combine"))
+    return dot(v, w) / sw
+end
 
 # Weighted median: smallest x_i such that the cumulative normalised weight
 # of values ≤ x_i is ≥ 0.5. Matches matrixStats::weightedMedian default
@@ -69,6 +76,10 @@ function _weighted_median(v::AbstractVector, w::AbstractVector)
     vs = v[perm]
     ws = w[perm]
     total = sum(ws)
+    isfinite(total) || throw(ArgumentError(
+        "ensemble weights sum to $total; all weights must be finite"))
+    total > 0 || throw(ArgumentError(
+        "ensemble weights sum to $total; a positive sum is required to combine"))
     cw = 0.0
     @inbounds for i in eachindex(vs)
         cw += ws[i]
