@@ -74,14 +74,14 @@ end
 # but no better answer exists from quantiles alone.
 function _left_tail(p::AbstractVector, v::AbstractVector)
     lo = firstindex(v)
-    j = findfirst(k -> v[k] != v[lo], eachindex(v))
+    j = findnext(k -> v[k] != v[lo], eachindex(v), lo + 1)
     j === nothing && return Normal(v[lo], eps(one(float(v[lo]))))  # fully degenerate
     return _fit_normal_tail(p[lo], v[lo], p[j], v[j])
 end
 
 function _right_tail(p::AbstractVector, v::AbstractVector)
     hi = lastindex(v)
-    j = findlast(k -> v[k] != v[hi], eachindex(v))
+    j = findprev(k -> v[k] != v[hi], eachindex(v), hi - 1)
     j === nothing && return Normal(v[hi], eps(one(float(v[hi]))))  # fully degenerate
     return _fit_normal_tail(p[j], v[j], p[hi], v[hi])
 end
