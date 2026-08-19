@@ -95,11 +95,6 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # Pin a current model: the action's built-in default
-          # (claude-sonnet-4-20250514) has been retired and now 404s. Sonnet 4.6
-          # for reviews; swap for an Opus id (e.g. claude-opus-4-8) for deeper ones.
-          model: "claude-sonnet-4-6"
-
           # Passing `prompt` on a pull_request event selects agent mode, which
           # posts no "Claude finished..." tracking comment. Setting
           # track_progress: true would force tag mode and bring it back.
@@ -222,6 +217,11 @@ jobs:
           # diff: with a diff a contributor may have authored, the tool list is
           # the blast radius. Reading is done by the step above, the verdict by
           # the step below.
+          # No model pinned: reviews track whatever the Claude CLI defaults to,
+          # currently Sonnet 5. The old top-level `model:` input was a v0 name
+          # that v1 dropped, so it only logged "Unexpected input(s) 'model'" and
+          # was ignored — the default has been in use all along. To pin one, add
+          # `--model <id>` below rather than restoring the input.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*)"
 
