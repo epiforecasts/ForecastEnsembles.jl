@@ -8,7 +8,7 @@ ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
-EpiAwarePackageTools = "0.3"
+EpiAwarePackageTools = "0.3, 0.4"
 DataFrames = "1"
 Distributions = "0.25"
 Documenter = "1"
