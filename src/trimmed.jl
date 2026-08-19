@@ -72,6 +72,15 @@ function combine(ft::ForecastTable, m::TrimmedMean; rng::AbstractRNG = default_r
         "are not aligned across models — use MixtureEnsemble)."))
 
     df = ft.data
+    # A fraction that rounds to zero trimmed values leaves the plain mean, so warn
+    # once per session rather than let a robustness request on a small ensemble be
+    # a silent no-op. The full model count is the representative per-task size.
+    n_models = length(unique(df[!, ft.model_id_col]))
+    if m.fraction > 0 && round(Int, m.fraction * n_models) == 0
+        @warn "TrimmedMean(fraction = $(m.fraction)) trims nothing with $n_models " *
+              "models (round(fraction × n) = 0): the result is the plain mean. " *
+              "Raise `fraction` or add models to trim." maxlog = 1
+    end
     group_cols = vcat([:output_type, :output_type_id], ft.task_id_cols)
     frac = m.fraction
     mode = m.mode

@@ -66,3 +66,15 @@
     @test_throws ArgumentError TrimmedMean(; fraction = -0.1)
     @test_throws ArgumentError TrimmedMean(; mode = :bogus)
 end
+
+@testitem "TrimmedMean warns when the fraction trims nothing" begin
+    using DataFrames
+    # Five models with fraction 0.1: round(0.1 × 5) = 0, so no trimming — the
+    # result is the plain mean, which should warn rather than pass silently.
+    df = DataFrame(model_id = string.("m", 1:5), output_type = "quantile",
+        output_type_id = 0.5, location = "A", value = [1.0, 2, 3, 4, 100])
+    ft = ForecastTable(df; task_id_cols = [:location])
+    @test_logs (:warn, r"trims nothing") combine(ft, TrimmedMean(; fraction = 0.1))
+    # A fraction that does trim (round(0.4 × 5) = 2) emits no such warning.
+    @test_logs combine(ft, TrimmedMean(; fraction = 0.4))
+end
