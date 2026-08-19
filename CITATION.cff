@@ -3,6 +3,9 @@ message: "If you use this software, please cite it using these metadata."
 title: "ForecastEnsembles.jl"
 type: software
 authors:
-  - name: "Sebastian Funk"
+  - given-names: "Sebastian"
+    family-names: "Funk"
+    orcid: "https://orcid.org/0000-0002-2842-3406"
 repository-code: "https://github.com/epiforecasts/ForecastEnsembles.jl"
-url: "https://github.com/epiforecasts/ForecastEnsembles.jl"
+url: "https://epiforecasts.io/ForecastEnsembles.jl/"
+license: "MIT"
