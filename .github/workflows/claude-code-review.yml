@@ -22,9 +22,10 @@ jobs:
     # Repo insiders only. Excludes bot authors (dependabot and friends report
     # author_association NONE) and outside contributors, whose fork PRs get no
     # secrets and so could not authenticate anyway.
-    if: >-
-      contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'),
-               github.event.pull_request.author_association)
+    # Keep this on one line: in a folded block, a more-indented continuation
+    # keeps its newline rather than folding to a space, and the expression then
+    # silently evaluates false.
+    if: contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
 
     runs-on: ubuntu-latest
     permissions:
