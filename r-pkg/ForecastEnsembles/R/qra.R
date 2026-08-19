@@ -18,13 +18,6 @@
 #' `enforce_normalisation = TRUE`, `intercept = FALSE`, `noncross = TRUE`)
 #' match `qrensemble::qra`, so a tuned call carries over unchanged.
 #'
-#' @section Default differences from the Julia API:
-#' `ForecastEnsembles.QRA` in Julia defaults `noncross = false`, where this
-#' wrapper defaults to `TRUE` to stay compatible with `qrensemble::qra`. The
-#' two produce identical results: `noncross` does nothing unless
-#' `per_quantile_weights = TRUE`, and both default that to off. Every other
-#' default matches the Julia constructor.
-#'
 #' @param training A data frame with columns `model_id`, `output_type`
 #'   (must be `"quantile"`), `output_type_id`, `value`, plus task-id
 #'   columns.
@@ -38,9 +31,9 @@
 #' @param intercept Include an intercept term in the regression.
 #' @param enforce_normalisation Constrain weights to lie on the simplex.
 #' @param noncross Add cross-quantile monotonicity constraints. Only takes
-#'   effect when `per_quantile_weights = TRUE`; without effect otherwise, as
-#'   the joint fit cannot cross by construction when
-#'   `enforce_normalisation = TRUE`.
+#'   effect when `per_quantile_weights = TRUE`; silently without effect
+#'   otherwise (the joint fit cannot cross by construction when
+#'   `enforce_normalisation = TRUE`).
 #' @param group Character vector of task dimensions over which to fit
 #'   separate regressions (e.g. `"location"` for per-location weights).
 #'   Leave empty to fit a single global model across all tasks.
@@ -102,11 +95,7 @@ qra <- function(training,
             isTRUE(per_quantile_weights),
             isTRUE(intercept),
             isTRUE(enforce_normalisation),
-            # Only forward `noncross` where it can act. The shared-weight fit is
-            # already monotone in tau, so the Julia constructor warns that the
-            # flag does nothing -- which on a default call would be a warning
-            # about an argument the caller never set.
-            isTRUE(noncross) && isTRUE(per_quantile_weights),
+            isTRUE(noncross),
             as.list(group))
   res <- JuliaConnectoR::juliaGet(out)
   pred <- as.data.frame(res$pred, stringsAsFactors = FALSE)

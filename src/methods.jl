@@ -119,7 +119,7 @@ is_per_quantile_weights(w::EnsembleWeights) = is_per_quantile(w)
 
 """
     QRA(; per_quantile_weights = false, intercept = false,
-          enforce_normalisation = true, noncross = false,
+          enforce_normalisation = true, noncross = true,
           group = Symbol[])
 
 Quantile Regression Averaging. `group` lists task dimensions over which a
@@ -130,13 +130,17 @@ The defaults fit a simplex-constrained, intercept-free combination
 guaranteeing non-crossing quantiles for the shared-weight fit. Set
 `intercept = true` and/or `enforce_normalisation = false` for an unconstrained
 regression, but note that combination can then produce weights outside `[0, 1]`
-and crossing quantiles. `noncross` only takes effect with
-`per_quantile_weights = true` (the shared-weight fit is already monotone in τ).
+and crossing quantiles.
 
-The R wrapper `qra()` defaults `noncross = TRUE`, mirroring `qrensemble::qra`,
-where this constructor defaults it to `false`. Results agree either way, since
-the flag is inert unless `per_quantile_weights = true`, which both default to
-off. All other defaults match.
+`noncross` only takes effect with `per_quantile_weights = true`; the
+shared-weight fit is already monotone in τ, so the default configuration is
+unaffected by it either way. It defaults to `true` so that turning on
+per-quantile weights does not silently start producing crossing quantiles. Note
+that the non-crossing fit is a joint LP across all τ and requires every τ to
+carry the same set of models; set `noncross = false` for ragged per-quantile
+submissions.
+
+Defaults match the R wrapper `qra()` and `qrensemble::qra` exactly.
 """
 struct QRA <: TrainedMethod
     per_quantile_weights::Bool
@@ -150,15 +154,9 @@ function QRA(;
         per_quantile_weights::Bool = false,
         intercept::Bool = false,
         enforce_normalisation::Bool = true,
-        noncross::Bool = false,
+        noncross::Bool = true,
         group = Symbol[]
 )
-    if noncross && !per_quantile_weights
-        # `maxlog = 1` warns once per session so a sweep of no-op configs does not
-        # flood the log.
-        @warn "QRA(noncross = true) has no effect unless per_quantile_weights = true; " *
-              "the shared-weight fit is already monotone in τ." maxlog = 1
-    end
     return QRA(
         per_quantile_weights,
         intercept,

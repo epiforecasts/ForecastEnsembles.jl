@@ -37,9 +37,9 @@ a forecast task, e.g. `c("location", "horizon", "target_date")`.}
 \item{enforce_normalisation}{Constrain weights to lie on the simplex.}
 
 \item{noncross}{Add cross-quantile monotonicity constraints. Only takes
-effect when `per_quantile_weights = TRUE`; without effect otherwise, as
-the joint fit cannot cross by construction when
-`enforce_normalisation = TRUE`.}
+effect when `per_quantile_weights = TRUE`; silently without effect
+otherwise (the joint fit cannot cross by construction when
+`enforce_normalisation = TRUE`).}
 
 \item{group}{Character vector of task dimensions over which to fit
 separate regressions (e.g. `"location"` for per-location weights).
@@ -70,15 +70,6 @@ columns plus a column named exactly `observed`.
 The defaults (`per_quantile_weights = FALSE`,
 `enforce_normalisation = TRUE`, `intercept = FALSE`, `noncross = TRUE`)
 match `qrensemble::qra`, so a tuned call carries over unchanged.
-}
-
-\section{Default differences from the Julia API}{
-
-`ForecastEnsembles.QRA` in Julia defaults `noncross = false`, where this
-wrapper defaults to `TRUE` to stay compatible with `qrensemble::qra`. The
-two produce identical results: `noncross` does nothing unless
-`per_quantile_weights = TRUE`, and both default that to off. Every other
-default matches the Julia constructor.
 }
 
 \section{Startup time}{
