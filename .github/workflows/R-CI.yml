@@ -16,8 +16,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Cap a transient hang; real runs finish well under this (~22 min cold).
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}  # for Remotes: sbfnk/juliaready
     steps:
@@ -30,15 +29,16 @@ jobs:
       - uses: julia-actions/cache@a7bed9df697e5d7309d68afe7542a87621a8b6c8 # v3.3.0
 
       - uses: r-lib/actions/setup-r@v2
-        # Fail fast: this step has hung on transient network trouble.
-        timeout-minutes: 10
         with:
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          # juliaready comes from DESCRIPTION Remotes (public repo).
-          extra-packages: any::testthat, any::devtools
+          # testthat drives the tests; juliaready comes from DESCRIPTION Remotes
+          # (public repo). devtools is deliberately not installed — its ~100-package
+          # tree dominated the cold-cache install; testthat::test_local() below
+          # does the same job.
+          extra-packages: any::testthat
           working-directory: r-pkg/ForecastEnsembles
 
       - name: Instantiate the Julia bridge
@@ -55,9 +55,9 @@ jobs:
             Pkg.precompile()'
 
       - name: Run testthat
-        # devtools::test() runs against the source tree; the test helper sets
-        # options(ForecastEnsembles.jl_path = <repo root>), which julia_setup() now
-        # reads by default, so the bridge finds the checked-out source.
+        # test_local() loads the package from source and runs tests/testthat; the
+        # test helper sets options(ForecastEnsembles.jl_path = <repo root>), which
+        # julia_setup() reads by default, so the bridge finds the checked-out source.
         working-directory: r-pkg/ForecastEnsembles
         run: |
-          Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+          Rscript -e 'testthat::test_local(stop_on_failure = TRUE)'
