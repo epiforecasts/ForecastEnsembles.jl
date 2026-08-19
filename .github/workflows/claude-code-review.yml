@@ -18,7 +18,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  claude-review:
+  # Deliberately not named `claude-review`: with no explicit `name:`, GitHub
+  # publishes the job's own check run under the job id, and the verdict step
+  # below publishes a check run called `claude-review`. Two checks sharing one
+  # name on the same SHA is ambiguous to anything reading statusCheckRollup —
+  # and the job's check is `success` whenever the job completes, whatever the
+  # review found, so a consumer could read a PR with outstanding findings as
+  # reviewed-and-clean.
+  review:
     # Repo insiders only, judged by where the branch lives: pushing a branch to
     # this repo requires write access, so a same-repo PR is by definition from
     # someone trusted, and every fork PR is excluded (those get no secrets and
