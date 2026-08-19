@@ -99,11 +99,16 @@ function _log_pool_quantiles(
         levels::AbstractVector{<:Real},
         ngrid::Int
 )
-    lo = minimum(quantile(d, 1e-4) for d in dists)
-    hi = maximum(quantile(d, 1 - 1e-4) for d in dists)
+    # Key the grid to the requested levels, not a fixed 1e-4 tail: a level more
+    # extreme than 1e-4 would otherwise fall outside the grid and be silently
+    # clamped to its edge. `plo`/`phi` never shrink the default tail.
+    plo = min(1.0e-4, minimum(levels))
+    phi = max(1 - 1.0e-4, maximum(levels))
+    lo = minimum(quantile(d, plo) for d in dists)
+    hi = maximum(quantile(d, phi) for d in dists)
     hi > lo || throw(ArgumentError(
         "logarithmic pool: the combined forecast range is degenerate (the span " *
-        "between the lowest 0.01th and highest 99.99th percentile across components " *
+        "between the lowest and highest requested-tail percentile across components " *
         "is zero, lo = hi = $lo), so no integration grid can be built."))
     pad = 0.05 * (hi - lo)
     xs = range(lo - pad, hi + pad; length = ngrid)
@@ -126,6 +131,14 @@ function _log_pool_quantiles(
 
     logdens .-= maximum(logdens)
     g = exp.(logdens)
+    # Reach check: with the grid keyed to the requested levels the pooled density
+    # should be negligible at the edges. If it is not, the grid is too narrow to
+    # hold the full mass, so renormalisation would inflate it and the extreme
+    # quantiles would be truncated — flag it rather than fail silently.
+    edge = max(g[1], g[ngrid])        # relative to the unit peak
+    edge < 1.0e-3 || @warn "logarithmic pool: the density is not negligible at " *
+          "the integration-grid edge (relative $(round(edge; sigdigits = 2))), so the " *
+          "most extreme requested quantiles may be truncated; raise `ngrid`." maxlog = 1
     g ./= _trapz(g, dx)               # normalise to a density
 
     # cumulative-trapezoid CDF, forced to [0, 1]

@@ -64,3 +64,27 @@
     )
     @test_throws ArgumentError combine(sft, LogarithmicPool())
 end
+
+@testitem "LogarithmicPool grid reaches levels more extreme than 1e-4" begin
+    using DataFrames
+    using Distributions: Normal, quantile as dquantile
+
+    # Request a level (1e-5) more extreme than the fixed 1e-4 grid tail. With the
+    # grid keyed to the requested levels it should extend to hold it rather than
+    # clamp to the edge, so the 1e-5 quantile sits clearly below the 1% one.
+    levels = [1.0e-5, 0.01, 0.5, 0.99, 1 - 1.0e-5]
+    rows = DataFrame[]
+    for (mid, μ) in (("m1", 0.0), ("m2", 2.0))
+        push!(rows,
+            DataFrame(model_id = mid, output_type = "quantile",
+                output_type_id = levels, location = "A",
+                value = [dquantile(Normal(μ, 1), τ) for τ in levels]))
+    end
+    ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])
+    out = sort(DataFrame(combine(ft, LogarithmicPool())), :output_type_id)
+    q(τ) = out.value[out.output_type_id .== τ][1]
+
+    @test issorted(out.value)          # still monotone in τ
+    @test q(1.0e-5) < q(0.01)          # extreme lower level not clamped to the 1% edge
+    @test q(1 - 1.0e-5) > q(0.99)      # extreme upper level not clamped either
+end
