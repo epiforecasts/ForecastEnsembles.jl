@@ -26,7 +26,7 @@ jobs:
         with:
           # 1.11 floor: the bridge pulls in ForecastEnsembles, which dropped 1.10.
           version: '1.11'
-      - uses: julia-actions/cache@b7788abd52452d5bc033d69796e110d9906af4ab # v3.2.0
+      - uses: julia-actions/cache@a7bed9df697e5d7309d68afe7542a87621a8b6c8 # v3.3.0
 
       - uses: r-lib/actions/setup-r@v2
         with:
