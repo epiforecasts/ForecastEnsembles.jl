@@ -271,3 +271,49 @@ jobs:
             -f conclusion="$conclusion" \
             -f 'output[title]'="$summary" \
             -f 'output[summary]'="$summary as of $SHA." >/dev/null
+
+      # A finding whose code the author then changed shows up as an *outdated*
+      # review thread on the new head: this round re-read that hunk and did not
+      # re-raise it, so the point is addressed. Resolve those so a fixed thread
+      # does not linger open for a human to close by hand. Only this bot's own
+      # threads are touched, never a human reviewer's, and a still-current
+      # (non-outdated) unresolved finding is left open.
+      - name: Resolve addressed review threads
+        if: steps.claude-review.outputs.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          owner=${REPO%/*}
+          name=${REPO#*/}
+          ids=$(gh api graphql -f query='
+            query($owner: String!, $name: String!, $pr: Int!) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $pr) {
+                  reviewThreads(first: 100) {
+                    nodes {
+                      id
+                      isResolved
+                      isOutdated
+                      comments(first: 1) { nodes { author { login } } }
+                    }
+                  }
+                }
+              }
+            }' -F owner="$owner" -F name="$name" -F pr="$PR" \
+            --jq '.data.repository.pullRequest.reviewThreads.nodes[]
+                  | select(.isResolved == false and .isOutdated == true
+                           and .comments.nodes[0].author.login == "claude[bot]")
+                  | .id')
+          for id in $ids; do
+            if gh api graphql -f query='
+              mutation($id: ID!) {
+                resolveReviewThread(input: { threadId: $id }) { thread { id } }
+              }' -F id="$id" >/dev/null 2>&1; then
+              echo "resolved outdated thread $id"
+            else
+              echo "could not resolve thread $id (leaving open)"
+            fi
+          done
