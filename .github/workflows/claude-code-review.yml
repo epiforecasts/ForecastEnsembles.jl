@@ -19,13 +19,19 @@ concurrency:
 
 jobs:
   claude-review:
-    # Repo insiders only. Excludes bot authors (dependabot and friends report
-    # author_association NONE) and outside contributors, whose fork PRs get no
-    # secrets and so could not authenticate anyway.
+    # Repo insiders only, judged by where the branch lives: pushing a branch to
+    # this repo requires write access, so a same-repo PR is by definition from
+    # someone trusted, and every fork PR is excluded (those get no secrets and
+    # could not authenticate anyway). Bot authors push in-repo branches too, so
+    # they need excluding separately.
+    #
+    # Do not use author_association here — the webhook payload does not report
+    # the same value the REST API does, and the job silently skips.
+    #
     # Keep this on one line: in a folded block, a more-indented continuation
-    # keeps its newline rather than folding to a space, and the expression then
-    # silently evaluates false.
-    if: contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    # keeps its newline rather than folding to a space, which also makes the
+    # expression evaluate false.
+    if: github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.event.pull_request.user.login, '[bot]')
 
     runs-on: ubuntu-latest
     permissions:
