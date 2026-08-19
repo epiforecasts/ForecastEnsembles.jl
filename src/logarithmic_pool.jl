@@ -136,9 +136,11 @@ function _log_pool_quantiles(
     # hold the full mass, so renormalisation would inflate it and the extreme
     # quantiles would be truncated — flag it rather than fail silently.
     edge = max(g[1], g[ngrid])        # relative to the unit peak
-    edge < 1.0e-3 || @warn "logarithmic pool: the density is not negligible at " *
-          "the integration-grid edge (relative $(round(edge; sigdigits = 2))), so the " *
-          "most extreme requested quantiles may be truncated; raise `ngrid`." maxlog = 1
+    edge < 1.0e-3 || @warn "logarithmic pool: the pooled density is not negligible " *
+          "at the integration-grid edge (relative $(round(edge; sigdigits = 2))): a " *
+          "component's tail extends past the grid, so the most extreme requested " *
+          "quantiles may be truncated. The grid span is set by the requested levels, " *
+          "not `ngrid`, so raising `ngrid` refines resolution without widening it." maxlog = 1
     g ./= _trapz(g, dx)               # normalise to a density
 
     # cumulative-trapezoid CDF, forced to [0, 1]
