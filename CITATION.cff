@@ -9,4 +9,3 @@ authors:
 repository-code: "https://github.com/epiforecasts/ForecastEnsembles.jl"
 url: "https://epiforecasts.io/ForecastEnsembles.jl/"
 license: "MIT"
-# Add `version`, `date-released`, and a Zenodo `doi` when cutting a citable release.
