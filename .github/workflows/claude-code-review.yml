@@ -217,12 +217,14 @@ jobs:
           # diff: with a diff a contributor may have authored, the tool list is
           # the blast radius. Reading is done by the step above, the verdict by
           # the step below.
-          # `model` is not a v1 input — passing it top-level only logs
-          # "Unexpected input(s) 'model'" and leaves the action on its default.
-          # It belongs here, as a CLI flag. Sonnet 4.6 for reviews; swap for an
-          # Opus id (e.g. claude-opus-5) for deeper ones.
+          # `model` is not a v1 input — passing it top-level only logged
+          # "Unexpected input(s) 'model'" and left the model unset, so the CLI
+          # default applied. That default resolved to Sonnet 5, which is what
+          # every review to date has actually run on; pinning it here keeps that
+          # rather than silently following whatever the default becomes next.
+          # Swap for an Opus id (e.g. claude-opus-5) for deeper reviews.
           claude_args: |
-            --model claude-sonnet-4-6
+            --model claude-sonnet-5
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*)"
 
       # Whether the round was clean is a fact about what got posted, not a claim
