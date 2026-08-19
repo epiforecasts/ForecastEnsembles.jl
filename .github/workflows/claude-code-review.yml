@@ -278,6 +278,10 @@ jobs:
       # does not linger open for a human to close by hand. Only this bot's own
       # threads are touched, never a human reviewer's, and a still-current
       # (non-outdated) unresolved finding is left open.
+      #
+      # Match both spellings of the bot's login: GraphQL reports a Bot actor as
+      # `claude`, REST as `claude[bot]`. Testing only the REST form here matches
+      # nothing, and the step then exits cleanly having resolved no threads.
       - name: Resolve addressed review threads
         if: steps.claude-review.outputs.conclusion == 'success'
         env:
@@ -305,7 +309,8 @@ jobs:
             }' -F owner="$owner" -F name="$name" -F pr="$PR" \
             --jq '.data.repository.pullRequest.reviewThreads.nodes[]
                   | select(.isResolved == false and .isOutdated == true
-                           and .comments.nodes[0].author.login == "claude[bot]")
+                           and (.comments.nodes[0].author.login == "claude"
+                                or .comments.nodes[0].author.login == "claude[bot]"))
                   | .id')
           for id in $ids; do
             if gh api graphql -f query='
