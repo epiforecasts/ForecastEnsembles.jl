@@ -16,7 +16,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Real runs top out around 22 min cold (bridge precompile) / ~5 min warm, so
+    # 30 caps a transient hang without failing any legitimate run.
+    timeout-minutes: 30
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}  # for Remotes: sbfnk/juliaready
     steps:
@@ -29,6 +31,9 @@ jobs:
       - uses: julia-actions/cache@a7bed9df697e5d7309d68afe7542a87621a8b6c8 # v3.3.0
 
       - uses: r-lib/actions/setup-r@v2
+        # Guard the RSPM fetch: this step has hung for the full job timeout on
+        # transient network trouble, so fail it fast and name the culprit.
+        timeout-minutes: 10
         with:
           use-public-rspm: true
 
