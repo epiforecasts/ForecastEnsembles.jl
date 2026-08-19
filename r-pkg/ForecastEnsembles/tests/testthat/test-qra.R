@@ -44,3 +44,38 @@ test_that("qra matches qrensemble default fixture", {
   expect_gt(nrow(m), 0)
   expect_lt(max(abs(m$value - m$predicted)), 1e-3)
 })
+
+test_that("a default qra() call does not warn about noncross", {
+  in_df <- read.csv(file.path(ENS_REF_DIR, "qra_input.csv"))
+  target_date <- read.csv(file.path(ENS_REF_DIR, "qra_target.csv"))$target_date[1]
+  in_df$target_date <- as.character(in_df$target_date)
+
+  train <- in_df[in_df$target_date != target_date, ]
+  target <- in_df[in_df$target_date == target_date, ]
+  to_ft <- function(d) {
+    data.frame(
+      model_id       = d$model,
+      output_type    = "quantile",
+      output_type_id = d$quantile_level,
+      location       = d$location,
+      horizon        = d$horizon,
+      target_date    = d$target_date,
+      value          = d$predicted,
+      stringsAsFactors = FALSE
+    )
+  }
+  obs <- unique(train[, c("location", "horizon", "target_date", "observed")])
+
+  # noncross defaults to TRUE here to mirror qrensemble, but per_quantile_weights
+  # defaults to FALSE, where the flag does nothing. Forwarding it in that case
+  # made the Julia constructor warn on a call the user configured no differently
+  # from the documented default.
+  expect_no_warning(
+    qra(
+      training     = to_ft(train),
+      target       = to_ft(target),
+      observations = obs,
+      task_id_cols = c("location", "horizon", "target_date")
+    )
+  )
+})
