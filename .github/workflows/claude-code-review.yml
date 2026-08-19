@@ -26,6 +26,12 @@ jobs:
   # review found, so a consumer could read a PR with outstanding findings as
   # reviewed-and-clean.
   review:
+    outputs:
+      # Whether the verdict step actually published a check run. The job can
+      # succeed without one: the action declines to run on a PR that edits this
+      # workflow, and the verdict step is gated on it having run.
+      published: ${{ steps.verdict.outputs.published }}
+
     # Repo insiders only, judged by where the branch lives: pushing a branch to
     # this repo requires write access, so a same-repo PR is by definition from
     # someone trusted, and every fork PR is excluded (those get no secrets and
@@ -243,6 +249,7 @@ jobs:
       # unreviewed commit clean. `conclusion` is only set once Claude has
       # actually run.
       - name: Record the verdict
+        id: verdict
         if: steps.claude-review.outputs.conclusion == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -259,11 +266,15 @@ jobs:
             conclusion=success
           else
             summary="$found finding(s) posted inline"
-            # `neutral`, not `failure`: findings are for a human to weigh, not a
-            # broken build, and this must not read as a failing check.
-            conclusion=neutral
+            # `failure`, not `neutral`. Required status checks treat `neutral`
+            # and `skipped` as passing, so a neutral verdict would satisfy the
+            # rule it is meant to enforce. The cost is that a round with findings
+            # shows a red X rather than a grey dot; /wait-for-review knows to
+            # read this one as review comments to address, not CI to fix.
+            conclusion=failure
           fi
           echo "$summary"
+          echo "published=true" >> "$GITHUB_OUTPUT"
           gh api "repos/$REPO/check-runs" -X POST \
             -f name=claude-review \
             -f head_sha="$SHA" \
@@ -271,3 +282,42 @@ jobs:
             -f conclusion="$conclusion" \
             -f 'output[title]'="$summary" \
             -f 'output[summary]'="$summary as of $SHA." >/dev/null
+
+  # A required `claude-review` check must report on every PR or it blocks the
+  # merge forever: absent is not passing, it is pending. Three cases never reach
+  # the verdict step — a bot author, a fork PR (both excluded by the job above),
+  # and a PR editing this workflow (the action refuses to run it when the file
+  # differs from main's copy). Publish a passing verdict for those.
+  #
+  # This does mean a PR that edits the review workflow reviews itself by
+  # default. That falls out of the action's own safeguard rather than anything
+  # decided here, and only repo insiders can open such a PR — a human reviewer
+  # is still the gate on it.
+  verdict-fallback:
+    needs: review
+    if: always() && needs.review.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    steps:
+      - name: Publish a not-applicable verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEWED: ${{ needs.review.result }}
+        run: |
+          set -euo pipefail
+          if [ "$REVIEWED" = "skipped" ]; then
+            title="Review not applicable to this author"
+          else
+            title="Review did not run for this commit"
+          fi
+          echo "$title"
+          gh api "repos/$REPO/check-runs" -X POST \
+            -f name=claude-review \
+            -f head_sha="$SHA" \
+            -f status=completed \
+            -f conclusion=success \
+            -f 'output[title]'="$title" \
+            -f 'output[summary]'="$title ($SHA)." >/dev/null
