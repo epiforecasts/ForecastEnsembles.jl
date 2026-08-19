@@ -1,12 +1,16 @@
 name = "EnsemblesBridge"
 authors = ["Sebastian Funk <sebastian.funk@lshtm.ac.uk>"]
 
+# Project that the R-bridge runner activates. It pulls in ForecastEnsembles.jl from
+# its sibling source tree (set the dev path before instantiating; see
+# `r-pkg/ForecastEnsembles/R/setup.R`) plus the small set of packages needed for
+# CSV/JSON IO at the boundary.
+
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [compat]
 CSV = "0.10"
