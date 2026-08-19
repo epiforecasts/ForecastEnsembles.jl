@@ -1,5 +1,5 @@
 # Based on EpiAwarePackageTools.scaffold, customised for this repo
-# (inline review comments; llm-approved label). template-sync is not enabled.
+# (inline review comments; a claude-review check run). template-sync is not enabled.
 #
 # This is the only automatic review lane. `/wait-for-review` no longer runs its
 # own review pass — it reads the findings this workflow posts and addresses
@@ -37,7 +37,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write # post inline review comments
-      issues: write # apply the llm-approved label
+      checks: write # publish the review verdict against the head SHA
       id-token: write
 
     steps:
@@ -213,8 +213,8 @@ jobs:
 
           # No `gh api`, no label commands, nothing that writes outside this PR's
           # diff: with a diff a contributor may have authored, the tool list is
-          # the blast radius. Reading is done by the step above, labelling by the
-          # step below.
+          # the blast radius. Reading is done by the step above, the verdict by
+          # the step below.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*)"
 
@@ -222,11 +222,17 @@ jobs:
       # Claude makes about itself — so it is measured here, with the run's own
       # token.
       #
+      # The verdict is a check run against the head SHA rather than a label. It is
+      # bound to the commit by construction, so a later push simply has no verdict
+      # yet and nothing has to reason about staleness. It also carries no approval
+      # semantics: unlike a review, it cannot satisfy the ruleset's
+      # required_approving_review_count, so the human gate stays where it is.
+      #
       # Gate on the action's `conclusion` output, not on the step outcome. The
       # action exits 0 without reviewing anything when it declines to run — most
       # often on a PR that edits this workflow, which it refuses to execute
       # because the file differs from the copy on the default branch. The step
-      # then "succeeds" having done nothing, and a naive check would label an
+      # then "succeeds" having done nothing, and a naive check would mark an
       # unreviewed commit clean. `conclusion` is only set once Claude has
       # actually run.
       - name: Record the verdict
@@ -235,16 +241,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
           BEFORE: ${{ steps.ctx.outputs.before }}
         run: |
           set -euo pipefail
           after=$(gh api "repos/$REPO/pulls/$PR/comments" --paginate --jq '.[].id' | wc -l)
-          if [ "$after" -eq "$BEFORE" ]; then
-            echo "No new inline comments — marking clean."
-            gh label create llm-approved --color 0E8A16 \
-              --description "Reviewed by Claude with no outstanding findings" 2>/dev/null || true
-            gh pr edit "$PR" --add-label llm-approved
+          found=$((after - BEFORE))
+          if [ "$found" -eq 0 ]; then
+            summary="No findings"
+            conclusion=success
           else
-            echo "$((after - BEFORE)) new inline comment(s) — clearing any stale label."
-            gh pr edit "$PR" --remove-label llm-approved 2>/dev/null || true
+            summary="$found finding(s) posted inline"
+            # `neutral`, not `failure`: findings are for a human to weigh, not a
+            # broken build, and this must not read as a failing check.
+            conclusion=neutral
           fi
+          echo "$summary"
+          gh api "repos/$REPO/check-runs" -X POST \
+            -f name=claude-review \
+            -f head_sha="$SHA" \
+            -f status=completed \
+            -f conclusion="$conclusion" \
+            -f 'output[title]'="$summary" \
+            -f 'output[summary]'="$summary as of $SHA." >/dev/null
