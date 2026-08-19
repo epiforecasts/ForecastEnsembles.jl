@@ -27,7 +27,7 @@ ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 # entry. Add a bound for each test-only dep you add.
 # This is the no-AD variant, so no AD-harness deps appear.
 [compat]
-EpiAwarePackageTools = "0.3"
+EpiAwarePackageTools = "0.3, 0.4"
 Aqua = "0.8"
 BenchmarkTools = "1"
 CSV = "0.10"
