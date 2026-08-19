@@ -6,6 +6,11 @@ Initial release. Mirrors the user-facing API of `hubEnsembles`
 the numerics to the Julia package ForecastEnsembles.jl over a JuliaConnectoR
 bridge.
 
+Also exposes three ForecastEnsembles.jl methods that have no legacy R
+equivalent: `logarithmic_pool()` (logarithmic opinion pool),
+`trimmed_mean()` (robust trimmed/winsorised cross-model mean), and `blp()`
+(beta-transformed linear pool).
+
 Differences from the packages it mirrors:
 
 * `task_id_cols` is a required argument throughout (the hub schema is

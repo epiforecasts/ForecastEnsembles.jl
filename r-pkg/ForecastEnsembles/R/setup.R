@@ -172,6 +172,39 @@ function _ens_crps(train_in, obs_in, task_id_cols::Vector, dirichlet_alpha::Floa
     _ens_pack(DataFrame(fitted.weights))
 end
 
+function _ens_logpool(df_in, task_id_cols::Vector, weights_in, ngrid::Int)
+    df = _ens_to_symbol!(DataFrame(df_in))
+    cols = Symbol.(task_id_cols)
+    ft = ForecastEnsembles.ForecastTable(df; task_id_cols = cols)
+    method = if weights_in === nothing
+        ForecastEnsembles.LogarithmicPool(; ngrid = ngrid)
+    else
+        ForecastEnsembles.LogarithmicPool(; ngrid = ngrid, weights = DataFrame(weights_in))
+    end
+    _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
+end
+
+function _ens_trimmed(df_in, task_id_cols::Vector, fraction::Float64, mode::String)
+    df = _ens_to_symbol!(DataFrame(df_in))
+    cols = Symbol.(task_id_cols)
+    ft = ForecastEnsembles.ForecastTable(df; task_id_cols = cols)
+    method = ForecastEnsembles.TrimmedMean(; fraction = fraction, mode = Symbol(mode))
+    _ens_pack(_ens_to_string!(DataFrame(combine(ft, method))))
+end
+
+function _ens_blp(train_in, target_in, obs_in, task_id_cols::Vector, weights_in)
+    cols = Symbol.(task_id_cols)
+    train_df  = _ens_to_symbol!(DataFrame(train_in))
+    target_df = _ens_to_symbol!(DataFrame(target_in))
+    obs_df    = DataFrame(obs_in)
+    train_ft  = ForecastEnsembles.ForecastTable(train_df;  task_id_cols = cols)
+    target_ft = ForecastEnsembles.ForecastTable(target_df; task_id_cols = cols)
+    method = weights_in === nothing ? ForecastEnsembles.BLP() :
+             ForecastEnsembles.BLP(; weights = DataFrame(weights_in))
+    fitted = fit(method, train_ft, obs_df)
+    _ens_pack(_ens_to_string!(DataFrame(combine(target_ft, fitted))))
+end
+
 nothing
 '
 }
