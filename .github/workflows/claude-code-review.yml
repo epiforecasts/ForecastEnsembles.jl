@@ -264,3 +264,41 @@ jobs:
             -f conclusion="$conclusion" \
             -f 'output[title]'="$summary" \
             -f 'output[summary]'="$summary as of $SHA." >/dev/null
+
+          # A clean round has just re-read the whole diff and found nothing, so
+          # any of our own threads GitHub has marked outdated is about code that
+          # no longer has a problem. Left open they look like outstanding
+          # findings, and /wait-for-review would try to address a comment whose
+          # subject is gone. Resolve them -- silently, since a reply saying
+          # "no longer applies" on each one is the noise this workflow exists to
+          # avoid. Only ever on a clean round: while findings stand, an outdated
+          # thread may just be a fix that moved the code.
+          [ "$found" -eq 0 ] || exit 0
+          owner=${REPO%/*}
+          name=${REPO#*/}
+          gh api graphql -f query='
+            query($owner:String!, $name:String!, $pr:Int!) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $pr) {
+                  reviewThreads(first: 100) {
+                    nodes {
+                      id isResolved isOutdated
+                      comments(first: 1) { nodes { author { login } } }
+                    }
+                  }
+                }
+              }
+            }' -f owner="$owner" -f name="$name" -F pr="$PR" --jq '
+              .data.repository.pullRequest.reviewThreads.nodes[]
+              | select(.isOutdated and (.isResolved | not))
+              | select(.comments.nodes[0].author.login == "claude")
+              | .id' |
+            while read -r tid; do
+              echo "Resolving outdated thread $tid"
+              gh api graphql -f query='
+                mutation($id:ID!) {
+                  resolveReviewThread(input: {threadId: $id}) {
+                    thread { isResolved }
+                  }
+                }' -f id="$tid" >/dev/null
+            done
