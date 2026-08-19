@@ -77,4 +77,16 @@ end
     @test_logs (:warn, r"trims nothing") combine(ft, TrimmedMean(; fraction = 0.1))
     # A fraction that does trim (round(0.4 × 5) = 2) emits no such warning.
     @test_logs combine(ft, TrimmedMean(; fraction = 0.4))
+
+    # Heterogeneous participation: location B has only 5 models, so it trims
+    # nothing at fraction 0.1 even though the 6-model location A does. Keying the
+    # check off the smallest group (not the global unique count of 6) still warns.
+    het = DataFrame(
+        model_id = [string.("m", 1:6); string.("m", 1:5)],
+        output_type = "quantile", output_type_id = 0.5,
+        location = [fill("A", 6); fill("B", 5)],
+        value = [1.0:6.0; 1.0:5.0]
+    )
+    hft = ForecastTable(het; task_id_cols = [:location])
+    @test_logs (:warn, r"as few as 5 models") combine(hft, TrimmedMean(; fraction = 0.1))
 end
