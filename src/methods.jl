@@ -132,6 +132,11 @@ guaranteeing non-crossing quantiles for the shared-weight fit. Set
 regression, but note that combination can then produce weights outside `[0, 1]`
 and crossing quantiles. `noncross` only takes effect with
 `per_quantile_weights = true` (the shared-weight fit is already monotone in τ).
+
+The R wrapper `qra()` defaults `noncross = TRUE`, mirroring `qrensemble::qra`,
+where this constructor defaults it to `false`. Results agree either way, since
+the flag is inert unless `per_quantile_weights = true`, which both default to
+off. All other defaults match.
 """
 struct QRA <: TrainedMethod
     per_quantile_weights::Bool
