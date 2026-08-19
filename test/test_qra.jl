@@ -145,15 +145,18 @@ end
     m = QRA()
     @test m.enforce_normalisation == true
     @test m.intercept == false
-    @test m.noncross == false
+    @test m.noncross == true
     @test m.per_quantile_weights == false
     @test m.group == Symbol[]
 end
 
-@testitem "QRA(noncross = true) warns only without per_quantile_weights" begin
-    # `@test_logs` installs a fresh TestLogger, so the source-level `maxlog = 1`
-    # does not suppress the warning here regardless of test order.
-    @test_logs (:warn, r"noncross.*no effect.*per_quantile_weights") QRA(noncross = true)
+@testitem "QRA construction is quiet in every noncross configuration" begin
+    # `noncross` is inert unless `per_quantile_weights = true`, but it is now the
+    # default, so constructing one must not warn about that -- a warning here
+    # would fire on every default `QRA()` and on every call from the R wrapper.
+    @test_logs QRA()
+    @test_logs QRA(noncross = true)
+    @test_logs QRA(noncross = false)
     @test_logs QRA(noncross = true, per_quantile_weights = true)
 end
 
