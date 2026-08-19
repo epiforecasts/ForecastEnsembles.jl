@@ -11,7 +11,9 @@ test_that("trimmed_mean drops the extremes before averaging", {
   out <- trimmed_mean(df, fraction = 0.2, task_id_cols = "location")
   expect_s3_class(out, "model_out_tbl")
   expect_equal(nrow(out), 1L)
-  expect_equal(out$value, 3, tolerance = 1e-10)
+  # as.numeric() drops the JLDIM attribute JuliaConnectoR marks scalar columns
+  # with, which expect_equal would otherwise flag against the plain literal.
+  expect_equal(as.numeric(out$value), 3, tolerance = 1e-10)
   expect_true(all(out$model_id == "hub-ensemble"))
 })
 
@@ -26,7 +28,7 @@ test_that("trimmed_mean winsorise clamps rather than drops", {
   # Clamp the extreme (1 -> 2, 100 -> 4): mean of c(2, 2, 3, 4, 4) = 3.
   out <- trimmed_mean(df, fraction = 0.2, mode = "winsorise",
                       task_id_cols = "location")
-  expect_equal(out$value, 3, tolerance = 1e-10)
+  expect_equal(as.numeric(out$value), 3, tolerance = 1e-10)
 })
 
 test_that("trimmed_mean validates its arguments in R", {
