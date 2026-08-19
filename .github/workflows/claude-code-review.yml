@@ -192,10 +192,17 @@ jobs:
 
       # Whether the round was clean is a fact about what got posted, not a claim
       # Claude makes about itself — so it is measured here, with the run's own
-      # token. Only on success: a failed or cancelled review has not established
-      # anything about this commit.
+      # token.
+      #
+      # Gate on the action's `conclusion` output, not on the step outcome. The
+      # action exits 0 without reviewing anything when it declines to run — most
+      # often on a PR that edits this workflow, which it refuses to execute
+      # because the file differs from the copy on the default branch. The step
+      # then "succeeds" having done nothing, and a naive check would label an
+      # unreviewed commit clean. `conclusion` is only set once Claude has
+      # actually run.
       - name: Record the verdict
-        if: steps.claude-review.outcome == 'success'
+        if: steps.claude-review.outputs.conclusion == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
