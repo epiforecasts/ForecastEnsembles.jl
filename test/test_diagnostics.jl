@@ -47,7 +47,8 @@
     fh = FittedHedge(
         DataFrame(model_id = ["stable", "swing"], weight = [0.5, 0.8]),
         ["stable", "swing"],
-        traj
+        traj,
+        :t
     )
     ws = weight_stability(fh)
     @test ws isa DataFrame
@@ -56,8 +57,30 @@
     @test ws[ws.model_id .== "swing", :total_variation][1] >
           ws[ws.model_id .== "stable", :total_variation][1]
 
+    # A trajectory carrying extra columns still orders by the stored time_col;
+    # the rows are shuffled so the ordering has to come from `time_col`.
+    wide = traj[[6, 1, 4, 2, 5, 3], :]
+    wide[!, :location] .= "A"
+    wide[!, :eta] .= 0.1
+    wide_fh = FittedHedge(
+        DataFrame(model_id = ["stable", "swing"], weight = [0.5, 0.8]),
+        ["stable", "swing"],
+        wide,
+        :t
+    )
+    @test sort(weight_stability(wide_fh), :model_id) == sort(ws, :model_id)
+
+    # A time_col that is not in the trajectory names the missing column.
+    bad_fh = FittedHedge(
+        DataFrame(model_id = ["stable", "swing"], weight = [0.5, 0.8]),
+        ["stable", "swing"],
+        traj,
+        :date
+    )
+    @test_throws ArgumentError weight_stability(bad_fh)
+
     # Empty trajectory → empty result, no error.
     empty_fh = FittedHedge(
-        DataFrame(model_id = String[], weight = Float64[]), String[], DataFrame())
+        DataFrame(model_id = String[], weight = Float64[]), String[], DataFrame(), :t)
     @test nrow(weight_stability(empty_fh)) == 0
 end

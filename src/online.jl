@@ -76,19 +76,22 @@ function _auto_eta(scores::AbstractVector, M::Integer, T::Integer)
 end
 
 """
-    FittedHedge(weights, models, trajectory)
+    FittedHedge(weights, models, trajectory, time_col)
 
 Output of `fit(::Hedge, …)`. Stores the final simplex `weights` (a `DataFrame`
 with columns `model_id` and `weight`), the component `models` in weight order,
-and the `trajectory` — a long `DataFrame` (`time_col`, `model_id`, `weight`) of
-the weights after each update, for diagnosing weight stability over time. Plug
-into `combine(ft, fitted)` — internally a [`LinearPool`](@ref) with the final
-weights.
+the `trajectory` — a long `DataFrame` (`time_col`, `model_id`, `weight`) of the
+weights after each update, for diagnosing weight stability over time — and
+`time_col`, the name of the trajectory's time column (carried over from the
+[`Hedge`](@ref) that produced it, so [`weight_stability`](@ref) can order the
+trajectory without having to guess which column holds the time). Plug into
+`combine(ft, fitted)` — internally a [`LinearPool`](@ref) with the final weights.
 """
 struct FittedHedge <: UnfittedMethod
     weights::DataFrame
     models::Vector{String}
     trajectory::DataFrame
+    time_col::Symbol
 end
 
 function combine(ft::ForecastTable, m::FittedHedge; rng::AbstractRNG = default_rng())
@@ -158,5 +161,5 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
 
     trajectory = isempty(traj) ? DataFrame() : reduce(vcat, traj)
     return FittedHedge(DataFrame(model_id = String.(models), weight = w),
-        String.(models), trajectory)
+        String.(models), trajectory, m.time_col)
 end

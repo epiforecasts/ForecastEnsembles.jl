@@ -23,6 +23,14 @@ ForecastTable(df; task_id_cols, model_id_col = :model_id)
 `task_id_cols` may be omitted, in which case it is inferred as every column
 that is not one of the required columns.
 
+Getting the data out
+--------------------
+
+`DataFrame(ft)` returns a copy, safe to mutate. The Tables.jl interface
+(`Tables.columns`) is zero-copy as that contract expects, so its columns alias
+the table's backing store — mutating them in place corrupts `ft` and bypasses
+the constructor's validation.
+
 Fields
 ------
 
@@ -188,6 +196,9 @@ end
 
 Tables.istable(::Type{ForecastTable}) = true
 Tables.columnaccess(::Type{ForecastTable}) = true
+# Zero-copy, as the Tables.jl contract expects: the returned columns alias the
+# table's backing store, so mutating them in place corrupts `ft`. Use
+# `DataFrame(ft)` (above) for a copy you own.
 Tables.columns(ft::ForecastTable) = Tables.columns(ft.data)
 Tables.schema(ft::ForecastTable) = Tables.schema(ft.data)
 

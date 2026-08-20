@@ -41,6 +41,7 @@
 
     fitted = fit(Hedge(crps; eta = 1.0, time_col = :t), train, obs)
     @test isa(fitted, FittedHedge)
+    @test fitted.time_col === :t          # carried over for weight_stability
     @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
     gw = fitted.weights[fitted.weights.model_id .== "m_good", :weight][1]
     nw = fitted.weights[fitted.weights.model_id .== "m_noisy", :weight][1]

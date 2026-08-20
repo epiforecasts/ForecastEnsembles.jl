@@ -4,8 +4,8 @@
 
 Linear opinion pool. The kernel is dispatched on the table's `output_type`:
 
-- `:sample`   → weighted resampling of per-model samples to give a single
-  pooled sample set per task (the only path that uses `rng`).
+- `:sample`   → weighted resampling of per-model samples, with replacement, to
+  give a single pooled sample set per task (the only path that uses `rng`).
 - `:cdf`      → weighted pointwise average of CDFs.
 - `:quantile` → reconstruct a continuous distribution per model via
   `QuantileDistribution`, then invert the mixture CDF Σᵢ wᵢ Fᵢ exactly by
