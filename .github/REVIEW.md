@@ -37,16 +37,18 @@ on API instability itself.
   not introduce `Any`-typed returns or new dynamic dispatch on the compute path;
   and `fit`/`combine` should treat a caller's array or `DataFrame` as read-only
   rather than mutating it in place.
-- **Package surface (Aqua.jl)**: the `test/package` Aqua suite guards method
-  ambiguities, unbound type parameters, stale or undeclared dependencies, and
-  undocumented exports — keep it green; update `Project.toml` `[compat]` when a
-  dependency or newly-used feature needs it; exports match what is genuinely
-  public, with docstrings.
+- **Package surface**: `Project.toml` `[compat]` updated when a dependency or a
+  newly-used feature of one needs it; exports match what is genuinely public,
+  with docstrings. (The `test/package` Aqua suite catches method ambiguities,
+  unbound type parameters and undeclared dependencies on its own — read its
+  failure rather than re-deriving it.)
 - **The R wrapper (`r-pkg/`, `interop.jl`)**: when a Julia signature or type
   changes, the R interface is kept in step, and conversions across the boundary
   (quantile tables, weights) round-trip correctly.
-- **Tests**: a regression test for every bug fix. Reference and backtest results
-  (`test/reference`, `test_backtest.jl`) are regenerated only when combination
-  output legitimately changes, not to paper over a regression; the JET and Aqua
-  suites stay green. Formatting is handled by JuliaFormatter / SciMLStyle
-  (`.JuliaFormatter.toml`) and is not reviewed here.
+- **Breaking changes to defaults**: a changed default value or method behaviour
+  silently changes results for existing callers. Flag one that is not called out
+  as breaking, and check whether the R wrapper's defaults still agree with the
+  Julia ones.
+- **Reference results**: `test/reference` and `test_backtest.jl` are regenerated
+  only when combination output legitimately changes — a regenerated fixture is
+  how a real regression gets papered over.
