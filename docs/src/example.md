@@ -83,9 +83,12 @@ than dropped:
 first(DataFrame(combine(ft, TrimmedMean(; fraction = 0.2, mode = :winsorise))), 5)
 ```
 
+Those two tables are identical here, and both match the median ensemble above.
 `fraction` trims `round(fraction · n)` models from each end, capped so at least
 one value survives, so with three models nothing is trimmed until `fraction`
-rises above about 0.17.
+rises above about 0.17, and once it does only one value is left: trimming leaves
+the median, and winsorising clamps both extremes onto it. The two modes diverge
+on larger ensembles, where more than one value survives.
 
 ## Hand-supplied weights
 
