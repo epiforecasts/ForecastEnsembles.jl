@@ -337,8 +337,8 @@ weights, `weights(::FittedBLP)` is `nothing`.
 
 ## What's where in the data
 
-Both `DataFrames` and `ForecastEnsembles` export `combine`, so the DataFrames
-one needs qualifying here:
+`ForecastEnsembles` extends `DataFrames.combine`, so one `combine` covers both
+the ensemble combinations above and this group-and-count:
 
 ```@example example
 DataFrames.combine(
