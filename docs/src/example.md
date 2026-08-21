@@ -109,13 +109,18 @@ const MODELS = ["Flusight-baseline", "MOBS-GLEAM_FLUH", "PSI-DICE"]
 
 rng = MersenneTwister(20221217)
 T, K = 12, 200
-train_obs = DataFrame(t = 1:T, observed = 100.0 .+ 20.0 .* randn(rng, T))
+
+# A latent signal the models track, with the observation landing near but not on
+# it. Forecasting the realised value exactly would leave nothing for the
+# estimators, or for the recalibration further down, to work on.
+signal = 100.0 .+ 20.0 .* randn(rng, T)
+train_obs = DataFrame(t = 1:T, observed = signal .+ 6.0 .* randn(rng, T))
 
 rows = DataFrame[]
 for (mid, sd) in zip(MODELS, (35.0, 15.0, 22.0)), t in 1:T
     push!(rows, DataFrame(model_id = mid, output_type = "sample",
         output_type_id = 1:K, t = t,
-        value = train_obs.observed[t] .+ sd .* randn(rng, K)))
+        value = signal[t] .+ sd .* randn(rng, K)))
 end
 train_ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:t])
 ```
@@ -132,7 +137,7 @@ qrows = DataFrame[]
 for (mid, sd) in zip(MODELS, (35.0, 15.0, 22.0)), t in 1:T
     push!(qrows, DataFrame(model_id = mid, output_type = "quantile",
         output_type_id = levels, t = t,
-        value = train_obs.observed[t] .+ sd .* quantile.(Normal(), levels)))
+        value = signal[t] .+ sd .* quantile.(Normal(), levels)))
 end
 qtrain_ft = ForecastTable(reduce(vcat, qrows); task_id_cols = [:t])
 ```
