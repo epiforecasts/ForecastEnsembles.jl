@@ -54,11 +54,14 @@ end
     )
     ft = ForecastTable(df; task_id_cols = [:location])
 
-    # The keyword must be declared on the ForecastTable method itself. Every
-    # assertion below passes either way, because falling through to the generic
-    # Tables.jl constructor happens to give the same copying behaviour; only the
-    # method's own signature records that the no-copy path is offered on purpose.
-    @test hasmethod(DataFrame, Tuple{ForecastTable}, (:copycols,))
+    # The keyword must be declared on the ForecastTable method itself: every
+    # other assertion below passes either way, because falling through to the
+    # generic Tables.jl constructor happens to give the same copying behaviour.
+    # `hasmethod` cannot see the difference, since the generic constructor also
+    # accepts `copycols` and applies here; the matching method's own signature
+    # can.
+    m = only(methods(DataFrame, Tuple{ForecastTable}))
+    @test Base.kwarg_decl(m) == [:copycols]
 
     # The default and an explicit `copycols = true` both isolate the caller: a
     # write through the returned frame must not reach the table's store.
