@@ -79,8 +79,8 @@ end
     FittedHedge(weights, models, trajectory, time_col)
 
 Output of `fit(::Hedge, …)`. Stores the final simplex `weights` (a `DataFrame`
-with columns `model_id` and `weight`), the component `models` in weight order,
-the `trajectory`, and `time_col`.
+with columns `model_id` and `weight`), the component `models` sorted by id and
+matching the rows of `weights`, the `trajectory`, and `time_col`.
 
 The `trajectory` is a long `DataFrame` (`time_col`, `model_id`, `weight`) holding
 the weights after each update, for diagnosing weight stability over time.
