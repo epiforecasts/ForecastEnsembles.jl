@@ -51,8 +51,10 @@ fitted `trajectory`. A large value flags a model whose weight swung across the
 history (regime change or noise); a small one flags a stable contribution.
 Returns a `DataFrame` with columns `model_id` and `total_variation`.
 
-Orders the trajectory by the fitted `time_col`, ignoring any other columns it
-carries alongside `model_id` and `weight`.
+Orders each model's rows by the fitted `time_col`. The trajectory may carry
+extra columns, but it must hold exactly one weight per model per time step:
+grouping is on `model_id` alone, so a second key such as a location would
+interleave unrelated weight series.
 
 # Example
 
