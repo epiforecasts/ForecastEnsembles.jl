@@ -88,7 +88,8 @@ Those two tables are identical here, and both match the median ensemble above.
 one value survives, so with three models nothing is trimmed until `fraction`
 rises above about 0.17, and once it does only one value is left: trimming leaves
 the median, and winsorising clamps both extremes onto it. The two modes diverge
-on larger ensembles, where more than one value survives.
+only where at least three values survive, so four models agree at every
+`fraction` too; five or more, trimmed lightly, is where they part.
 
 ## Hand-supplied weights
 
