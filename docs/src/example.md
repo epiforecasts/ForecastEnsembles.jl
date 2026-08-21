@@ -178,12 +178,22 @@ combine(ft, QuantileEnsemble(:mean; weights = qra))
 
 Some configurations do not reduce to a weight vector at all — fits with an
 intercept, unconstrained fits, or fits spanning several task groups. For those
-`weights(::FittedQRA)` returns `nothing`, and asking for the weights explains
-which case you are in:
+`weights(::FittedQRA)` returns `nothing`:
 
 ```@example example
 loose = fit(QRA(; enforce_normalisation = false), qtrain_ft, train_obs)
 weights(loose) === nothing
+```
+
+Passing such a fit where weights are expected says which of the three cases it
+is, and how to refit:
+
+```@example example
+try
+    MixtureEnsemble(; weights = loose)
+catch err
+    println(err.msg)
+end
 ```
 
 You can still apply such a fit directly with `combine(ft, loose)`, which uses
