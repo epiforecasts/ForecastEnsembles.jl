@@ -207,8 +207,12 @@ catch err
 end
 ```
 
-You can still apply such a fit directly with `combine(ft, loose)`, which uses
-the regression coefficients to predict quantiles.
+You can still apply such a fit directly with `combine(ft, loose)`, which uses the
+regression coefficients to predict quantiles. Nothing constrains those
+coefficients, so the predicted quantiles can cross — on this small history they
+do, and the package warns about it. `per_quantile_weights = true` with
+`noncross = true`, or sorting each task's values before submission, restores
+monotonicity.
 
 ## Score-driven estimators
 
