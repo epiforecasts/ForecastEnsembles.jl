@@ -58,8 +58,8 @@ fitted = fit(CRPSStacking(), training_forecasts, observations)
 combine(ft, MixtureEnsemble(; weights = fitted))
 ```
 
-[`CRPSStacking`](@ref) and [`QRA`](@ref) work on quantile forecasts; the
-score-driven estimators take a scoring function you supply and need sample
+[`QRA`](@ref) works on quantile forecasts; [`CRPSStacking`](@ref) and the
+score-driven estimators, which take a scoring function you supply, need sample
 forecasts. The [worked example](../example.md) runs all of them on a real
 hubverse slice.
 
