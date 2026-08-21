@@ -23,7 +23,7 @@ df = DataFrame(
 )
 
 ft = ForecastTable(df; task_id_cols = [:location, :horizon])
-combine(ft, QuantileEnsemble(:mean))
+DataFrame(combine(ft, QuantileEnsemble(:mean)))
 ```
 
 The task-id columns say what identifies a single forecast target: here one
@@ -40,13 +40,20 @@ w = EnsembleWeights(DataFrame(
     weight = [0.5, 0.3, 0.2]
 ))
 
-combine(ft, MixtureEnsemble(; weights = w))
+DataFrame(combine(ft, MixtureEnsemble(; weights = w)))
 ```
 
-Note this also swapped the combination operation. `QuantileEnsemble` averages
-quantile values at each level; `MixtureEnsemble` averages the distributions
-themselves. They give different answers, and choosing between them is the first
-of the two decisions the [Methods](@ref) page sets out.
+That changed two things at once, though: the weights and the combination
+operation. `QuantileEnsemble` averages quantile values at each level, while
+`MixtureEnsemble` averages the distributions themselves, and they differ even on
+equal weights:
+
+```@example getting-started
+DataFrame(combine(ft, MixtureEnsemble()))
+```
+
+Choosing between them is the first of the two decisions the [Methods](@ref) page
+sets out.
 
 ## Next: estimate weights from past forecasts
 
