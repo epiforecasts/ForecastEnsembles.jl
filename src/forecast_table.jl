@@ -31,7 +31,8 @@ Getting the data out
 instead, as the Tables.jl zero-copy contract expects: `Tables.columns(ft)`
 and `DataFrame(ft; copycols = false)` both hand back columns aliasing
 `ft.data`. Mutating those in place corrupts `ft` and bypasses the
-constructor's validation.
+constructor's validation, so pass `copycols = false` only when you know the
+result is read-only.
 
 Fields
 ------
@@ -102,12 +103,16 @@ end
 
 # Defensive copy: callers must not be able to mutate the table's backing store
 # (which would bypass the constructor's validation) through the accessor.
-# `copy` copies the column vectors (copycols = true), so both column replacement
-# and in-place element writes on the returned frame leave `ft.data` untouched.
-# This method declares no keywords, so `DataFrame(ft; copycols = false)` does not
-# reach it: that call falls through to the generic Tables.jl constructor and does
-# alias `ft.data`.
-DataFrames.DataFrame(ft::ForecastTable) = copy(ft.data)
+# `copy` copies the column vectors, so both column replacement and in-place
+# element writes on the returned frame leave `ft.data` untouched.
+#
+# `copycols` is declared here rather than left to the generic Tables.jl
+# constructor, which a keyword call would otherwise fall through to: without it
+# `DataFrame(ft; copycols = false)` aliased `ft.data` by accident of dispatch,
+# giving no hint that the result shares the store.
+function DataFrames.DataFrame(ft::ForecastTable; copycols::Bool = true)
+    return copycols ? copy(ft.data) : DataFrames.DataFrame(ft.data; copycols = false)
+end
 
 """
     task_id_cols(ft::ForecastTable) -> Vector{Symbol}
