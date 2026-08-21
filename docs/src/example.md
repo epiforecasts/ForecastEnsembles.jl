@@ -314,9 +314,13 @@ backtest(train_ft, train_obs,
 
 ## Recalibrated mixture (beta-transformed linear pool)
 
-`BLP` corrects the linear pool's tail underdispersion. It fits a Beta to the
-pool's PIT values on quantile-typed history, then reweights the pool's quantile
-levels rather than the models:
+`BLP` corrects a miscalibrated linear pool. It fits a Beta to the pool's PIT
+values on quantile-typed history, then reweights the pool's quantile levels
+rather than the models. Its usual motivation is a pool whose tails are too
+narrow, but the transform works in either direction, and this synthetic history
+is the other case: the members carry far more spread than the observations
+warrant, so the fitted Beta is peaked at 0.5 and the recalibrated interval comes
+out much narrower than the raw pool's.
 
 ```@example example
 blp = fit(BLP(), qtrain_ft, train_obs)
