@@ -27,13 +27,13 @@ The simplest combination: at each (location, τ) take the unweighted mean of the
 three model quantile values.
 
 ```@example example
-combine(ft, QuantileEnsemble(:mean))
+first(DataFrame(combine(ft, QuantileEnsemble(:mean))), 5)
 ```
 
 Or the median ensemble the COVID-19 hub used as its default:
 
 ```@example example
-combine(ft, QuantileEnsemble(:median))
+first(DataFrame(combine(ft, QuantileEnsemble(:median))), 5)
 ```
 
 ## Mixture (linear opinion pool)
@@ -45,11 +45,18 @@ level by bisection. On quantile input this path is deterministic, so `n_samples`
 does not apply to it; that field governs the `:sample` path only.
 
 ```@example example
-combine(ft, MixtureEnsemble())
+first(DataFrame(combine(ft, MixtureEnsemble())), 5)
 ```
 
 This gives a different answer from Vincentization in general: averaging quantile
-values is not the same operation as averaging CDFs.
+values is not the same operation as averaging CDFs. On this slice the largest gap
+between the two is:
+
+```@example example
+vinc = DataFrame(combine(ft, QuantileEnsemble(:mean))).value
+mix = DataFrame(combine(ft, MixtureEnsemble())).value
+maximum(abs.(vinc .- mix))
+```
 
 ## Geometric (logarithmic) pool
 
@@ -57,7 +64,7 @@ Multiply the member densities instead of averaging them — a product of experts
 sharper than the linear pool where the models agree:
 
 ```@example example
-combine(ft, LogarithmicPool())
+first(DataFrame(combine(ft, LogarithmicPool())), 5)
 ```
 
 ## Robust mean (trimmed / winsorised)
@@ -66,14 +73,14 @@ Drop or clamp the most extreme model at each (location, τ) before averaging, fo
 robustness to an outlier submission:
 
 ```@example example
-combine(ft, TrimmedMean(; fraction = 0.2))
+first(DataFrame(combine(ft, TrimmedMean(; fraction = 0.2))), 5)
 ```
 
 With `mode = :winsorise` the extremes are clamped to the surviving range rather
 than dropped:
 
 ```@example example
-combine(ft, TrimmedMean(; fraction = 0.2, mode = :winsorise))
+first(DataFrame(combine(ft, TrimmedMean(; fraction = 0.2, mode = :winsorise))), 5)
 ```
 
 `fraction` trims `round(fraction · n)` models from each end, capped so at least
@@ -90,11 +97,11 @@ w = EnsembleWeights(DataFrame(
     weight = [0.2, 0.4, 0.4]
 ))
 
-combine(ft, QuantileEnsemble(:mean; weights = w))
+first(DataFrame(combine(ft, QuantileEnsemble(:mean; weights = w))), 5)
 ```
 
 ```@example example
-combine(ft, MixtureEnsemble(; weights = w))
+first(DataFrame(combine(ft, MixtureEnsemble(; weights = w))), 5)
 ```
 
 ## A history to learn weights from
@@ -154,7 +161,7 @@ DataFrame(weights(stacked))
 ```
 
 ```@example example
-combine(ft, MixtureEnsemble(; weights = stacked))
+first(DataFrame(combine(ft, MixtureEnsemble(; weights = stacked))), 5)
 ```
 
 ## Weights from QRA
@@ -173,7 +180,7 @@ qra = fit(
         intercept = false),
     qtrain_ft, train_obs
 )
-combine(ft, QuantileEnsemble(:mean; weights = qra))
+first(DataFrame(combine(ft, QuantileEnsemble(:mean; weights = qra))), 5)
 ```
 
 Some configurations do not reduce to a weight vector at all — fits with an
@@ -246,6 +253,36 @@ Its `trajectory` records the weights after every update, and
 weight_stability(hedged)
 ```
 
+Hierarchical weighting fits a vector per stratum, shrunk toward a shared one, for
+when locations behave differently but not independently. It needs a stratifying
+column, so this builds a two-location history in which each model is the sharp
+one somewhere:
+
+```@example example
+prows = DataFrame[]
+orows = DataFrame[]
+for loc in ("CA", "TX")
+    sds = loc == "CA" ? (12.0, 30.0, 25.0) : (30.0, 12.0, 25.0)
+    for t in 1:T
+        push!(orows, DataFrame(location = loc, t = t,
+            observed = signal[t] + 6.0 * randn(rng)))
+        for (mid, sd) in zip(MODELS, sds)
+            push!(prows, DataFrame(model_id = mid, output_type = "sample",
+                output_type_id = 1:K, location = loc, t = t,
+                value = signal[t] .+ sd .* randn(rng, K)))
+        end
+    end
+end
+pool_ft = ForecastTable(reduce(vcat, prows); task_id_cols = [:t, :location])
+pool_obs = reduce(vcat, orows)
+
+pooled = fit(PartialPooling(crps; strata = [:location]), pool_ft, pool_obs)
+pooled.weights
+```
+
+Each location's weights favour the member that is sharp there, which a single
+global vector could not express.
+
 ## Training on a trailing window, and comparing schemes
 
 `Windowed` restricts any estimator to the most recent times, and `backtest`
@@ -279,7 +316,7 @@ levels rather than the models:
 
 ```@example example
 blp = fit(BLP(), qtrain_ft, train_obs)
-combine(ft, blp)
+first(DataFrame(combine(ft, blp)), 5)
 ```
 
 Because it recalibrates the pooled distribution rather than estimating per-model
