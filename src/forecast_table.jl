@@ -26,11 +26,12 @@ that is not one of the required columns.
 Getting the data out
 --------------------
 
-`DataFrame(ft)` returns a copy, safe to mutate. Anything routed through the
-Tables.jl interface shares the backing store instead, as that zero-copy contract
-expects: `Tables.columns(ft)` and `DataFrame(ft; copycols = false)` both hand
-back columns aliasing `ft.data`. Mutating those in place corrupts `ft` and
-bypasses the constructor's validation.
+`DataFrame(ft)` returns a copy, safe to mutate, as does
+`DataFrame(ft; copycols = true)`. Two routes share the backing store
+instead, as the Tables.jl zero-copy contract expects: `Tables.columns(ft)`
+and `DataFrame(ft; copycols = false)` both hand back columns aliasing
+`ft.data`. Mutating those in place corrupts `ft` and bypasses the
+constructor's validation.
 
 Fields
 ------
