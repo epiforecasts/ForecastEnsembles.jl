@@ -77,3 +77,48 @@ end
     shared.value[1] = -222.0
     @test DataFrame(ft).value[1] == -222.0
 end
+
+@testitem "Constructor and weights errors say what to do about it" begin
+    using DataFrames
+
+    # A frame using scoringutils/lopensemble column names should be told which
+    # renames to make, not merely which of our names are absent. The hint map is
+    # mirrored in r-pkg/ForecastEnsembles/R/utils.R.
+    foreign = DataFrame(
+        model = "m1", quantile_level = 0.5, predicted = 1.0,
+        output_type = "quantile", location = "A"
+    )
+    err = try
+        ForecastTable(foreign; task_id_cols = [:location])
+        nothing
+    catch e
+        e
+    end
+    @test err isa ArgumentError
+    @test occursin("`model` -> `model_id`", err.msg)
+    @test occursin("`quantile_level` -> `output_type_id`", err.msg)
+    @test occursin("`predicted` -> `value`", err.msg)
+
+    # A frame with no recognisable aliases gets the plain message, with no
+    # misleading rename advice appended.
+    bare = DataFrame(thing = 1, output_type = "quantile", location = "A")
+    err2 = try
+        ForecastTable(bare; task_id_cols = [:location])
+        nothing
+    catch e
+        e
+    end
+    @test err2 isa ArgumentError
+    @test !occursin("rename", err2.msg)
+
+    # A method with no weight vector must say why, not just that it has none.
+    blp = ForecastEnsembles.FittedBLP(1.0, 1.0, nothing)
+    err3 = try
+        effective_num_models(blp)
+        nothing
+    catch e
+        e
+    end
+    @test err3 isa ArgumentError
+    @test occursin("recalibrates", err3.msg)
+end

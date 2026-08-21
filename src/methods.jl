@@ -307,3 +307,8 @@ function weights end
 # Default: no weights interpretation (e.g. an unconstrained or per-quantile
 # QRA fit, or any future method without a single per-model weight vector).
 weights(::EnsembleMethod) = nothing
+
+# Why `weights` returned `nothing`, phrased for whoever called it. Each method
+# that can return `nothing` overrides this, so the error names the actual cause
+# rather than leaving the caller to guess which of several it hit.
+_no_weights_reason(::EnsembleMethod) = "it does not reduce to one weight per model"

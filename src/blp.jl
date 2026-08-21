@@ -138,6 +138,12 @@ end
 # BLP is a recalibration, not a weight vector — no `weights` interpretation.
 weights(::FittedBLP) = nothing
 
+function _no_weights_reason(::FittedBLP)
+    "BLP recalibrates the pooled distribution through a Beta transform and " *
+    "never estimates per-model weights; use the equal or supplied weights of " *
+    "the pool it was fitted to"
+end
+
 # Maximum-likelihood Beta fit of the PIT values, with a method-of-moments
 # fallback (and the identity Beta(1,1) when the moments are degenerate).
 function _fit_beta(u::AbstractVector{<:Real})

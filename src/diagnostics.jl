@@ -88,7 +88,8 @@ _ensemble_weights(w::EnsembleWeights) = w
 _ensemble_weights(df::AbstractDataFrame) = EnsembleWeights(df)
 function _ensemble_weights(m::EnsembleMethod)
     w = weights(m)
-    w === nothing &&
-        throw(ArgumentError("$(typeof(m)) does not expose ensemble weights"))
+    w === nothing && throw(ArgumentError(
+        "$(nameof(typeof(m))) does not expose ensemble weights: " *
+        "$(_no_weights_reason(m))."))
     return w isa EnsembleWeights ? w : EnsembleWeights(w)
 end

@@ -92,11 +92,35 @@ end
 
 ForecastTable(t; kwargs...) = ForecastTable(DataFrame(t); kwargs...)
 
+# Column names used by the R packages this one mirrors (scoringutils,
+# lopensemble), mapped to ours. Kept in step with `.col_hints` in
+# `r-pkg/ForecastEnsembles/R/utils.R` so both languages suggest the same
+# renames: `output_type` and `output_type_id` are hubverse terms, and a user
+# arriving from either package will have the columns under other names.
+const COLUMN_HINTS = (
+    model = :model_id,
+    quantile_level = :output_type_id,
+    sample_id = :output_type_id,
+    sample = :output_type_id,
+    predicted = :value
+)
+
 function _validate_columns!(df::DataFrame, model_id_col::Symbol)
     required = (model_id_col, REQUIRED_NON_TASK_COLS...)
     missing_cols = [c for c in required if !hasproperty(df, c)]
-    isempty(missing_cols) ||
-        throw(ArgumentError("ForecastTable is missing required columns: $(missing_cols)"))
+    isempty(missing_cols) && return nothing
+
+    present = propertynames(df)
+    hints = [(alias, ours)
+             for (alias, ours) in pairs(COLUMN_HINTS)
+             if alias in present && ours in missing_cols]
+    msg = "ForecastTable is missing required columns: $(missing_cols)"
+    if !isempty(hints)
+        renames = join(("`$alias` -> `$ours`" for (alias, ours) in hints), ", ")
+        msg *= ". The frame uses scoringutils/lopensemble-style names; rename " *
+               renames
+    end
+    throw(ArgumentError(msg))
 end
 
 # ---- accessors ----
