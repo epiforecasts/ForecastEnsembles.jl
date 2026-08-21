@@ -80,12 +80,15 @@ end
 
 Output of `fit(::Hedge, …)`. Stores the final simplex `weights` (a `DataFrame`
 with columns `model_id` and `weight`), the component `models` in weight order,
-the `trajectory` — a long `DataFrame` (`time_col`, `model_id`, `weight`) of the
-weights after each update, for diagnosing weight stability over time — and
-`time_col`, the name of the trajectory's time column (carried over from the
-[`Hedge`](@ref) that produced it, so [`weight_stability`](@ref) can order the
-trajectory without having to guess which column holds the time). Plug into
-`combine(ft, fitted)` — internally a [`LinearPool`](@ref) with the final weights.
+the `trajectory`, and `time_col`.
+
+The `trajectory` is a long `DataFrame` (`time_col`, `model_id`, `weight`) holding
+the weights after each update, for diagnosing weight stability over time.
+`time_col` names its time column, carried over from the [`Hedge`](@ref) that
+produced it so [`weight_stability`](@ref) can order the trajectory by it.
+
+Plug into `combine(ft, fitted)`, internally a [`LinearPool`](@ref) with the final
+weights.
 """
 struct FittedHedge <: UnfittedMethod
     weights::DataFrame

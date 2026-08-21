@@ -27,9 +27,9 @@ Getting the data out
 --------------------
 
 `DataFrame(ft)` returns a copy, safe to mutate. The Tables.jl interface
-(`Tables.columns`) is zero-copy as that contract expects, so its columns alias
-the table's backing store — mutating them in place corrupts `ft` and bypasses
-the constructor's validation.
+(`Tables.columns`) is zero-copy, as that contract expects, so its columns alias
+the table's backing store. Mutating them in place corrupts `ft` and bypasses the
+constructor's validation.
 
 Fields
 ------
