@@ -27,7 +27,7 @@ generic `Stacking`, `InverseScore`, `Hedge`, `PartialPooling` — take a score
 *you* supply: any callable `score(samples, y; w)`. The package depends on no
 scoring library;
 [`ScoringRules.jl`](https://github.com/EpiAware/ScoringRules.jl) is the natural
-**companion** — `using ScoringRules` then `Stacking(ScoringRules.crps)` — but you
+companion (`using ScoringRules`, then `Stacking(ScoringRules.crps)`), but you
 can pass your own function just as well.
 
 This package covers the *combine* step of a forecasting pipeline
