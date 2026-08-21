@@ -76,8 +76,9 @@ than dropped:
 combine(ft, TrimmedMean(; fraction = 0.2, mode = :winsorise))
 ```
 
-`fraction` trims `round(fraction · n)` models from each end, so with three
-models it needs to reach 0.2 before anything is trimmed at all.
+`fraction` trims `round(fraction · n)` models from each end, capped so at least
+one value survives, so with three models nothing is trimmed until `fraction`
+rises above about 0.17.
 
 ## Hand-supplied weights
 
