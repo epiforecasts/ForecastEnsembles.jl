@@ -290,7 +290,7 @@ global vector could not express.
 
 `Windowed` restricts any estimator to the most recent times, and `backtest`
 compares schemes out of sample by expanding the training window one step at a
-time:
+time.
 
 `backtest` scores each fold with a function you supply, of the shape
 `(forecast, observations) -> score`. Built from the `crps` above:
