@@ -65,8 +65,9 @@ algorithm path depends on the forecast `output_type`:
 
 - `:sample`   — weighted resample from per-model samples.
 - `:cdf`      — pointwise weighted average of CDFs.
-- `:quantile` — reconstruct each model's CDF from its quantiles, draw
-  `n_samples`, pool, and re-extract quantiles at the original levels.
+- `:quantile` — reconstruct each model's CDF from its quantiles, then invert
+  the mixture CDF at each requested level by bisection. Deterministic, so
+  `n_samples` has no effect on this path.
 
 Mixture pooling is fundamentally a per-model operation; per-quantile
 weights aren't meaningful here (use `QuantileEnsemble` for that).
