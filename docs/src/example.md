@@ -255,8 +255,8 @@ weight_stability(hedged)
 
 Hierarchical weighting fits a vector per stratum, shrunk toward a shared one, for
 when locations behave differently but not independently. It needs a stratifying
-column, so this builds a two-location history in which each model is the sharp
-one somewhere:
+column, so this builds a two-location history in which a different member is the
+sharp one in each:
 
 ```@example example
 prows = DataFrame[]
