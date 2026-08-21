@@ -51,6 +51,11 @@ fitted `trajectory`. A large value flags a model whose weight swung across the
 history (regime change or noise); a small one flags a stable contribution.
 Returns a `DataFrame` with columns `model_id` and `total_variation`.
 
+Orders each model's rows by the fitted `time_col`. The trajectory may carry
+extra columns, but it must hold exactly one weight per model per time step:
+grouping is on `model_id` alone, so a second key such as a location would
+interleave unrelated weight series.
+
 # Example
 
 ```@example
@@ -61,16 +66,19 @@ trajectory = DataFrame(
     t = [1, 2, 1, 2]
 )
 fitted = FittedHedge(
-    DataFrame(model_id = ["m1", "m2"], weight = [0.7, 0.3]), ["m1", "m2"], trajectory)
+    DataFrame(model_id = ["m1", "m2"], weight = [0.7, 0.3]), ["m1", "m2"],
+    trajectory, :t)
 weight_stability(fitted)
 ```
 """
 function weight_stability(m::FittedHedge)
     traj = m.trajectory
     isempty(traj) && return DataFrame(model_id = String[], total_variation = Float64[])
-    tc = only(setdiff(propertynames(traj), [:model_id, :weight]))
+    hasproperty(traj, m.time_col) || throw(ArgumentError(
+        "the fitted trajectory has no time column $(m.time_col); " *
+        "columns are $(propertynames(traj))"))
     return DataFrames.combine(DataFrames.groupby(traj, :model_id)) do g
-        s = sort(g, tc)
+        s = sort(g, m.time_col)
         (; total_variation = sum(abs.(diff(Float64.(s.weight)))))
     end
 end

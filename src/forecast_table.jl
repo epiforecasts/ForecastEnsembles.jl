@@ -23,6 +23,16 @@ ForecastTable(df; task_id_cols, model_id_col = :model_id)
 `task_id_cols` may be omitted, in which case it is inferred as every column
 that is not one of the required columns.
 
+Getting the data out
+--------------------
+
+`DataFrame(ft)` returns a copy, safe to mutate, as does
+`DataFrame(ft; copycols = true)`. Two routes share the backing store
+instead, as the Tables.jl zero-copy contract expects: `Tables.columns(ft)`
+and `DataFrame(ft; copycols = false)` both hand back columns aliasing
+`ft.data`. Mutating those in place corrupts `ft` and bypasses the
+constructor's validation.
+
 Fields
 ------
 
@@ -94,6 +104,9 @@ end
 # (which would bypass the constructor's validation) through the accessor.
 # `copy` copies the column vectors (copycols = true), so both column replacement
 # and in-place element writes on the returned frame leave `ft.data` untouched.
+# This method declares no keywords, so `DataFrame(ft; copycols = false)` does not
+# reach it: that call falls through to the generic Tables.jl constructor and does
+# alias `ft.data`.
 DataFrames.DataFrame(ft::ForecastTable) = copy(ft.data)
 
 """
@@ -188,6 +201,9 @@ end
 
 Tables.istable(::Type{ForecastTable}) = true
 Tables.columnaccess(::Type{ForecastTable}) = true
+# Zero-copy, as the Tables.jl contract expects: the returned columns alias the
+# table's backing store, so mutating them in place corrupts `ft`. Use
+# `DataFrame(ft)` (above) for a copy you own.
 Tables.columns(ft::ForecastTable) = Tables.columns(ft.data)
 Tables.schema(ft::ForecastTable) = Tables.schema(ft.data)
 
