@@ -103,7 +103,7 @@ function combine(ft::ForecastTable, m::FittedPartialPooling; rng::AbstractRNG = 
             task_id_cols = ft.task_id_cols,
             model_id_col = ft.model_id_col
         )
-        push!(outs, combine(sub, LinearPool(; weights = wdf); rng = rng).data)
+        push!(outs, combine(sub, MixtureEnsemble(; weights = wdf); rng = rng).data)
     end
     return ForecastTable(
         reduce(vcat, outs);

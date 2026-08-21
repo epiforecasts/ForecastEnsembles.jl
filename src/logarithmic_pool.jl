@@ -4,7 +4,7 @@
 #     f_ens(x) ∝ Πᵢ fᵢ(x)^wᵢ,
 #
 # the geometric-mean counterpart of the linear pool's arithmetic mean of
-# densities ([`MixtureEnsemble`](@ref)/[`LinearPool`](@ref)). It is a product of
+# densities ([`MixtureEnsemble`](@ref)). It is a product of
 # experts: mass survives only where every weighted member puts mass, so the pool
 # is sharper than the linear pool and precision-weights toward the tightest
 # member. Unlike the linear pool it has no closed form for reconstructed quantile
@@ -17,7 +17,7 @@
 Logarithmic (geometric) opinion pool of quantile forecasts: the ensemble is the
 normalised weighted product of the member densities, `f_ens(x) ∝ Πᵢ fᵢ(x)^wᵢ`.
 
-The geometric-mean counterpart of [`LinearPool`](@ref) (which averages the
+The geometric-mean counterpart of [`MixtureEnsemble`](@ref) (which averages the
 densities): the log pool is a product of experts, so it concentrates where the
 members agree and is typically sharper than the linear pool. `weights` are
 per-model (equal by default, or any per-model [`EnsembleWeights`](@ref) / fitted

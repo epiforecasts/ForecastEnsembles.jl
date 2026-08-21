@@ -28,7 +28,7 @@ export ForecastTable,
        EnsembleWeights,
        QuantileEnsemble,
        MixtureEnsemble,
-       LinearPool,        # alias for MixtureEnsemble
+       LinearPool,        # documented alias; MixtureEnsemble is primary
        LogarithmicPool,
        TrimmedMean,
        QRA,

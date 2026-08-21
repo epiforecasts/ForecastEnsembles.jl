@@ -9,7 +9,12 @@
 """
     Hedge(score; eta = nothing, time_col)
 
-Online ensemble weighting by the Hedge / exponentiated-gradient rule.
+Adaptive, time-varying ensemble weights: a member forecasting poorly in one
+period counts for less in the next. This is the forecast-combination use of
+what the online-learning literature calls the Hedge or exponentiated-gradient
+rule, and it is close in spirit to dynamic model averaging. Use it when member
+skill changes over time; for weights fixed across the whole training period
+use [`Stacking`](@ref) or [`CRPSStacking`](@ref).
 
 `fit(Hedge(score; time_col), training, observations)` walks the distinct
 `time_col` values in order and, at each step, multiplies every member's weight by
@@ -87,7 +92,7 @@ the weights after each update, for diagnosing weight stability over time.
 `time_col` names its time column, carried over from the [`Hedge`](@ref) that
 produced it so [`weight_stability`](@ref) can order the trajectory by it.
 
-Plug into `combine(ft, fitted)`, internally a [`LinearPool`](@ref) with the final
+Plug into `combine(ft, fitted)`, internally a [`MixtureEnsemble`](@ref) with the final
 weights.
 """
 struct FittedHedge <: UnfittedMethod
@@ -98,7 +103,7 @@ struct FittedHedge <: UnfittedMethod
 end
 
 function combine(ft::ForecastTable, m::FittedHedge; rng::AbstractRNG = default_rng())
-    return combine(ft, LinearPool(; weights = m.weights); rng = rng)
+    return combine(ft, MixtureEnsemble(; weights = m.weights); rng = rng)
 end
 
 weights(m::FittedHedge) = EnsembleWeights(m.weights)
