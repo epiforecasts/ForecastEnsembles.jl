@@ -210,9 +210,10 @@ end
 You can still apply such a fit directly with `combine(ft, loose)`, which uses the
 regression coefficients to predict quantiles. Nothing constrains those
 coefficients, so the predicted quantiles can cross — on this small history they
-do, and the package warns about it. `per_quantile_weights = true` with
-`noncross = true`, or sorting each task's values before submission, restores
-monotonicity.
+do, and the package warns about it. Fitting with `per_quantile_weights = true`
+and `noncross = true` constrains the ordering at the training points only; on a
+new forecast table the predictions can still cross, so sort each task's values
+before submission.
 
 ## Score-driven estimators
 
