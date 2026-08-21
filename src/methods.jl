@@ -107,12 +107,9 @@ _resolve_weights(::Nothing) = nothing
 _resolve_weights(w::EnsembleWeights) = w
 function _resolve_weights(w::EnsembleMethod)
     wf = weights(w)
-    wf === nothing && throw(
-        ArgumentError(
-        "method $(typeof(w)) does not expose ensemble weights " *
-        "(see `weights(::$(typeof(w)))` for the conditions).",
-    ),
-    )
+    wf === nothing && throw(ArgumentError(
+        "$(nameof(typeof(w))) does not expose ensemble weights: " *
+        "$(_no_weights_reason(w))."))
     return _resolve_weights(wf)
 end
 _resolve_weights(w) = EnsembleWeights(w)
