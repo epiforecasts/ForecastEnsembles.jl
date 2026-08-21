@@ -26,10 +26,11 @@ that is not one of the required columns.
 Getting the data out
 --------------------
 
-`DataFrame(ft)` returns a copy, safe to mutate. The Tables.jl interface
-(`Tables.columns`) is zero-copy, as that contract expects, so its columns alias
-the table's backing store. Mutating them in place corrupts `ft` and bypasses the
-constructor's validation.
+`DataFrame(ft)` returns a copy, safe to mutate. Anything routed through the
+Tables.jl interface shares the backing store instead, as that zero-copy contract
+expects: `Tables.columns(ft)` and `DataFrame(ft; copycols = false)` both hand
+back columns aliasing `ft.data`. Mutating those in place corrupts `ft` and
+bypasses the constructor's validation.
 
 Fields
 ------
@@ -102,6 +103,9 @@ end
 # (which would bypass the constructor's validation) through the accessor.
 # `copy` copies the column vectors (copycols = true), so both column replacement
 # and in-place element writes on the returned frame leave `ft.data` untouched.
+# This method declares no keywords, so `DataFrame(ft; copycols = false)` does not
+# reach it: that call falls through to the generic Tables.jl constructor and does
+# alias `ft.data`.
 DataFrames.DataFrame(ft::ForecastTable) = copy(ft.data)
 
 """
