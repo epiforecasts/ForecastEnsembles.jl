@@ -40,13 +40,17 @@ A data frame of class `model_out_tbl` in the same shape as the
   input, with `model_id` set as requested.
 }
 \description{
+Wraps the Julia method `MixtureEnsemble`, which the Julia package documents
+under that name; `LinearPool` is an alias there. This function keeps the
+`linear_pool` name to mirror `hubEnsembles`.
+}
+\details{
 R wrapper that mirrors `hubEnsembles::linear_pool`. Routes by
 `output_type` of `model_out_tbl`: samples are pooled by weighted
 resampling, CDFs averaged pointwise, and quantile inputs go through CDF
 reconstruction (PCHIP + normal tails) followed by exact inversion of
 the mixture CDF.
-}
-\details{
+
 Differences from `hubEnsembles::linear_pool` to be aware of when
 migrating:
 \itemize{

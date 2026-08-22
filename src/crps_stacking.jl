@@ -6,7 +6,7 @@ Output of `fit(::CRPSStacking, …)`. Stores the simplex-constrained ensemble
 `weights` as a `DataFrame` with columns `model_id` and `weight`, the list of
 `models` these weights refer to, and `crps`, the fitted objective value (the
 mean CRPS achieved at the optimum). Plug into `combine(ft, fitted)` (sample
-inputs) — internally a [`LinearPool`](@ref) with these weights.
+inputs) — internally a [`MixtureEnsemble`](@ref) with these weights.
 """
 struct FittedCRPSStacking <: UnfittedMethod
     weights::DataFrame
@@ -171,7 +171,7 @@ end
     combine(ft::ForecastTable, m::FittedCRPSStacking; rng = default_rng()) -> ForecastTable
 
 Apply CRPS-stacked weights to a (sample-typed) forecast table. Equivalent to
-`combine(ft, LinearPool(weights = m.weights))`.
+`combine(ft, MixtureEnsemble(weights = m.weights))`.
 
 # Arguments
 - `ft`: a `ForecastTable` of sample forecasts.
@@ -199,7 +199,7 @@ combine(ft, fitted)
 ```
 """
 function combine(ft::ForecastTable, m::FittedCRPSStacking; rng::AbstractRNG = default_rng())
-    return combine(ft, LinearPool(; weights = m.weights); rng = rng)
+    return combine(ft, MixtureEnsemble(; weights = m.weights); rng = rng)
 end
 
 # CRPSStacking is by construction a single per-model weight vector on the

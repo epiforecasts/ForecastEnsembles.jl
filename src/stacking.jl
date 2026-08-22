@@ -8,14 +8,19 @@
 """
     Stacking(score; dirichlet_alpha = 1.0)
 
-Score-optimal stacking against a user-supplied proper scoring rule.
+Score-optimal stacking against a proper scoring rule you supply.
+
+Use this when the score is not CRPS, or is CRPS with options this package's
+own implementation does not offer. For plain CRPS, [`CRPSStacking`](@ref)
+computes the same kind of weights with CRPS built in, so it needs no scoring
+library at all.
 
 `fit(Stacking(score), training, observations)` learns simplex ensemble weights
 that minimise the mean `score` of the linearly-pooled forecast, where `score` is
 any negatively-oriented rule from
 [`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) — e.g.
 `ScoringRules.crps`. The `FittedStacking` result plugs into [`combine`](@ref),
-or into [`LinearPool`](@ref)/[`QuantileEnsemble`](@ref) via [`weights`](@ref).
+or into [`MixtureEnsemble`](@ref)/[`QuantileEnsemble`](@ref) via [`weights`](@ref).
 
 `score` is any callable `score(samples, y; w)`;
 [`ScoringRules`](https://github.com/EpiAware/ScoringRules.jl) is the natural
@@ -55,7 +60,7 @@ end
 Output of `fit(::Stacking, …)`. Stores the simplex ensemble `weights` (a
 `DataFrame` with columns `model_id` and `weight`), the component `models` in
 weight order, and the mean `score_value` achieved at the optimum. Plug into
-`combine(ft, fitted)` — internally a [`LinearPool`](@ref) with these weights.
+`combine(ft, fitted)` — internally a [`MixtureEnsemble`](@ref) with these weights.
 """
 struct FittedStacking <: UnfittedMethod
     weights::DataFrame
@@ -64,7 +69,7 @@ struct FittedStacking <: UnfittedMethod
 end
 
 function combine(ft::ForecastTable, m::FittedStacking; rng::AbstractRNG = default_rng())
-    return combine(ft, LinearPool(; weights = m.weights); rng = rng)
+    return combine(ft, MixtureEnsemble(; weights = m.weights); rng = rng)
 end
 
 weights(m::FittedStacking) = EnsembleWeights(m.weights)
@@ -130,8 +135,9 @@ end
 """
     InverseScore(score; temperature = 1.0)
 
-Performance weighting: score each member independently and weight the better
-ones more heavily — `wᵢ ∝ exp(−temperature · sᵢ)`, where `sᵢ` is member `i`'s
+Performance-based weighting, the distributional descendant of Bates & Granger
+(1969) inverse-error weights: score each member independently and weight the
+better ones more heavily — `wᵢ ∝ exp(−temperature · sᵢ)`, where `sᵢ` is member `i`'s
 mean `score` over the training set (negatively oriented, so a lower score earns
 more weight). No optimisation, so it is fast and robust with few observations;
 but — unlike [`Stacking`](@ref) — it scores each member in isolation and never
@@ -168,7 +174,7 @@ end
 Output of `fit(::InverseScore, …)`. Stores the simplex `weights` (a `DataFrame`
 with columns `model_id` and `weight`), the component `models` in weight order,
 and the per-member mean `scores` they were derived from. Plug into
-`combine(ft, fitted)` — internally a [`LinearPool`](@ref) with these weights.
+`combine(ft, fitted)` — internally a [`MixtureEnsemble`](@ref) with these weights.
 """
 struct FittedInverseScore <: UnfittedMethod
     weights::DataFrame
@@ -177,7 +183,7 @@ struct FittedInverseScore <: UnfittedMethod
 end
 
 function combine(ft::ForecastTable, m::FittedInverseScore; rng::AbstractRNG = default_rng())
-    return combine(ft, LinearPool(; weights = m.weights); rng = rng)
+    return combine(ft, MixtureEnsemble(; weights = m.weights); rng = rng)
 end
 
 weights(m::FittedInverseScore) = EnsembleWeights(m.weights)

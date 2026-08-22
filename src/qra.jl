@@ -297,6 +297,22 @@ function weights(m::FittedQRA)
     end
 end
 
+# Report which of the three disqualifying cases this fit is in, since the caller
+# cannot tell them apart from a bare `nothing`.
+function _no_weights_reason(m::FittedQRA)
+    m.enforce_normalisation ||
+        return "this QRA fit is unconstrained, so its coefficients are a " *
+               "regression, not weights summing to one; refit with " *
+               "`enforce_normalisation = true` for a weight vector"
+    m.has_intercept &&
+        return "this QRA fit has an intercept, so the coefficients alone do " *
+               "not define the combination; refit without one for a weight " *
+               "vector"
+    return "this QRA fit is grouped and the groups have different " *
+           "coefficients, so there is no single weight vector; fit one group " *
+           "at a time to get weights"
+end
+
 # m.coefs keys are (gkey, τ) where gkey is `()` when no group_cols were set.
 function _coefs_for(m::FittedQRA, τ)
     for (k, β) in m.coefs

@@ -93,6 +93,9 @@ end
 
 # Earlier name for what is now MixtureEnsemble; kept for source
 # compatibility.
+# `MixtureEnsemble` is the primary name, used throughout the docs. `LinearPool`
+# is kept because that is what the forecasting literature calls the operation
+# (Stone 1961), and what the R wrapper exposes as `linear_pool()`.
 const LinearPool = MixtureEnsemble
 
 # Coerce a `weights` argument into the canonical
@@ -104,17 +107,14 @@ _resolve_weights(::Nothing) = nothing
 _resolve_weights(w::EnsembleWeights) = w
 function _resolve_weights(w::EnsembleMethod)
     wf = weights(w)
-    wf === nothing && throw(
-        ArgumentError(
-        "method $(typeof(w)) does not expose ensemble weights " *
-        "(see `weights(::$(typeof(w)))` for the conditions).",
-    ),
-    )
+    wf === nothing && throw(ArgumentError(
+        "$(nameof(typeof(w))) does not expose ensemble weights: " *
+        "$(_no_weights_reason(w))."))
     return _resolve_weights(wf)
 end
 _resolve_weights(w) = EnsembleWeights(w)
 
-# Backward-compatible predicate used by the LinearPool dispatch.
+# Backward-compatible predicate used by the MixtureEnsemble dispatch.
 is_per_quantile_weights(::Nothing) = false
 is_per_quantile_weights(w::EnsembleWeights) = is_per_quantile(w)
 
@@ -172,8 +172,11 @@ end
                    lambda = nothing, time_col = nothing,
                    task_weights = nothing)
 
-CRPS-stacked linear opinion pool. Mirrors `lopensemble::crps_weights`,
-including its time weighting.
+CRPS-stacked mixture. Mirrors `lopensemble::crps_weights`, including its time
+weighting.
+
+CRPS is implemented here, so this needs no scoring library. Reach for the
+general [`Stacking`](@ref) when the objective is a different score.
 
 By default every training task contributes equally to the objective. Two
 ways to change that:
@@ -307,3 +310,8 @@ function weights end
 # Default: no weights interpretation (e.g. an unconstrained or per-quantile
 # QRA fit, or any future method without a single per-model weight vector).
 weights(::EnsembleMethod) = nothing
+
+# Why `weights` returned `nothing`, phrased for whoever called it. Each method
+# that can return `nothing` overrides this, so the error names the actual cause
+# rather than leaving the caller to guess which of several it hit.
+_no_weights_reason(::EnsembleMethod) = "it does not reduce to one weight per model"

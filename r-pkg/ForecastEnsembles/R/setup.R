@@ -121,9 +121,9 @@ function _ens_linear_pool(df_in, task_id_cols::Vector, n_samples::Int, weights_i
     cols = Symbol.(task_id_cols)
     ft = ForecastEnsembles.ForecastTable(df; task_id_cols = cols)
     method = if weights_in === nothing
-        ForecastEnsembles.LinearPool(; n_samples = n_samples)
+        ForecastEnsembles.MixtureEnsemble(; n_samples = n_samples)
     else
-        ForecastEnsembles.LinearPool(; n_samples = n_samples, weights = DataFrame(weights_in))
+        ForecastEnsembles.MixtureEnsemble(; n_samples = n_samples, weights = DataFrame(weights_in))
     end
     rng = seed === nothing ? Random.default_rng() :
                               Random.MersenneTwister(Int(seed))

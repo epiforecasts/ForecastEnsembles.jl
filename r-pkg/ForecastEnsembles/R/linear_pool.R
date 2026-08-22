@@ -1,5 +1,9 @@
 #' Linear opinion pool
 #'
+#' Wraps the Julia method `MixtureEnsemble`, which the Julia package documents
+#' under that name; `LinearPool` is an alias there. This function keeps the
+#' `linear_pool` name to mirror `hubEnsembles`.
+#'
 #' R wrapper that mirrors `hubEnsembles::linear_pool`. Routes by
 #' `output_type` of `model_out_tbl`: samples are pooled by weighted
 #' resampling, CDFs averaged pointwise, and quantile inputs go through CDF
