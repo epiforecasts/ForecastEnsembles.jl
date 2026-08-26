@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   test:
-    uses: EpiAware/.github/.github/workflows/tests.yml@8c1e09003b9cf0d2eb3cbec7aa726855bb365ac5
+    uses: EpiAware/.github/.github/workflows/tests.yml@2c7ce73459772f11dad46ac7f456e35f0d296faf
     # The kit requires Julia >= 1.11, so LTS (1.10) is dropped; test the 1.11
     # floor, the current release, and pre.
     with:
@@ -22,7 +22,7 @@ jobs:
     secrets: inherit  # pragma: allowlist secret
 
   downgrade-compat:
-    uses: EpiAware/.github/.github/workflows/downgrade.yml@8c1e09003b9cf0d2eb3cbec7aa726855bb365ac5
+    uses: EpiAware/.github/.github/workflows/downgrade.yml@2c7ce73459772f11dad46ac7f456e35f0d296faf
     # Run the downgrade suite on the 1.11 floor (the default 1.10 is unsupported).
     with:
       julia_version: '1.11'
