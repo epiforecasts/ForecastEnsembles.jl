@@ -7,7 +7,7 @@
 #' no-ops.
 #'
 #' Heavy lifting (binary detection, subprocess instantiate, lazy-init
-#' guard) is delegated to [juliaready::julia_ready()].
+#' guard) is delegated to [juliabridge::julia_ready()].
 #'
 #' @param julia_bindir Path to the directory containing the `julia`
 #'   executable. If supplied, sets `JULIACONNECTOR_JULIABIN` so the
@@ -62,13 +62,13 @@ julia_setup <- function(julia_bindir = NULL,
     abs <- normalizePath(ensembles_jl_path, mustWork = TRUE)
     abs_jl <- gsub("\\\\", "/", abs, fixed = TRUE)
     bridge_jl <- gsub("\\\\", "/", bridge, fixed = TRUE)
-    juliaready:::julia_subprocess(sprintf(
+    juliabridge:::julia_subprocess(sprintf(
       'import Pkg; Pkg.activate("%s"); Pkg.develop(path="%s")',
       bridge_jl, abs_jl
     ))
   }
 
-  juliaready::julia_ready(
+  juliabridge::julia_ready(
     packages  = c("ForecastEnsembles", "DataFrames"),
     state_env = .pkg_env,
     project   = bridge,
@@ -78,7 +78,7 @@ julia_setup <- function(julia_bindir = NULL,
 
   # Define all helper functions in one shot so subsequent calls don't pay
   # the parse cost.
-  juliaready::eval_julia(.bridge_helpers_jl())
+  juliabridge::eval_julia(.bridge_helpers_jl())
 
   invisible(NULL)
 }
