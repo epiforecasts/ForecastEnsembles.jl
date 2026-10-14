@@ -10,19 +10,19 @@ Description: A thin R interface to the Julia package ForecastEnsembles.jl, which
     unifies the methods previously spread across hubEnsembles, qrensemble
     and lopensemble under one in-memory representation and one set of
     verbs (combine() and fit()). All numerical work is done in Julia via
-    juliaready (which uses JuliaConnectoR under the hood); data frames
+    juliabridge (which uses JuliaConnectoR under the hood); data frames
     are round-tripped at the API boundary.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:
     R (>= 4.0.0)
 Imports:
-    juliaready
+    juliabridge
 Suggests:
     testthat (>= 3.0.0),
     data.table
 Remotes:
-    sbfnk/juliaready
+    epiforecasts/juliabridge
 Config/testthat/edition: 3
 SystemRequirements: Julia (>= 1.11)
 RoxygenNote: 7.3.3

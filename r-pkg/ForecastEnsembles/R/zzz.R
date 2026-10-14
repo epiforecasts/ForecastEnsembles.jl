@@ -1,7 +1,7 @@
 .pkg_env <- new.env(parent = emptyenv())
 
 .ensure_setup <- function() {
-  juliaready::ensure_julia(.pkg_env, julia_setup)
+  juliabridge::ensure_julia(.pkg_env, julia_setup)
 }
 
 # Resolve where the bridge Project.toml lives. After installation it is

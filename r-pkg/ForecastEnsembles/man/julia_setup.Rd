@@ -33,7 +33,7 @@ no-ops.
 }
 \details{
 Heavy lifting (binary detection, subprocess instantiate, lazy-init
-guard) is delegated to [juliaready::julia_ready()].
+guard) is delegated to [juliabridge::julia_ready()].
 }
 \section{Startup time}{
 
