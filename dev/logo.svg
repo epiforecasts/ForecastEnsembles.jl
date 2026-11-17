@@ -7,12 +7,12 @@
 
   <!-- Julia hexagon -->
   <path d="M 600 0 L 0 346.5 L 0 1039.5 L 600 1386 L 1200 1039.5 L 1200 346.5 Z"
-        fill="#1a1a2e" stroke="#e8e8f0" stroke-width="20"
+        fill="#f7f7fb" stroke="#1a1a2e" stroke-width="20"
         stroke-linejoin="miter"/>
 
   <!-- forecast baseline -->
   <line x1="130" y1="950" x2="1070" y2="950"
-        stroke="#e8e8f0" stroke-opacity="0.3" stroke-width="6"/>
+        stroke="#1a1a2e" stroke-opacity="0.3" stroke-width="6"/>
 
   <!-- three member forecast densities (Julia red / purple / green) -->
   <g fill-opacity="0.75" stroke-linejoin="round">
@@ -23,11 +23,11 @@
 
   <!-- the combined ensemble forecast -->
   <path d="M130 950 C365 950 506 300 600 300 C694 300 835 950 1070 950"
-        fill="none" stroke="#e8e8f0" stroke-width="16"
+        fill="none" stroke="#1a1a2e" stroke-width="16"
         stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- package name -->
   <text x="600" y="1085" text-anchor="middle"
         font-family="'Helvetica Neue', Arial, sans-serif"
-        font-size="76" font-weight="700" fill="#e8e8f0">ForecastEnsembles.jl</text>
+        font-size="76" font-weight="700" fill="#1a1a2e">ForecastEnsembles.jl</text>
 </svg>
