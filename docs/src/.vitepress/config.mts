@@ -96,8 +96,7 @@ export default defineConfig({
   },
   themeConfig: {
     outline: 'deep',
-    // separate files so the header logo follows the light or dark theme
-    logo: { light: '/logo.svg', dark: '/logo-dark.svg', width: 24, height: 24 },
+    logo: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     search: {
       provider: 'local',
       options: {

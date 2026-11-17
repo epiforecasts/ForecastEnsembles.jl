@@ -1,4 +1,4 @@
-# ForecastEnsembles.jl <img src="docs/src/assets/logo-dark.svg" width="150" alt="ForecastEnsembles logo" align="right">
+# ForecastEnsembles.jl <img src="docs/src/assets/logo.svg" width="150" alt="ForecastEnsembles logo" align="right">
 
 <!-- badges:start -->
 | **Documentation** | **Build Status** | **Code Quality** | **License & DOI** | **Downloads** |
