@@ -11,7 +11,7 @@
     @test quantile(qd, 0.25) < quantile(qd, 0.5) < quantile(qd, 0.75)
     # Both tails are fitted from the same two pairs → a single Normal; the
     # implied median is the midpoint.
-    @test quantile(qd, 0.5) ≈ 2.0 atol = 1e-9
+    @test quantile(qd, 0.5) ≈ 2.0 atol = 1.0e-9
 
     # Duplicate probabilities previously passed `issorted` and produced NaN
     # slopes silently.
@@ -38,12 +38,12 @@ end
     @test_throws ArgumentError ForecastTable(df[1:0, :]; task_id_cols = [:location])
 
     # NaN values rejected.
-    bad = copy(df);
+    bad = copy(df)
     bad.value = [1.0, NaN]
     @test_throws ArgumentError ForecastTable(bad; task_id_cols = [:location])
 
     # missing values rejected.
-    bad2 = copy(df);
+    bad2 = copy(df)
     bad2.value = [1.0, missing]
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 end
@@ -96,7 +96,7 @@ end
     out_q = sort(DataFrame(combine(qft, QuantileEnsemble(:mean))), :output_type_id)
     @test out_q.value ≈ [-1.0, 0.0, 1.0]
     out_m = sort(DataFrame(combine(qft, MixtureEnsemble())), :output_type_id)
-    @test out_m.value ≈ [-1.0, 0.0, 1.0] atol = 1e-8
+    @test out_m.value ≈ [-1.0, 0.0, 1.0] atol = 1.0e-8
 
     sdf = DataFrame(
         model_id = "only",
@@ -136,7 +136,7 @@ end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])
     out = sort(DataFrame(combine(ft, MixtureEnsemble())), :output_type_id)
     med = out.value[out.output_type_id .== 0.5][1]
-    @test med ≈ 2.5 atol = 1e-8
+    @test med ≈ 2.5 atol = 1.0e-8
 
     # Determinism: two calls give identical output.
     out2 = sort(DataFrame(combine(ft, MixtureEnsemble())), :output_type_id)
@@ -214,7 +214,7 @@ end
     sft = ForecastTable(small; task_id_cols = [:t])
     fitted = fit(CRPSStacking(), sft, obs)
     @test all(isfinite, fitted.weights.weight)
-    @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-8
+    @test sum(fitted.weights.weight) ≈ 1.0 atol = 1.0e-8
 end
 
 @testitem "FittedQRA combine guards" begin
@@ -227,8 +227,11 @@ end
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in (("m_a", y .+ 0.3 .* randn(rng, n)), (
-        "m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, pred) in (
+            ("m_a", y .+ 0.3 .* randn(rng, n)), (
+                "m_b", y .+ 0.3 .* randn(rng, n),
+            ),
+        )
         for τ in levels
             push!(
                 rows,
@@ -283,8 +286,11 @@ end
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     rows = DataFrame[]
-    for (mid, pred) in (("m_a", y .+ 0.4 .* randn(rng, n)), (
-        "m_b", y .+ 0.4 .* randn(rng, n)))
+    for (mid, pred) in (
+            ("m_a", y .+ 0.4 .* randn(rng, n)), (
+                "m_b", y .+ 0.4 .* randn(rng, n),
+            ),
+        )
         for τ in levels
             push!(
                 rows,
@@ -354,7 +360,7 @@ end
         ref_τ = ref_w[ref_w.quantile_level .== τ, :]
         for (i, mod) in enumerate(fitted.models)
             ref_val = first(ref_τ[ref_τ.model .== mod, :weight])
-            @test β[i] ≈ ref_val atol = 1e-3
+            @test β[i] ≈ ref_val atol = 1.0e-3
         end
     end
 
@@ -378,5 +384,5 @@ end
         on = [:location, :horizon, :target_date, :output_type_id]
     )
     @test nrow(j) == nrow(out)
-    @test maximum(abs.(j.value .- j.predicted_r)) < 1e-3
+    @test maximum(abs.(j.value .- j.predicted_r)) < 1.0e-3
 end

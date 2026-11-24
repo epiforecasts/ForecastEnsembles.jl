@@ -30,16 +30,16 @@ function EnsembleWeights(df; shape::Symbol = :auto)
     has_oti = :output_type_id in cols
     (has_model_id && has_weight) || throw(
         ArgumentError(
-        "EnsembleWeights requires :model_id and :weight columns " *
-        "(got $(collect(cols))).",
-    ),
+            "EnsembleWeights requires :model_id and :weight columns " *
+                "(got $(collect(cols))).",
+        ),
     )
 
     all(w -> !ismissing(w) && isfinite(w) && w >= 0, df.weight) || throw(
         ArgumentError(
-        "EnsembleWeights requires finite, non-negative, non-missing weights; " *
-        "mixing operations are undefined for negative or non-finite weights.",
-    ),
+            "EnsembleWeights requires finite, non-negative, non-missing weights; " *
+                "mixing operations are undefined for negative or non-finite weights.",
+        ),
     )
 
     inferred = has_oti ? :per_quantile : :per_model
@@ -50,8 +50,8 @@ function EnsembleWeights(df; shape::Symbol = :auto)
     elseif shape == :per_model && has_oti
         throw(
             ArgumentError(
-            "shape = :per_model is incompatible with an :output_type_id column",
-        ),
+                "shape = :per_model is incompatible with an :output_type_id column",
+            ),
         )
     elseif shape ∉ (:per_model, :per_quantile)
         throw(ArgumentError("shape must be :per_model, :per_quantile, or :auto"))
@@ -69,5 +69,5 @@ DataFrames.DataFrame(w::EnsembleWeights) = w.data
 
 function Base.show(io::IO, ::MIME"text/plain", w::EnsembleWeights)
     println(io, "EnsembleWeights($(w.shape), $(nrow(w.data)) rows)")
-    show(io, MIME("text/plain"), w.data)
+    return show(io, MIME("text/plain"), w.data)
 end

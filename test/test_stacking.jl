@@ -12,9 +12,9 @@
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
     rows = DataFrame[]
     for (mid, sampler) in (
-        ("m_good", (y, r) -> y .+ randn(r, K)),
-        ("m_noisy", (y, r) -> 5.0 .* randn(r, K))
-    )
+            ("m_good", (y, r) -> y .+ randn(r, K)),
+            ("m_noisy", (y, r) -> 5.0 .* randn(r, K)),
+        )
         for t in 1:T
             push!(
                 rows,
@@ -32,7 +32,7 @@
 
     fitted = fit(Stacking(crps), train, obs)
     @test isa(fitted, FittedStacking)
-    @test sum(fitted.weights.weight) ≈ 1.0 atol = 1e-6
+    @test sum(fitted.weights.weight) ≈ 1.0 atol = 1.0e-6
     good_w = fitted.weights[fitted.weights.model_id .== "m_good", :weight][1]
     @test good_w > 0.7
 

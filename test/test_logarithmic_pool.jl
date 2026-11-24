@@ -7,7 +7,8 @@
     # A model whose quantile forecast is Normal(μ, σ).
     normrows(mid, μ, σ) = DataFrame(
         model_id = mid, output_type = "quantile", output_type_id = levels,
-        location = "A", value = [quantile(Normal(μ, σ), τ) for τ in levels])
+        location = "A", value = [quantile(Normal(μ, σ), τ) for τ in levels]
+    )
 
     q(df, τ) = df[df.output_type_id .== τ, :value][1]
     width90(df) = q(df, 0.95) - q(df, 0.05)
@@ -55,11 +56,14 @@
     # Guards.
     @test_throws ArgumentError LogarithmicPool(; ngrid = 10)
     pq = EnsembleWeights(
-        DataFrame(model_id = ["m1"], output_type_id = [0.5], weight = [1.0]))
+        DataFrame(model_id = ["m1"], output_type_id = [0.5], weight = [1.0])
+    )
     @test_throws ArgumentError LogarithmicPool(; weights = pq)
     sft = ForecastTable(
-        DataFrame(model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
-            output_type_id = repeat(1:3, 2), location = "A", value = Float64.(1:6));
+        DataFrame(
+            model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
+            output_type_id = repeat(1:3, 2), location = "A", value = Float64.(1:6)
+        );
         task_id_cols = [:location]
     )
     @test_throws ArgumentError combine(sft, LogarithmicPool())
@@ -75,10 +79,14 @@ end
     levels = [1.0e-5, 0.01, 0.5, 0.99, 1 - 1.0e-5]
     rows = DataFrame[]
     for (mid, μ) in (("m1", 0.0), ("m2", 2.0))
-        push!(rows,
-            DataFrame(model_id = mid, output_type = "quantile",
+        push!(
+            rows,
+            DataFrame(
+                model_id = mid, output_type = "quantile",
                 output_type_id = levels, location = "A",
-                value = [dquantile(Normal(μ, 1), τ) for τ in levels]))
+                value = [dquantile(Normal(μ, 1), τ) for τ in levels]
+            )
+        )
     end
     ft = ForecastTable(reduce(vcat, rows); task_id_cols = [:location])
     out = sort(DataFrame(combine(ft, LogarithmicPool())), :output_type_id)

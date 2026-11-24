@@ -39,9 +39,12 @@ function Windowed(method::TrainedMethod, window::Integer; time_col::Symbol)
 end
 
 function fit(w::Windowed, training::ForecastTable, observations::AbstractDataFrame)
-    w.time_col in training.task_id_cols || throw(ArgumentError(
-        "time_col $(w.time_col) must be one of the task-id columns " *
-        "$(training.task_id_cols)"))
+    w.time_col in training.task_id_cols || throw(
+        ArgumentError(
+            "time_col $(w.time_col) must be one of the task-id columns " *
+                "$(training.task_id_cols)"
+        )
+    )
     times = sort(unique(training.data[!, w.time_col]))
     keep = Set(times[max(1, length(times) - w.window + 1):end])
     sub_ft = _time_subset(training, w.time_col, v -> v in keep)

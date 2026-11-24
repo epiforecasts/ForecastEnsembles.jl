@@ -13,8 +13,10 @@ using ForecastEnsembles
 using DataFrames
 using Random
 
-const LEVELS = [0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
-    0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99]
+const LEVELS = [
+    0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+    0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99,
+]
 
 # A quantile `model_out_tbl`: models × locations × horizons at the standard
 # hub levels. Values are sorted so each forecast is a valid (monotone) quantile.
@@ -22,9 +24,13 @@ function quantile_table(rng; nmodels = 5, nloc = 8, nhoriz = 4)
     rows = DataFrame[]
     for m in 1:nmodels, loc in 1:nloc, h in 1:nhoriz
         vals = sort(100 .+ 12 .* randn(rng, length(LEVELS)))
-        push!(rows,
-            DataFrame(model_id = "m$m", output_type = "quantile",
-                output_type_id = LEVELS, location = "loc$loc", horizon = h, value = vals))
+        push!(
+            rows,
+            DataFrame(
+                model_id = "m$m", output_type = "quantile",
+                output_type_id = LEVELS, location = "loc$loc", horizon = h, value = vals
+            )
+        )
     end
     return ForecastTable(reduce(vcat, rows); task_id_cols = [:location, :horizon])
 end
@@ -35,10 +41,14 @@ function sample_training(rng; nmodels = 4, ntime = 25, k = 80)
     rows = DataFrame[]
     for m in 1:nmodels, t in 1:ntime
 
-        push!(rows,
-            DataFrame(model_id = "m$m", output_type = "sample",
+        push!(
+            rows,
+            DataFrame(
+                model_id = "m$m", output_type = "sample",
                 output_type_id = 1:k, t = t,
-                value = obs.observed[t] .+ (2 + m) .* randn(rng, k)))
+                value = obs.observed[t] .+ (2 + m) .* randn(rng, k)
+            )
+        )
     end
     return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
 end
@@ -50,9 +60,13 @@ function quantile_training(rng; nmodels = 4, ntime = 25)
     for m in 1:nmodels, t in 1:ntime
 
         vals = sort(obs.observed[t] .+ (5 + 2m) .* randn(rng, length(LEVELS)))
-        push!(rows,
-            DataFrame(model_id = "m$m", output_type = "quantile",
-                output_type_id = LEVELS, t = t, value = vals))
+        push!(
+            rows,
+            DataFrame(
+                model_id = "m$m", output_type = "quantile",
+                output_type_id = LEVELS, t = t, value = vals
+            )
+        )
     end
     return ForecastTable(reduce(vcat, rows); task_id_cols = [:t]), obs
 end

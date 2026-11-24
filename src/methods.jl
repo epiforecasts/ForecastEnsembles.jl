@@ -82,9 +82,9 @@ function MixtureEnsemble(; weights = nothing, n_samples::Integer = 10_000)
     if w !== nothing && is_per_quantile(w)
         throw(
             ArgumentError(
-            "MixtureEnsemble takes per-model weights only; per-quantile " *
-            "weights belong to QuantileEnsemble.",
-        ),
+                "MixtureEnsemble takes per-model weights only; per-quantile " *
+                    "weights belong to QuantileEnsemble.",
+            ),
         )
     end
     n_samples > 0 || throw(ArgumentError("n_samples must be positive"))
@@ -107,9 +107,12 @@ _resolve_weights(::Nothing) = nothing
 _resolve_weights(w::EnsembleWeights) = w
 function _resolve_weights(w::EnsembleMethod)
     wf = weights(w)
-    wf === nothing && throw(ArgumentError(
-        "$(nameof(typeof(w))) does not expose ensemble weights: " *
-        "$(_no_weights_reason(w))."))
+    wf === nothing && throw(
+        ArgumentError(
+            "$(nameof(typeof(w))) does not expose ensemble weights: " *
+                "$(_no_weights_reason(w))."
+        )
+    )
     return _resolve_weights(wf)
 end
 _resolve_weights(w) = EnsembleWeights(w)
@@ -157,7 +160,7 @@ function QRA(;
         enforce_normalisation::Bool = true,
         noncross::Bool = true,
         group = Symbol[]
-)
+    )
     return QRA(
         per_quantile_weights,
         intercept,
@@ -215,13 +218,13 @@ function CRPSStacking(;
         time_col::Union{Nothing, Symbol} = nothing,
         task_weights = nothing,
         gamma = nothing
-)
+    )
     gamma === nothing || throw(
         ArgumentError(
-        "`gamma` (lopensemble's region weighting) has been replaced by the " *
-        "more general `task_weights`; supply a frame with the task-id " *
-        "columns plus :weight.",
-    ),
+            "`gamma` (lopensemble's region weighting) has been replaced by the " *
+                "more general `task_weights`; supply a frame with the task-id " *
+                "columns plus :weight.",
+        ),
     )
     if lambda !== nothing && task_weights !== nothing
         throw(ArgumentError("specify either `lambda` or `task_weights`, not both"))
@@ -229,16 +232,16 @@ function CRPSStacking(;
     if lambda !== nothing
         time_col === nothing && throw(
             ArgumentError(
-            "`lambda` requires `time_col`: the task column that orders " *
-            "tasks in time, e.g. time_col = :target_date.",
-        ),
+                "`lambda` requires `time_col`: the task column that orders " *
+                    "tasks in time, e.g. time_col = :target_date.",
+            ),
         )
         if lambda isa Real && !(lambda isa Bool)
             0 < lambda <= 1 || throw(
                 ArgumentError(
-                "scalar `lambda` is an exponential decay factor and must " *
-                "lie in (0, 1]",
-            ),
+                    "scalar `lambda` is an exponential decay factor and must " *
+                        "lie in (0, 1]",
+                ),
             )
             lambda = Float64(lambda)
         elseif lambda isa Symbol
@@ -251,9 +254,9 @@ function CRPSStacking(;
         elseif !(lambda isa Function)
             throw(
                 ArgumentError(
-                "`lambda` must be a scalar in (0,1], :lopensemble, :equal, " *
-                "a vector, or a function of the normalised time rank",
-            ),
+                    "`lambda` must be a scalar in (0,1], :lopensemble, :equal, " *
+                        "a vector, or a function of the normalised time rank",
+                ),
             )
         end
     end

@@ -12,21 +12,26 @@
     # Accepts an EnsembleWeights and a raw DataFrame.
     ew = EnsembleWeights(DataFrame(model_id = ["a", "b"], weight = [0.5, 0.5]))
     @test effective_num_models(ew) ≈ 2.0
-    @test effective_num_models(DataFrame(model_id = ["a", "b", "c"],
-        weight = [1 / 3, 1 / 3, 1 / 3])) ≈ 3.0
+    @test effective_num_models(
+        DataFrame(
+            model_id = ["a", "b", "c"],
+            weight = [1 / 3, 1 / 3, 1 / 3]
+        )
+    ) ≈ 3.0
 
     # Accepts a fitted method through `weights`.
     fitted = FittedCRPSStacking(
-        DataFrame(model_id = ["a", "b"], weight = [0.9, 0.1]), ["a", "b"], 0.0)
+        DataFrame(model_id = ["a", "b"], weight = [0.9, 0.1]), ["a", "b"], 0.0
+    )
     @test effective_num_models(fitted) ≈ 1 / (0.81 + 0.01)
 
     # Per-quantile weights → one value per level.
     pq = EnsembleWeights(
         DataFrame(
-        model_id = ["a", "b", "a", "b"],
-        output_type_id = [0.25, 0.25, 0.75, 0.75],
-        weight = [1.0, 0.0, 0.5, 0.5]
-    )
+            model_id = ["a", "b", "a", "b"],
+            output_type_id = [0.25, 0.25, 0.75, 0.75],
+            weight = [1.0, 0.0, 0.5, 0.5]
+        )
     )
     res = effective_num_models(pq)
     @test res isa DataFrame
@@ -55,7 +60,7 @@
     @test ws[ws.model_id .== "stable", :total_variation][1] ≈ 0.0
     @test ws[ws.model_id .== "swing", :total_variation][1] ≈ 0.9
     @test ws[ws.model_id .== "swing", :total_variation][1] >
-          ws[ws.model_id .== "stable", :total_variation][1]
+        ws[ws.model_id .== "stable", :total_variation][1]
 
     # A trajectory carrying extra columns still orders by the stored time_col;
     # the rows are shuffled so the ordering has to come from `time_col`.
@@ -81,6 +86,7 @@
 
     # Empty trajectory → empty result, no error.
     empty_fh = FittedHedge(
-        DataFrame(model_id = String[], weight = Float64[]), String[], DataFrame(), :t)
+        DataFrame(model_id = String[], weight = Float64[]), String[], DataFrame(), :t
+    )
     @test nrow(weight_stability(empty_fh)) == 0
 end

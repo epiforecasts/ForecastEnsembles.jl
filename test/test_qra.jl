@@ -59,8 +59,11 @@ end
     levels = [0.25, 0.5, 0.75]
     y = randn(rng, n_train)
     rows = DataFrame[]
-    for (mid, prediction) in (("m_a", y .+ 0.5 .* randn(rng, n_train)), (
-        "m_b", y .+ 0.5 .* randn(rng, n_train)))
+    for (mid, prediction) in (
+            ("m_a", y .+ 0.5 .* randn(rng, n_train)), (
+                "m_b", y .+ 0.5 .* randn(rng, n_train),
+            ),
+        )
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -102,8 +105,11 @@ end
     y = randn(rng, n_train)
 
     rows = DataFrame[]
-    for (mid, prediction) in (("m_a", y .+ 0.3 .* randn(rng, n_train)), (
-        "m_b", y .+ 0.3 .* randn(rng, n_train)))
+    for (mid, prediction) in (
+            ("m_a", y .+ 0.3 .* randn(rng, n_train)), (
+                "m_b", y .+ 0.3 .* randn(rng, n_train),
+            ),
+        )
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -174,8 +180,10 @@ end
     for (mid, prediction) in (("m_good", y), ("m_noisy", randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
-            df = DataFrame(model_id = mid, output_type = "quantile",
-                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ)
+            df = DataFrame(
+                model_id = mid, output_type = "quantile",
+                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ
+            )
             # m_noisy skips the last 20 tasks — a partial submission.
             mid == "m_noisy" && (df = df[df.t .<= n_train - 20, :])
             push!(rows, df)
@@ -192,7 +200,7 @@ end
     # but missing at that level, so the per-τ check fires with a clear
     # ArgumentError rather than a BoundsError.
     noisy_at_half = (train.data.model_id .== "m_noisy") .&
-                    (train.data.output_type_id .== 0.5)
+        (train.data.output_type_id .== 0.5)
     bad_rows = train.data[(train.data.t .<= 3) .& .!noisy_at_half, :]
     bad = ForecastTable(bad_rows; task_id_cols = [:t])
     err = try
@@ -220,8 +228,10 @@ end
     for (mid, prediction) in (("m_good", y), ("m_noisy", randn(rng, n_train)))
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
-            df = DataFrame(model_id = mid, output_type = "quantile",
-                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ)
+            df = DataFrame(
+                model_id = mid, output_type = "quantile",
+                output_type_id = τ, t = 1:n_train, value = prediction .+ zτ
+            )
             # m_noisy drops the last 20 tasks at τ = 0.5 only, so the complete-case
             # count differs across τ — which the noncross joint LP cannot align.
             (mid == "m_noisy" && τ == 0.5) && (df = df[df.t .<= n_train - 20, :])
@@ -233,9 +243,12 @@ end
 
     err = try
         fit(
-            QRA(; per_quantile_weights = true, noncross = true,
-                enforce_normalisation = true, intercept = false),
-            train, obs)
+            QRA(;
+                per_quantile_weights = true, noncross = true,
+                enforce_normalisation = true, intercept = false
+            ),
+            train, obs
+        )
         nothing
     catch e
         e

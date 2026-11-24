@@ -14,7 +14,7 @@
     d = DataFrame(out)
     @test sort(unique(d.model_id)) == ["hub-ensemble"]
     sort!(d, :output_type_id)
-    @test d.value ≈ [(1.0 + 2.0 + 0.5)/3, (3.0 + 4.0 + 2.5)/3]
+    @test d.value ≈ [(1.0 + 2.0 + 0.5) / 3, (3.0 + 4.0 + 2.5) / 3]
 
     # unweighted median
     out_med = combine(ft, QuantileEnsemble(:median))
@@ -26,7 +26,7 @@
     out_w = combine(ft, QuantileEnsemble(:mean; weights = w))
     d_w = sort(DataFrame(out_w), :output_type_id)
     @test d_w.value ≈
-          [0.5 * 1.0 + 0.25 * 2.0 + 0.25 * 0.5, 0.5 * 3.0 + 0.25 * 4.0 + 0.25 * 2.5]
+        [0.5 * 1.0 + 0.25 * 2.0 + 0.25 * 0.5, 0.5 * 3.0 + 0.25 * 4.0 + 0.25 * 2.5]
 
     # weighted median: lower 50% of cumulative weight at 0.25 quantile
     # values sorted: m3 (0.5), m1 (1.0), m2 (2.0); weights 0.25, 0.5, 0.25

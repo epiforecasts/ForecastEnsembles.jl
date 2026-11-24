@@ -46,7 +46,7 @@
     @test w_of(indep.weights, "B", "m2") > w_of(indep.weights, "B", "m1")
     # Each stratum is a simplex.
     for g in groupby(indep.weights, :loc)
-        @test sum(g.weight) ≈ 1.0 atol = 1e-6
+        @test sum(g.weight) ≈ 1.0 atol = 1.0e-6
     end
 
     # Strong pooling drags the strata together: the A–B gap in m1's weight
@@ -55,9 +55,11 @@
     gap(f) = abs(w_of(f.weights, "A", "m1") - w_of(f.weights, "B", "m1"))
     @test gap(pooled) < gap(indep)
     # Global (pooled) vector is roughly balanced, since the strata cancel.
-    @test sum(pooled.global_weights.weight) ≈ 1.0 atol = 1e-6
-    @test abs(pooled.global_weights[pooled.global_weights.model_id .== "m1", :weight][1] -
-              0.5) < 0.2
+    @test sum(pooled.global_weights.weight) ≈ 1.0 atol = 1.0e-6
+    @test abs(
+        pooled.global_weights[pooled.global_weights.model_id .== "m1", :weight][1] -
+            0.5
+    ) < 0.2
 
     # combine applies each stratum's own weights and keeps the strata column.
     out = DataFrame(combine(train, indep; rng = MersenneTwister(1)))
@@ -84,7 +86,8 @@
     @test_throws ArgumentError PartialPooling(crps; strata = [:loc], lambda = -1.0)
     @test_throws ArgumentError PartialPooling(crps; strata = Symbol[])
     @test_throws ArgumentError fit(
-        PartialPooling(crps; strata = [:nope]), train, obs)
+        PartialPooling(crps; strata = [:nope]), train, obs
+    )
 
     # Quantile input is out of scope.
     qtrain = ForecastTable(

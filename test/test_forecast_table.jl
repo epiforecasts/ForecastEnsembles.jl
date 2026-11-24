@@ -23,7 +23,7 @@
     @test_throws ArgumentError ForecastTable(bad; task_id_cols = [:location])
 
     # unknown output_type
-    bad2 = copy(df);
+    bad2 = copy(df)
     bad2.output_type .= "weird"
     @test_throws ArgumentError ForecastTable(bad2; task_id_cols = [:location])
 

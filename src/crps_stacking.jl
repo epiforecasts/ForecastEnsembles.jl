@@ -1,4 +1,3 @@
-
 """
     FittedCRPSStacking(weights, models)
 
@@ -51,8 +50,8 @@ effective sample size of the weights.
 function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDataFrame)
     output_type(training) === :sample || throw(
         ArgumentError(
-        "CRPSStacking expects sample forecasts; got $(output_type(training))",
-    ),
+            "CRPSStacking expects sample forecasts; got $(output_type(training))",
+        ),
     )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
@@ -156,9 +155,11 @@ function fit(m::CRPSStacking, training::ForecastTable, observations::AbstractDat
         end
     end
     best_res === nothing && error("CRPSStacking: optimisation produced no result")
-    Optim.converged(best_res) || @warn("CRPSStacking: L-BFGS did not converge " *
-          "($(Optim.iterations(best_res)) iterations); weights are the best " *
-          "iterate found.")
+    Optim.converged(best_res) || @warn(
+        "CRPSStacking: L-BFGS did not converge " *
+            "($(Optim.iterations(best_res)) iterations); weights are the best " *
+            "iterate found."
+    )
 
     w_hat = _softmax(Optim.minimizer(best_res))
     crps_hat = Optim.minimum(best_res)
@@ -224,8 +225,8 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
         sort!(joined, :__row__)
         any(ismissing, joined.weight) && throw(
             ArgumentError(
-            "`task_weights` is missing a weight for at least one training task",
-        ),
+                "`task_weights` is missing a weight for at least one training task",
+            ),
         )
         return Float64.(joined.weight)
     end
@@ -237,8 +238,8 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
         throw(ArgumentError("CRPSStacking: time_col must be set when lambda is used"))
     tc in join_cols || throw(
         ArgumentError(
-        "time_col $tc is not one of the task-id columns $join_cols",
-    ),
+            "time_col $tc is not one of the task-id columns $join_cols",
+        ),
     )
     tvals = tasks[!, tc]
     ut = sort(unique(tvals))
@@ -252,9 +253,9 @@ function _task_lambda(m::CRPSStacking, tasks::DataFrame, join_cols)
     elseif m.lambda isa Vector{Float64}
         length(m.lambda) == Tt || throw(
             ArgumentError(
-            "`lambda` has length $(length(m.lambda)) but the training data " *
-            "has $Tt unique values of $(m.time_col)",
-        ),
+                "`lambda` has length $(length(m.lambda)) but the training data " *
+                    "has $Tt unique values of $(m.time_col)",
+            ),
         )
         m.lambda
     else # Function of the normalised time rank

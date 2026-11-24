@@ -42,8 +42,12 @@ end
 function LogarithmicPool(; weights = nothing, ngrid::Integer = 2000)
     w = _resolve_weights(weights)
     if w !== nothing && is_per_quantile(w)
-        throw(ArgumentError("LogarithmicPool takes per-model weights only; " *
-                            "per-quantile weights are not meaningful for a product pool."))
+        throw(
+            ArgumentError(
+                "LogarithmicPool takes per-model weights only; " *
+                    "per-quantile weights are not meaningful for a product pool."
+            )
+        )
     end
     ngrid >= 100 || throw(ArgumentError("ngrid must be >= 100 (got $ngrid)"))
     return LogarithmicPool(w, Int(ngrid))
@@ -98,7 +102,7 @@ function _log_pool_quantiles(
         ws::AbstractVector{<:Real},
         levels::AbstractVector{<:Real},
         ngrid::Int
-)
+    )
     # Key the grid to the requested levels, not a fixed 1e-4 tail: a level more
     # extreme than 1e-4 would otherwise fall outside the grid and be silently
     # clamped to its edge. `plo`/`phi` never shrink the default tail.
@@ -106,10 +110,13 @@ function _log_pool_quantiles(
     phi = max(1 - 1.0e-4, maximum(levels))
     lo = minimum(quantile(d, plo) for d in dists)
     hi = maximum(quantile(d, phi) for d in dists)
-    hi > lo || throw(ArgumentError(
-        "logarithmic pool: the combined forecast range is degenerate (the span " *
-        "between the lowest and highest requested-tail percentile across components " *
-        "is zero, lo = hi = $lo), so no integration grid can be built."))
+    hi > lo || throw(
+        ArgumentError(
+            "logarithmic pool: the combined forecast range is degenerate (the span " *
+                "between the lowest and highest requested-tail percentile across components " *
+                "is zero, lo = hi = $lo), so no integration grid can be built."
+        )
+    )
     pad = 0.05 * (hi - lo)
     xs = range(lo - pad, hi + pad; length = ngrid)
     dx = step(xs)
@@ -126,7 +133,7 @@ function _log_pool_quantiles(
         @inbounds for j in 2:(ngrid - 1)
             dens[j] = (F[j + 1] - F[j - 1]) / (2dx)
         end
-        @. logdens += w * log(max(dens, 1e-300))
+        @. logdens += w * log(max(dens, 1.0e-300))
     end
 
     logdens .-= maximum(logdens)
@@ -137,10 +144,10 @@ function _log_pool_quantiles(
     # quantiles would be truncated — flag it rather than fail silently.
     edge = max(g[1], g[ngrid])        # relative to the unit peak
     edge < 1.0e-3 || @warn "logarithmic pool: the pooled density is not negligible " *
-          "at the integration-grid edge (relative $(round(edge; sigdigits = 2))): a " *
-          "component's tail extends past the grid, so the most extreme requested " *
-          "quantiles may be truncated. The grid span is set by the requested levels, " *
-          "not `ngrid`, so raising `ngrid` refines resolution without widening it." maxlog = 1
+        "at the integration-grid edge (relative $(round(edge; sigdigits = 2))): a " *
+        "component's tail extends past the grid, so the most extreme requested " *
+        "quantiles may be truncated. The grid span is set by the requested levels, " *
+        "not `ngrid`, so raising `ngrid` refines resolution without widening it." maxlog = 1
     g ./= _trapz(g, dx)               # normalise to a density
 
     # cumulative-trapezoid CDF, forced to [0, 1]

@@ -62,7 +62,8 @@ function Hedge(score; eta::Union{Nothing, Real} = nothing, time_col::Symbol)
     eta === nothing || eta > 0 ||
         throw(ArgumentError("eta must be positive (got $eta)"))
     return Hedge{typeof(score)}(
-        score, eta === nothing ? nothing : Float64(eta), time_col)
+        score, eta === nothing ? nothing : Float64(eta), time_col
+    )
 end
 
 # Regret-optimal Hedge step size for losses in [0, B] over T rounds and M
@@ -109,11 +110,17 @@ end
 weights(m::FittedHedge) = EnsembleWeights(m.weights)
 
 function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
-    output_type(training) === :sample || throw(ArgumentError(
-        "Hedge supports :sample forecasts (weighted-sample scores)."))
-    m.time_col in task_id_cols(training) || throw(ArgumentError(
-        "time_col $(m.time_col) must be one of the task-id columns " *
-        "$(task_id_cols(training))"))
+    output_type(training) === :sample || throw(
+        ArgumentError(
+            "Hedge supports :sample forecasts (weighted-sample scores)."
+        )
+    )
+    m.time_col in task_id_cols(training) || throw(
+        ArgumentError(
+            "time_col $(m.time_col) must be one of the task-id columns " *
+                "$(task_id_cols(training))"
+        )
+    )
 
     tcols = task_id_cols(training)
     mid = training.model_id_col
@@ -133,9 +140,12 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     # `[mid, time_col]` alone would pool every task at a date (e.g. all locations)
     # and score them against one arbitrary observation.
     per_task = combine(DataFrames.groupby(d, [mid, tcols...])) do g
-        allequal(g.observed) || throw(ArgumentError(
-            "multiple observations for one task — check observations for " *
-            "duplicate task keys"))
+        allequal(g.observed) || throw(
+            ArgumentError(
+                "multiple observations for one task — check observations for " *
+                    "duplicate task keys"
+            )
+        )
         # Copy into a fresh vector (as Stacking/InverseScore do) so a score that
         # sorts or otherwise mutates its input in place cannot corrupt the join.
         (; s = score(Float64.(g.value), Float64(first(g.observed))))
@@ -168,6 +178,8 @@ function fit(m::Hedge, training::ForecastTable, observations::AbstractDataFrame)
     end
 
     trajectory = isempty(traj) ? DataFrame() : reduce(vcat, traj)
-    return FittedHedge(DataFrame(model_id = String.(models), weight = w),
-        String.(models), trajectory, m.time_col)
+    return FittedHedge(
+        DataFrame(model_id = String.(models), weight = w),
+        String.(models), trajectory, m.time_col
+    )
 end

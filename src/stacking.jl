@@ -80,9 +80,12 @@ weights(m::FittedStacking) = EnsembleWeights(m.weights)
 # score is whatever callable the user supplied — this fit never touches any
 # scoring library, so it lives in the MIT core.
 function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFrame)
-    output_type(training) === :sample || throw(ArgumentError(
-        "Stacking supports :sample forecasts (weighted-sample scores). Use QRA " *
-        "for quantile (WIS) stacking."))
+    output_type(training) === :sample || throw(
+        ArgumentError(
+            "Stacking supports :sample forecasts (weighted-sample scores). Use QRA " *
+                "for quantile (WIS) stacking."
+        )
+    )
 
     tcols = task_id_cols(training)
     mid = training.model_id_col
@@ -101,8 +104,10 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
     task_data = map(collect(DataFrames.groupby(d, tcols))) do g
         midx = [idx[mm] for mm in g[!, mid]]
         counts = [count(==(i), midx) for i in 1:M]
-        (samples = Float64.(g.value), midx = midx, counts = counts,
-            y = Float64(first(g.observed)))
+        (
+            samples = Float64.(g.value), midx = midx, counts = counts,
+            y = Float64(first(g.observed)),
+        )
     end
 
     score = m.score
@@ -123,13 +128,17 @@ function fit(m::Stacking, training::ForecastTable, observations::AbstractDataFra
     end
 
     res = optimize(loss, zeros(M), LBFGS())
-    Optim.converged(res) || @warn("Stacking: L-BFGS did not converge " *
-          "($(Optim.iterations(res)) iterations); weights are the best iterate " *
-          "found. The score may be poorly conditioned — try more training data, a " *
-          "different score, or fewer models.")
+    Optim.converged(res) || @warn(
+        "Stacking: L-BFGS did not converge " *
+            "($(Optim.iterations(res)) iterations); weights are the best iterate " *
+            "found. The score may be poorly conditioned — try more training data, a " *
+            "different score, or fewer models."
+    )
     w_hat = _softmax(Optim.minimizer(res))
-    return FittedStacking(DataFrame(model_id = models, weight = w_hat),
-        String.(models), Optim.minimum(res))
+    return FittedStacking(
+        DataFrame(model_id = models, weight = w_hat),
+        String.(models), Optim.minimum(res)
+    )
 end
 
 """
@@ -192,8 +201,11 @@ weights(m::FittedInverseScore) = EnsembleWeights(m.weights)
 # negative mean scores into simplex weights. No optimiser — one scoring pass.
 # The score is the user's callable, so this stays in the MIT core.
 function fit(m::InverseScore, training::ForecastTable, observations::AbstractDataFrame)
-    output_type(training) === :sample || throw(ArgumentError(
-        "InverseScore supports :sample forecasts (weighted-sample scores)."))
+    output_type(training) === :sample || throw(
+        ArgumentError(
+            "InverseScore supports :sample forecasts (weighted-sample scores)."
+        )
+    )
 
     tcols = task_id_cols(training)
     mid = training.model_id_col
@@ -213,6 +225,8 @@ function fit(m::InverseScore, training::ForecastTable, observations::AbstractDat
     mean_scores = [mean(per[per[!, mid] .== mm, :s]) for mm in models]
 
     w = _softmax(-m.temperature .* mean_scores)
-    return FittedInverseScore(DataFrame(model_id = models, weight = w),
-        String.(models), mean_scores)
+    return FittedInverseScore(
+        DataFrame(model_id = models, weight = w),
+        String.(models), mean_scores
+    )
 end
