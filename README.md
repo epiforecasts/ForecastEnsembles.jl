@@ -3,7 +3,7 @@
 <!-- badges:start -->
 | **Documentation** | **Build Status** | **Code Quality** | **License & DOI** | **Downloads** |
 |:-----------------:|:----------------:|:----------------:|:-----------------:|:-------------:|
-| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://epiforecasts.io/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://epiforecasts.io/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl) | [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
+| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://epiforecasts.github.io/ForecastEnsembles.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://epiforecasts.github.io/ForecastEnsembles.jl/dev/) | [![Test](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/epiforecasts/ForecastEnsembles.jl/actions/workflows/test.yaml) [![codecov](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl/graph/badge.svg)](https://codecov.io/gh/epiforecasts/ForecastEnsembles.jl) | [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl) [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) [![JET](https://img.shields.io/badge/%E2%9C%88%EF%B8%8F%20tested%20with%20-%20JET.jl%20-%20red)](https://github.com/aviatesk/JET.jl) | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) | [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FForecastEnsembles&query=total_requests&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) [![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FForecastEnsembles&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/ForecastEnsembles) |
 <!-- badges:end -->
 
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
@@ -83,12 +83,12 @@ organise the methods.
 
 <!-- standard-sections:start -->
 <!-- MANAGED by EpiAwarePackageTools.scaffold — do not edit between the
-     markers. These standard sections are re-rendered on every scaffold_update;
+     markers. These standard sections are re-rendered on every update;
      edit the package-owned sections outside them, or CITATION.cff. -->
 
 ## Contributing
 
-We welcome contributions and new contributors! Please open an issue or pull request on [GitHub](https://github.com/epiforecasts/ForecastEnsembles.jl). This package follows [ColPrac](https://github.com/SciML/ColPrac) and the [SciML style](https://github.com/SciML/SciMLStyle).
+We welcome contributions and new contributors! Please open an issue or pull request on [GitHub](https://github.com/epiforecasts/ForecastEnsembles.jl). This package follows [ColPrac](https://github.com/SciML/ColPrac) and is formatted with [Runic](https://github.com/fredrikekre/Runic.jl).
 
 ## How to cite
 

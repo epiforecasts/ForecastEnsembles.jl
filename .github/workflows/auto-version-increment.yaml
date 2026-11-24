@@ -5,6 +5,16 @@ on:
   push:
     branches: [main]
 
+# Batched merges to main fire this workflow several times within minutes;
+# without a group, each run reads the same Project.toml, computes the same
+# next version, and races to push the same branch. Not
+# cancel-in-progress: true like most managed workflows (see
+# `benchmark-history.yaml`): cancelling a queued run here would make it skip
+# observing the version the previous run just landed, so runs queue instead.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -22,16 +32,13 @@ jobs:
       - name: Check if version changed
         id: version-check
         run: |
-          # Get the version from current commit
           CURRENT_VERSION=$(grep '^version = ' Project.toml | sed 's/version = "\(.*\)"/\1/')
           echo "Current version: $CURRENT_VERSION"
 
-          # Get the version from previous commit
           git show HEAD~1:Project.toml > Project.toml.prev
           PREV_VERSION=$(grep '^version = ' Project.toml.prev | sed 's/version = "\(.*\)"/\1/')
           echo "Previous version: $PREV_VERSION"
 
-          # Check if version changed
           if [ "$CURRENT_VERSION" = "$PREV_VERSION" ]; then
             echo "Version unchanged, need to increment"
             echo "needs_increment=true" >> $GITHUB_OUTPUT
