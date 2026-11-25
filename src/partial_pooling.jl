@@ -58,12 +58,16 @@ function PartialPooling(
         strata,
         lambda::Real = 1.0,
         dirichlet_alpha::Real = 1.0
-)
+    )
     lambda >= 0 || throw(ArgumentError("lambda (shrinkage) must be >= 0 (got $lambda)"))
     dirichlet_alpha >= 1 ||
-        throw(ArgumentError("dirichlet_alpha must be >= 1 (1 is the flat, " *
-                            "uninformative prior; larger values pull the weights " *
-                            "toward the simplex centre)"))
+        throw(
+        ArgumentError(
+            "dirichlet_alpha must be >= 1 (1 is the flat, " *
+                "uninformative prior; larger values pull the weights " *
+                "toward the simplex centre)"
+        )
+    )
     st = Symbol.(collect(strata))
     isempty(st) && throw(ArgumentError("strata must name at least one task-id column"))
     return PartialPooling{typeof(score)}(score, st, Float64(lambda), Float64(dirichlet_alpha))
@@ -90,9 +94,12 @@ end
 
 function combine(ft::ForecastTable, m::FittedPartialPooling; rng::AbstractRNG = default_rng())
     absent = setdiff(m.strata, ft.task_id_cols)
-    isempty(absent) || throw(ArgumentError(
-        "combine target is missing strata column(s) $absent; its task-id columns " *
-        "are $(ft.task_id_cols)"))
+    isempty(absent) || throw(
+        ArgumentError(
+            "combine target is missing strata column(s) $absent; its task-id columns " *
+                "are $(ft.task_id_cols)"
+        )
+    )
 
     outs = DataFrame[]
     for g in DataFrames.groupby(ft.data, m.strata)
@@ -133,11 +140,17 @@ weights(m::FittedPartialPooling) = EnsembleWeights(m.global_weights)
 # independently; `lambda → ∞` pools them onto one vector (the optimum sets
 # `z₀ = meanₛ zₛ`). The score is the user's callable, so this stays in the core.
 function fit(m::PartialPooling, training::ForecastTable, observations::AbstractDataFrame)
-    output_type(training) === :sample || throw(ArgumentError(
-        "PartialPooling supports :sample forecasts (weighted-sample scores)."))
+    output_type(training) === :sample || throw(
+        ArgumentError(
+            "PartialPooling supports :sample forecasts (weighted-sample scores)."
+        )
+    )
     absent = setdiff(m.strata, task_id_cols(training))
-    isempty(absent) || throw(ArgumentError(
-        "strata $absent must be among the task-id columns $(task_id_cols(training))"))
+    isempty(absent) || throw(
+        ArgumentError(
+            "strata $absent must be among the task-id columns $(task_id_cols(training))"
+        )
+    )
 
     tcols = task_id_cols(training)
     mid = training.model_id_col
@@ -163,8 +176,10 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
         midx = [idx[mm] for mm in g[!, mid]]
         counts = [count(==(i), midx) for i in 1:M]
         s = sidx[Tuple(g[1, col] for col in m.strata)]
-        (samples = Float64.(g.value), midx = midx, counts = counts,
-            y = Float64(first(g.observed)), s = s)
+        (
+            samples = Float64.(g.value), midx = midx, counts = counts,
+            y = Float64(first(g.observed)), s = s,
+        )
     end
 
     score = m.score
@@ -202,11 +217,13 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
     end
 
     res = optimize(loss, zeros(M * (S + 1)), LBFGS())
-    Optim.converged(res) || @warn("PartialPooling: L-BFGS did not converge " *
-          "($(Optim.iterations(res)) iterations) over the $(M * (S + 1))-parameter " *
-          "logit space; weights are the best iterate found. Consider " *
-          "more training data " *
-          "per stratum, stronger shrinkage (`lambda`), or fewer models.")
+    Optim.converged(res) || @warn(
+        "PartialPooling: L-BFGS did not converge " *
+            "($(Optim.iterations(res)) iterations) over the $(M * (S + 1))-parameter " *
+            "logit space; weights are the best iterate found. Consider " *
+            "more training data " *
+            "per stratum, stronger shrinkage (`lambda`), or fewer models."
+    )
     z_hat = Optim.minimizer(res)
 
     # Per-stratum weights table (strata columns + model_id + weight).
@@ -221,6 +238,8 @@ function fit(m::PartialPooling, training::ForecastTable, observations::AbstractD
     end
     weights_df = reduce(vcat, on_rows)
     global_df = DataFrame(model_id = String.(models), weight = _softmax(gview(z_hat)))
-    return FittedPartialPooling(weights_df, global_df, copy(m.strata),
-        String.(models), Optim.minimum(res))
+    return FittedPartialPooling(
+        weights_df, global_df, copy(m.strata),
+        String.(models), Optim.minimum(res)
+    )
 end

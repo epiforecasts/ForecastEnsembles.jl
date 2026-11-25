@@ -1,6 +1,3 @@
-# MANAGED by EpiAwarePackageTools.scaffold — do not edit by hand.
-# Isolated JET environment so JET's JuliaSyntax pin does not clash with the
-# main test deps. Add any extra packages JET needs to load the target here.
 [deps]
 EpiAwarePackageTools = "7aaea248-0d11-4a0d-a7dc-86da30abb951"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
@@ -9,9 +6,6 @@ ForecastEnsembles = "1bb9cac4-d66e-4ef2-b2ac-777309f9bc63"
 [sources]
 ForecastEnsembles = {path = "../.."}
 
-# Pin JET to its current 0.x series so a new minor (which is a breaking bump
-# under Julia's 0.x semver) cannot silently tighten static analysis and turn
-# the managed check red without a deliberate bump (see kit #77, #60, #73).
 [compat]
-EpiAwarePackageTools = "0.3"
-JET = "0.11"
+EpiAwarePackageTools = "0.3, 0.4"
+JET = "0.11, 0.12"

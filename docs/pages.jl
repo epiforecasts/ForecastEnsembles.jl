@@ -19,7 +19,7 @@ pages = [
     # README-derived home page). Add tutorials under `getting-started/` as the
     # package grows.
     "Getting started" => [
-        "Overview" => "getting-started/index.md"
+        "Overview" => "getting-started/index.md",
     ],
     "Methods" => "methods.md",
     "Worked example" => "example.md",
@@ -27,6 +27,6 @@ pages = [
     "Roadmap" => "roadmap.md",
     "API reference" => [
         "Public API" => "lib/public.md",
-        "Internal API" => "lib/internals.md"
-    ]
+        "Internal API" => "lib/internals.md",
+    ],
 ]

@@ -95,26 +95,29 @@ function backtest(
         min_train::Integer,
         rng::AbstractRNG = default_rng(),
         score_fn = nothing
-)
+    )
     time_col in ft.task_id_cols || throw(
         ArgumentError(
-        "time_col $time_col must be one of the task-id columns $(ft.task_id_cols)",
-    ),
+            "time_col $time_col must be one of the task-id columns $(ft.task_id_cols)",
+        ),
     )
     obs = DataFrame(observations)
     hasproperty(obs, :observed) ||
         throw(ArgumentError("observations must have an :observed column"))
 
-    score_fn === nothing && throw(ArgumentError(
-        "backtest needs a scoring function: pass " *
-        "`score_fn = (forecast, observations) -> score`. ScoringRules.jl is a " *
-        "natural source (e.g. a CRPS-based scorer over the fold's tasks)."))
+    score_fn === nothing && throw(
+        ArgumentError(
+            "backtest needs a scoring function: pass " *
+                "`score_fn = (forecast, observations) -> score`. ScoringRules.jl is a " *
+                "natural source (e.g. a CRPS-based scorer over the fold's tasks)."
+        )
+    )
 
     times = sort(unique(ft.data[!, time_col]))
     length(times) > min_train || throw(
         ArgumentError(
-        "need more than min_train = $min_train distinct $time_col values (got $(length(times)))",
-    ),
+            "need more than min_train = $min_train distinct $time_col values (got $(length(times)))",
+        ),
     )
 
     scheme_pairs = _scheme_pairs(schemes)

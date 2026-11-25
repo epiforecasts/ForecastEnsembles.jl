@@ -22,7 +22,7 @@
     )
     j = innerjoin(out_df, ref; on = on_cols)
     @test nrow(j) == nrow(out_df) == nrow(ref)
-    @test maximum(abs.(j.value .- j.value_r)) < 1e-10
+    @test maximum(abs.(j.value .- j.value_r)) < 1.0e-10
 
     # median
     out_med = select(DataFrame(combine(ft, QuantileEnsemble(:median))), on_cols..., :value)
@@ -32,7 +32,7 @@
         :value => :value_r
     )
     j2 = innerjoin(out_med, ref_med; on = on_cols)
-    @test maximum(abs.(j2.value .- j2.value_r)) < 1e-10
+    @test maximum(abs.(j2.value .- j2.value_r)) < 1.0e-10
 
     # weighted mean
     weights = CSV.read(joinpath(REF, "simple_weights.csv"), DataFrame)
@@ -47,7 +47,7 @@
         :value => :value_r
     )
     j3 = innerjoin(out_w, ref_w; on = on_cols)
-    @test maximum(abs.(j3.value .- j3.value_r)) < 1e-10
+    @test maximum(abs.(j3.value .- j3.value_r)) < 1.0e-10
 end
 
 @testitem "Parity — hubEnsembles::linear_pool (sample)" begin
@@ -86,20 +86,20 @@ end
         ours = out_df[out_df.location .== loc, :value]
         theirs = ref[ref.location .== loc, :value]
         σ̂ = std(vcat(ours, theirs))
-        nf = sqrt(1/n_r + 1/n_j)
+        nf = sqrt(1 / n_r + 1 / n_j)
 
         Δμ = abs(mean(ours) - mean(theirs))
         SEμ = σ̂ * nf
-        @info "lp-sample mean" loc Δμ SE=SEμ ratio=Δμ/SEμ
+        @info "lp-sample mean" loc Δμ SE = SEμ ratio = Δμ / SEμ
         @test Δμ < K * SEμ
 
         Δσ = abs(std(ours) - std(theirs))
-        SEσ = σ̂ * sqrt(0.5 * (1/n_r + 1/n_j))
-        @info "lp-sample std" loc Δσ SE=SEσ ratio=Δσ/SEσ
+        SEσ = σ̂ * sqrt(0.5 * (1 / n_r + 1 / n_j))
+        @info "lp-sample std" loc Δσ SE = SEσ ratio = Δσ / SEσ
         @test Δσ < K * SEσ
 
         for τ in (0.1, 0.5, 0.9)
-            qa = quantile(ours, τ);
+            qa = quantile(ours, τ)
             qb = quantile(theirs, τ)
             # Plug a Normal at the pooled empirical mean/std into the
             # quantile-density formula — a crude but consistent surrogate
@@ -108,7 +108,7 @@ end
             f_at_q = pdf(d̂, dquantile(d̂, τ))
             SEq = sqrt(τ * (1 - τ)) / f_at_q * nf
             Δq = abs(qa - qb)
-            @info "lp-sample quantile" loc τ Δq SE=SEq ratio=Δq/SEq
+            @info "lp-sample quantile" loc τ Δq SE = SEq ratio = Δq / SEq
             @test Δq < K * SEq
         end
     end
@@ -181,8 +181,8 @@ end
     # on individual weights is generous; in practice the dominant weight
     # agrees to 2-3 decimal places.
     for r in eachrow(j)
-        @info "crps weight" model=r.model_id julia=r.weight stan=r.weight_r diff=abs(
-            r.weight-r.weight_r,
+        @info "crps weight" model = r.model_id julia = r.weight stan = r.weight_r diff = abs(
+            r.weight - r.weight_r,
         )
         @test abs(r.weight - r.weight_r) < 0.05
     end
@@ -229,7 +229,7 @@ end
         for (i, mod) in enumerate(fitted.models)
             ref_w_im = ref_τ[ref_τ.model .== mod, :weight]
             @test !isempty(ref_w_im)
-            @test abs(β[i] - first(ref_w_im)) < 1e-3
+            @test abs(β[i] - first(ref_w_im)) < 1.0e-3
         end
     end
 
@@ -249,7 +249,8 @@ end
     ref_pred = CSV.read(joinpath(REF, "qra_default_output.csv"), DataFrame)
     rename!(ref_pred, :predicted => :predicted_r, :quantile_level => :output_type_id)
     ref_pred = select(
-        ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r)
+        ref_pred, :location, :horizon, :target_date, :output_type_id, :predicted_r
+    )
     j = innerjoin(out, ref_pred; on = [:location, :horizon, :target_date, :output_type_id])
-    @test maximum(abs.(j.value .- j.predicted_r)) < 1e-3
+    @test maximum(abs.(j.value .- j.predicted_r)) < 1.0e-3
 end

@@ -74,9 +74,12 @@ weight_stability(fitted)
 function weight_stability(m::FittedHedge)
     traj = m.trajectory
     isempty(traj) && return DataFrame(model_id = String[], total_variation = Float64[])
-    hasproperty(traj, m.time_col) || throw(ArgumentError(
-        "the fitted trajectory has no time column $(m.time_col); " *
-        "columns are $(propertynames(traj))"))
+    hasproperty(traj, m.time_col) || throw(
+        ArgumentError(
+            "the fitted trajectory has no time column $(m.time_col); " *
+                "columns are $(propertynames(traj))"
+        )
+    )
     return DataFrames.combine(DataFrames.groupby(traj, :model_id)) do g
         s = sort(g, m.time_col)
         (; total_variation = sum(abs.(diff(Float64.(s.weight)))))
@@ -88,8 +91,11 @@ _ensemble_weights(w::EnsembleWeights) = w
 _ensemble_weights(df::AbstractDataFrame) = EnsembleWeights(df)
 function _ensemble_weights(m::EnsembleMethod)
     w = weights(m)
-    w === nothing && throw(ArgumentError(
-        "$(nameof(typeof(m))) does not expose ensemble weights: " *
-        "$(_no_weights_reason(m))."))
+    w === nothing && throw(
+        ArgumentError(
+            "$(nameof(typeof(m))) does not expose ensemble weights: " *
+                "$(_no_weights_reason(m))."
+        )
+    )
     return w isa EnsembleWeights ? w : EnsembleWeights(w)
 end

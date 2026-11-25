@@ -31,8 +31,10 @@
 
     # k is capped so a value always survives: two models, heavy fraction → mean.
     ft2 = ForecastTable(
-        DataFrame(model_id = ["m1", "m2"], output_type = "quantile",
-            output_type_id = 0.5, t = 1, value = [1.0, 3.0]);
+        DataFrame(
+            model_id = ["m1", "m2"], output_type = "quantile",
+            output_type_id = 0.5, t = 1, value = [1.0, 3.0]
+        );
         task_id_cols = [:t]
     )
     @test DataFrame(combine(ft2, TrimmedMean(; fraction = 0.4))).value[1] ≈ 2.0
@@ -55,8 +57,10 @@
 
     # Sample forecasts are out of scope.
     sft = ForecastTable(
-        DataFrame(model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
-            output_type_id = repeat(1:3, 2), t = 1, value = Float64.(1:6));
+        DataFrame(
+            model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
+            output_type_id = repeat(1:3, 2), t = 1, value = Float64.(1:6)
+        );
         task_id_cols = [:t]
     )
     @test_throws ArgumentError combine(sft, TrimmedMean())
@@ -71,8 +75,10 @@ end
     using DataFrames
     # Five models with fraction 0.1: round(0.1 × 5) = 0, so no trimming — the
     # result is the plain mean, which should warn rather than pass silently.
-    df = DataFrame(model_id = string.("m", 1:5), output_type = "quantile",
-        output_type_id = 0.5, location = "A", value = [1.0, 2, 3, 4, 100])
+    df = DataFrame(
+        model_id = string.("m", 1:5), output_type = "quantile",
+        output_type_id = 0.5, location = "A", value = [1.0, 2, 3, 4, 100]
+    )
     ft = ForecastTable(df; task_id_cols = [:location])
     @test_logs (:warn, r"trims nothing") combine(ft, TrimmedMean(; fraction = 0.1))
     # A fraction that does trim (round(0.4 × 5) = 2) emits no such warning.

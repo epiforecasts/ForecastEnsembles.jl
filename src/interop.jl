@@ -39,7 +39,7 @@ function from_samples(
         model_col::Symbol = :model,
         sample_col::Symbol = :sample,
         value_col::Symbol = :predicted
-)
+    )
     out = DataFrame(df)
     rename!(out, model_col => :model_id, sample_col => :output_type_id, value_col => :value)
     out.output_type = fill(:sample, nrow(out))

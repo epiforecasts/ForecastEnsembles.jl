@@ -53,26 +53,29 @@ function ForecastTable(
         df::AbstractDataFrame;
         task_id_cols::Union{Nothing, AbstractVector{Symbol}} = nothing,
         model_id_col::Symbol = :model_id
-)
+    )
     df = DataFrame(df) # defensive copy / materialise
     _validate_columns!(df, model_id_col)
     nrow(df) > 0 || throw(ArgumentError("ForecastTable must contain at least one row"))
     if any(v -> ismissing(v) || (v isa AbstractFloat && isnan(v)), df.value)::Bool
         throw(
             ArgumentError(
-            "ForecastTable :value column contains missing or NaN entries; " *
-            "filter or impute before constructing.",
-        ),
+                "ForecastTable :value column contains missing or NaN entries; " *
+                    "filter or impute before constructing.",
+            ),
         )
     end
 
-    inferred_task = setdiff(Symbol.(propertynames(df)), [
-        model_id_col, REQUIRED_NON_TASK_COLS...])
+    inferred_task = setdiff(
+        Symbol.(propertynames(df)), [
+            model_id_col, REQUIRED_NON_TASK_COLS...,
+        ]
+    )
     chosen_task = task_id_cols === nothing ? inferred_task : Symbol.(task_id_cols)
     isempty(chosen_task) && throw(
         ArgumentError(
-        "ForecastTable needs at least one task-id column; none could be inferred.",
-    ),
+            "ForecastTable needs at least one task-id column; none could be inferred.",
+        ),
     )
     for c in chosen_task
         hasproperty(df, c) || throw(ArgumentError("task_id_col $c not present in data"))
@@ -102,7 +105,7 @@ const COLUMN_HINTS = (
     quantile_level = :output_type_id,
     sample_id = :output_type_id,
     sample = :output_type_id,
-    predicted = :value
+    predicted = :value,
 )
 
 function _validate_columns!(df::DataFrame, model_id_col::Symbol)
@@ -111,14 +114,16 @@ function _validate_columns!(df::DataFrame, model_id_col::Symbol)
     isempty(missing_cols) && return nothing
 
     present = propertynames(df)
-    hints = [(alias, ours)
-             for (alias, ours) in pairs(COLUMN_HINTS)
-             if alias in present && ours in missing_cols]
+    hints = [
+        (alias, ours)
+            for (alias, ours) in pairs(COLUMN_HINTS)
+            if alias in present && ours in missing_cols
+    ]
     msg = "ForecastTable is missing required columns: $(missing_cols)"
     if !isempty(hints)
         renames = join(("`$alias` -> `$ours`" for (alias, ours) in hints), ", ")
         msg *= ". The frame uses scoringutils/lopensemble-style names; rename " *
-               renames
+            renames
     end
     throw(ArgumentError(msg))
 end
@@ -220,8 +225,8 @@ function output_type(ft::ForecastTable)
     types = unique(ft.data.output_type)
     length(types) == 1 || throw(
         ArgumentError(
-        "ForecastTable contains mixed output_types $types; split before combining.",
-    ),
+            "ForecastTable contains mixed output_types $types; split before combining.",
+        ),
     )
     return types[1]
 end
@@ -244,10 +249,10 @@ function Base.show(io::IO, ::MIME"text/plain", ft::ForecastTable)
     println(io, "  output_type  = ", output_type_summary(ft))
     println(io, "  task_id_cols = ", ft.task_id_cols)
     println(io, "  rows         = ", nrow(ft.data))
-    print(io, ")")
+    return print(io, ")")
 end
 
 function output_type_summary(ft::ForecastTable)
     types = unique(ft.data.output_type)
-    length(types) == 1 ? string(types[1]) : "mixed: $types"
+    return length(types) == 1 ? string(types[1]) : "mixed: $types"
 end

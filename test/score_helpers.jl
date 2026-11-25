@@ -23,16 +23,20 @@ end
 # on :t): score each task then average — the scorer shape `backtest` expects.
 function sample_crps(fc, o)
     d = DataFrames.innerjoin(DataFrame(fc), o; on = :t)
-    per = DataFrames.combine(DataFrames.groupby(d, :t),
-        [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+    per = DataFrames.combine(
+        DataFrames.groupby(d, :t),
+        [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s
+    )
     return mean(per.s)
 end
 
 # Pinball (quantile) loss at each level — the WIS kernel. Returns one value per
 # level, matching ScoringRules' `quantile_score(levels, forecasts, y)` shape.
 function quantile_score(levels::AbstractVector, forecasts::AbstractVector, y::Real)
-    return [(y - forecasts[i]) * (levels[i] - (y < forecasts[i] ? 1.0 : 0.0))
-            for i in eachindex(levels)]
+    return [
+        (y - forecasts[i]) * (levels[i] - (y < forecasts[i] ? 1.0 : 0.0))
+            for i in eachindex(levels)
+    ]
 end
 
 # Shared backtest fixture: a non-stationary regime where model A is sharp in the

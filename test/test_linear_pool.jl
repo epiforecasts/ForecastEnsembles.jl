@@ -78,11 +78,11 @@ end
     # Equal weights → average of the two CDFs.
     out = combine(ft, LinearPool())
     d = sort(DataFrame(out), :output_type_id)
-    @test d.value ≈ [(0.1 + 0.3)/2, (0.5 + 0.7)/2, (0.9 + 0.95)/2]
+    @test d.value ≈ [(0.1 + 0.3) / 2, (0.5 + 0.7) / 2, (0.9 + 0.95) / 2]
 
     # 75/25 weights.
     w = DataFrame(model_id = ["m1", "m2"], weight = [0.75, 0.25])
     out_w = combine(ft, LinearPool(; weights = w))
     d_w = sort(DataFrame(out_w), :output_type_id)
-    @test d_w.value ≈ [0.75*0.1 + 0.25*0.3, 0.75*0.5 + 0.25*0.7, 0.75*0.9 + 0.25*0.95]
+    @test d_w.value ≈ [0.75 * 0.1 + 0.25 * 0.3, 0.75 * 0.5 + 0.25 * 0.7, 0.75 * 0.9 + 0.25 * 0.95]
 end

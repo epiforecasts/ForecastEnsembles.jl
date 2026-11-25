@@ -8,8 +8,12 @@
     # A model whose quantile forecast is Normal(0, σ), across `nt` tasks.
     normrows(mid, σ, ts) = reduce(
         vcat,
-        [DataFrame(model_id = mid, output_type = "quantile", output_type_id = levels,
-             t = t, value = [quantile(Normal(0.0, σ), τ) for τ in levels]) for t in ts]
+        [
+            DataFrame(
+                model_id = mid, output_type = "quantile", output_type_id = levels,
+                t = t, value = [quantile(Normal(0.0, σ), τ) for τ in levels]
+            ) for t in ts
+        ]
     )
 
     ft = ForecastTable(normrows("m1", 0.5, [1]); task_id_cols = [:t])
@@ -35,7 +39,7 @@
 
     rec = sort(DataFrame(combine(ft, fitted)), :output_type_id)
     width(df) = df[df.output_type_id .== 0.95, :value][1] -
-                df[df.output_type_id .== 0.05, :value][1]
+        df[df.output_type_id .== 0.05, :value][1]
     @test width(rec) > width(lp)
     # Recalibration preserves quantile monotonicity.
     @test issorted(rec.value)
@@ -50,8 +54,10 @@
 
     # Sample forecasts are out of scope (fit and combine).
     sft = ForecastTable(
-        DataFrame(model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
-            output_type_id = repeat(1:3, 2), t = 1, value = Float64.(1:6));
+        DataFrame(
+            model_id = repeat(["m1", "m2"], inner = 3), output_type = "sample",
+            output_type_id = repeat(1:3, 2), t = 1, value = Float64.(1:6)
+        );
         task_id_cols = [:t]
     )
     @test_throws ArgumentError fit(BLP(), sft, obs)
@@ -59,6 +65,7 @@
 
     # Per-quantile pool weights are rejected.
     pq = EnsembleWeights(
-        DataFrame(model_id = ["m1"], output_type_id = [0.5], weight = [1.0]))
+        DataFrame(model_id = ["m1"], output_type_id = [0.5], weight = [1.0])
+    )
     @test_throws ArgumentError BLP(; weights = pq)
 end

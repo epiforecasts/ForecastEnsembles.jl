@@ -14,8 +14,8 @@ const QA_CONFIG = (
     jet_env = joinpath(@__DIR__, "..", "jet"),
 
     # Path to the isolated formatter environment (see test/formatter/Project.toml),
-    # which pins JuliaFormatter to the version pre-commit/CI use. Running the
-    # format check there keeps it off the shared test env's floating version.
+    # which holds Runic at the same floor pre-commit uses. Running the format
+    # check there keeps the formatter out of the shared test environment.
     formatter_env = joinpath(@__DIR__, "..", "formatter"),
 
     # Per-check Aqua relaxations, e.g. (; ambiguities = false). Empty = all on.
@@ -48,5 +48,5 @@ const QA_CONFIG = (
     #      prefixes = ("MyPkg", "SomeTrigger"),
     #      expect_phantoms = false,    # true if a third party adds phantoms
     #      broken = false)             # true to quarantine a known ambiguity
-    extensions = ()
+    extensions = (),
 )

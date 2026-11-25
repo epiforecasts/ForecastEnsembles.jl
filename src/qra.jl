@@ -1,4 +1,3 @@
-
 """
     FittedQRA(coefs, intercepts, models, levels, group_cols, per_quantile_weights, enforce_normalisation, has_intercept)
 
@@ -95,13 +94,13 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
 
     for group_df in DataFrames.groupby(df, isempty(group_cols) ? Symbol[] : group_cols)
         gkey = isempty(group_cols) ? () :
-               NamedTuple(c => group_df[1, c] for c in group_cols)
+            NamedTuple(c => group_df[1, c] for c in group_cols)
 
         if m.per_quantile_weights
             if m.noncross
                 # Joint LP across τ with cross-τ monotonicity constraints.
                 βs,
-                β0s = _per_quantile_regression_noncross(
+                    β0s = _per_quantile_regression_noncross(
                     group_df,
                     models,
                     levels,
@@ -118,7 +117,7 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
                     gτ = group_df[group_df.output_type_id .== τ, :]
                     X, y = _design_matrix(gτ, models, training.model_id_col)
                     β,
-                    β0 = _quantile_regression(
+                        β0 = _quantile_regression(
                         X,
                         y,
                         τ;
@@ -132,7 +131,7 @@ function fit(m::QRA, training::ForecastTable, observations::AbstractDataFrame)
         else
             # Joint fit: stack rows over τ levels with τ-tilted loss.
             β,
-            β0 = _joint_quantile_regression(
+                β0 = _joint_quantile_regression(
                 group_df,
                 models,
                 levels,
@@ -183,15 +182,15 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         unseen = setdiff(levels_present, m.levels)
         isempty(unseen) || throw(
             ArgumentError(
-            "FittedQRA was not trained on quantile levels $unseen " *
-            "(trained levels: $(m.levels)).",
-        ),
+                "FittedQRA was not trained on quantile levels $unseen " *
+                    "(trained levels: $(m.levels)).",
+            ),
         )
         haskey(m.coefs, (gkey, first(levels_present))) || throw(
             ArgumentError(
-            "FittedQRA was not trained on group $gkey " *
-            "(group columns: $(m.group_cols)).",
-        ),
+                "FittedQRA was not trained on group $gkey " *
+                    "(group columns: $(m.group_cols)).",
+            ),
         )
 
         # A model entirely absent from the input; the per-τ loop below catches a
@@ -200,8 +199,8 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         missing_models = setdiff(m.models, models_present)
         isempty(missing_models) || throw(
             ArgumentError(
-            "FittedQRA models $(join(missing_models, ", ")) are absent from the input table.",
-        ),
+                "FittedQRA models $(join(missing_models, ", ")) are absent from the input table.",
+            ),
         )
 
         values = Float64[]
@@ -210,17 +209,22 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
             x = Float64[]
             for mod in m.models
                 vals = sub[sub[!, ft.model_id_col] .== mod, :value]
-                isempty(vals) && throw(ArgumentError(
-                    "FittedQRA cannot combine: model $mod is missing at " *
-                    "output_type_id $τ for $group_label. QRA needs every model at " *
-                    "every quantile level; supply a complete input or drop the model.",
-                ))
+                isempty(vals) && throw(
+                    ArgumentError(
+                        "FittedQRA cannot combine: model $mod is missing at " *
+                            "output_type_id $τ for $group_label. QRA needs every model at " *
+                            "every quantile level; supply a complete input or drop the model.",
+                    )
+                )
                 # A model must appear exactly once per (τ, group); flag duplicate
                 # rows rather than silently picking one.
-                length(vals) == 1 || throw(ArgumentError(
-                    "FittedQRA cannot combine: model $mod appears $(length(vals)) " *
-                    "times at output_type_id $τ for $group_label; expected exactly " *
-                    "one row per model per level."))
+                length(vals) == 1 || throw(
+                    ArgumentError(
+                        "FittedQRA cannot combine: model $mod appears $(length(vals)) " *
+                            "times at output_type_id $τ for $group_label; expected exactly " *
+                            "one row per model per level."
+                    )
+                )
                 push!(x, first(vals))
             end
             β = m.coefs[(gkey, τ)]
@@ -232,10 +236,12 @@ function combine(ft::ForecastTable, m::FittedQRA; rng::AbstractRNG = default_rng
         # without the simplex constraint can produce crossing quantiles,
         # which hub validators typically reject.
         issorted(values) ||
-            @warn("FittedQRA produced crossing quantiles for at least one task; " *
-                  "consider per_quantile_weights = true with noncross = true, or " *
-                  "post-process (e.g. sort) before submission.",
-                maxlog = 1,)
+            @warn(
+            "FittedQRA produced crossing quantiles for at least one task; " *
+                "consider per_quantile_weights = true with noncross = true, or " *
+                "post-process (e.g. sort) before submission.",
+            maxlog = 1,
+        )
         out = DataFrame(tg[1:1, ft.task_id_cols])
         out = repeat(out, length(levels_present))
         out.output_type = fill(:quantile, length(levels_present))
@@ -302,15 +308,15 @@ end
 function _no_weights_reason(m::FittedQRA)
     m.enforce_normalisation ||
         return "this QRA fit is unconstrained, so its coefficients are a " *
-               "regression, not weights summing to one; refit with " *
-               "`enforce_normalisation = true` for a weight vector"
+        "regression, not weights summing to one; refit with " *
+        "`enforce_normalisation = true` for a weight vector"
     m.has_intercept &&
         return "this QRA fit has an intercept, so the coefficients alone do " *
-               "not define the combination; refit without one for a weight " *
-               "vector"
+        "not define the combination; refit without one for a weight " *
+        "vector"
     return "this QRA fit is grouped and the groups have different " *
-           "coefficients, so there is no single weight vector; fit one group " *
-           "at a time to get weights"
+        "coefficients, so there is no single weight vector; fit one group " *
+        "at a time to get weights"
 end
 
 # m.coefs keys are (gkey, τ) where gkey is `()` when no group_cols were set.
@@ -333,10 +339,10 @@ end
 # or hits a limit; surface that as an error instead.
 function _check_lp_solution(model, context::String)
     st = termination_status(model)
-    st == MOI.OPTIMAL || error(
+    return st == MOI.OPTIMAL || error(
         "QRA $context LP did not solve to optimality (status: $st). " *
-        "Check the training data for degeneracy (e.g. collinear forecasts " *
-        "with enforce_normalisation = true).",
+            "Check the training data for degeneracy (e.g. collinear forecasts " *
+            "with enforce_normalisation = true).",
     )
 end
 
@@ -348,10 +354,13 @@ function _design_matrix(
         df::AbstractDataFrame,
         models::Vector{<:AbstractString},
         model_id_col::Symbol
-)
+    )
     # Pivot so each (task) has all M model values on a single row.
-    other_cols = setdiff(propertynames(df), [
-        model_id_col, :output_type, :output_type_id, :value])
+    other_cols = setdiff(
+        propertynames(df), [
+            model_id_col, :output_type, :output_type_id, :value,
+        ]
+    )
     wide = unstack(df, other_cols, model_id_col, :value)
     # A model with no forecasts in this slice has no column after unstack; add it
     # as all-missing so the complete-case filter drops those rows rather than
@@ -364,9 +373,12 @@ function _design_matrix(
     # submissions leave `missing` cells that break the numeric conversion. Callers
     # wanting imputation must do it first.
     keep = DataFrames.completecases(wide[:, cols])
-    any(keep) || throw(ArgumentError(
-        "QRA has no training tasks where all of $(join(models, ", ")) submitted a " *
-        "forecast; supply complete cases or drop the incomplete models."))
+    any(keep) || throw(
+        ArgumentError(
+            "QRA has no training tasks where all of $(join(models, ", ")) submitted a " *
+                "forecast; supply complete cases or drop the incomplete models."
+        )
+    )
     wide = wide[keep, :]
     # Columns carry a `Union{Missing, Float64}` eltype, so fill the matrix column
     # by column; a single `Matrix{Float64}(…)` cannot narrow the union.
@@ -385,7 +397,7 @@ function _quantile_regression(
         τ::Real;
         intercept::Bool = true,
         simplex::Bool = false
-)
+    )
     n, M = size(X)
     model = Model(HiGHS.Optimizer)
     set_silent(model)
@@ -400,9 +412,11 @@ function _quantile_regression(
     end
     @variable(model, u[1:n] >= 0)
     @variable(model, v[1:n] >= 0)
-    @constraint(model,
+    @constraint(
+        model,
         [i = 1:n],
-        y[i] - β0 - sum(X[i, j] * β[j] for j in 1:M) == u[i] - v[i])
+        y[i] - β0 - sum(X[i, j] * β[j] for j in 1:M) == u[i] - v[i]
+    )
     @objective(model, Min, sum(τ * u[i] + (1 - τ) * v[i] for i in 1:n))
     optimize!(model)
     _check_lp_solution(model, "single-τ")
@@ -420,7 +434,7 @@ function _per_quantile_regression_noncross(
         model_id_col::Symbol;
         intercept::Bool = true,
         simplex::Bool = false
-)
+    )
     # Build aligned design matrices per τ. Assumes all τ share the same set
     # of training points (typical when forecasts are produced jointly).
     Xs = Matrix{Float64}[]
@@ -435,11 +449,14 @@ function _per_quantile_regression_noncross(
     K = length(levels)
     n = size(first(Xs), 1)
     all(size(X, 1) == n for X in Xs) ||
-        throw(ArgumentError(
+        throw(
+        ArgumentError(
             "noncross requires the same training tasks at every quantile level; " *
-            "got mismatched sizes $(map(X -> size(X, 1), Xs)). This can happen with " *
-            "partial submissions where a model skips some tasks at some levels — " *
-            "ensure every model submits at every level, or drop the incomplete models."))
+                "got mismatched sizes $(map(X -> size(X, 1), Xs)). This can happen with " *
+                "partial submissions where a model skips some tasks at some levels — " *
+                "ensure every model submits at every level, or drop the incomplete models."
+        )
+    )
 
     model = Model(HiGHS.Optimizer)
     set_silent(model)
@@ -458,8 +475,10 @@ function _per_quantile_regression_noncross(
         u = @variable(model, [1:n], lower_bound = 0.0)
         v = @variable(model, [1:n], lower_bound = 0.0)
         for i in 1:n
-            @constraint(model,
-                ys[k][i] - β0[k] - sum(Xs[k][i, j] * β[j, k] for j in 1:M) == u[i] - v[i])
+            @constraint(
+                model,
+                ys[k][i] - β0[k] - sum(Xs[k][i, j] * β[j, k] for j in 1:M) == u[i] - v[i]
+            )
             add_to_expression!(obj, τ, u[i])
             add_to_expression!(obj, 1 - τ, v[i])
         end
@@ -469,9 +488,11 @@ function _per_quantile_regression_noncross(
     # every training point.
     for k in 1:(K - 1)
         for i in 1:n
-            @constraint(model,
+            @constraint(
+                model,
                 β0[k] + sum(Xs[k][i, j] * β[j, k] for j in 1:M) <=
-                β0[k + 1] + sum(Xs[k + 1][i, j] * β[j, k + 1] for j in 1:M))
+                    β0[k + 1] + sum(Xs[k + 1][i, j] * β[j, k + 1] for j in 1:M)
+            )
         end
     end
 
@@ -495,7 +516,7 @@ function _joint_quantile_regression(
         model_id_col::Symbol;
         intercept::Bool = true,
         simplex::Bool = false
-)
+    )
     Xs = Matrix{Float64}[]
     ys = Vector{Float64}[]
     τs = Float64[]
@@ -526,8 +547,10 @@ function _joint_quantile_regression(
         u = @variable(model, [1:n], lower_bound = 0.0)
         v = @variable(model, [1:n], lower_bound = 0.0)
         for i in 1:n
-            @constraint(model,
-                ys[k][i] - β0 - sum(Xs[k][i, j] * β[j] for j in 1:M) == u[i] - v[i])
+            @constraint(
+                model,
+                ys[k][i] - β0 - sum(Xs[k][i, j] * β[j] for j in 1:M) == u[i] - v[i]
+            )
             add_to_expression!(obj, τ, u[i])
             add_to_expression!(obj, 1 - τ, v[i])
         end

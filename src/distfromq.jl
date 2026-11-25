@@ -171,7 +171,7 @@ end
 Return the value of `d` at probability `u ∈ (0,1)`.
 """
 function quantile(d::QuantileDistribution, u::Real)
-    p = d.probs;
+    p = d.probs
     v = d.vals
     if u <= p[1]
         return quantile(d.left_tail, u)
@@ -190,7 +190,7 @@ end
 Return P(X ≤ x).
 """
 function cdf(d::QuantileDistribution, x::Real)
-    p = d.probs;
+    p = d.probs
     v = d.vals
     if x <= v[1]
         return cdf(d.left_tail, x)

@@ -45,8 +45,12 @@ end
 function BLP(; weights = nothing)
     w = _resolve_weights(weights)
     if w !== nothing && is_per_quantile(w)
-        throw(ArgumentError("BLP takes per-model pool weights only; per-quantile " *
-                            "weights are not meaningful for a mixture."))
+        throw(
+            ArgumentError(
+                "BLP takes per-model pool weights only; per-quantile " *
+                    "weights are not meaningful for a mixture."
+            )
+        )
     end
     return BLP(w)
 end
@@ -90,7 +94,7 @@ function fit(m::BLP, training::ForecastTable, observations::AbstractDataFrame)
             u += w * cdf(d, y)
             wsum += w
         end
-        push!(us, clamp(u / wsum, 1e-6, 1 - 1e-6))
+        push!(us, clamp(u / wsum, 1.0e-6, 1 - 1.0e-6))
     end
 
     a, b = _fit_beta(us)
@@ -139,9 +143,9 @@ end
 weights(::FittedBLP) = nothing
 
 function _no_weights_reason(::FittedBLP)
-    "BLP recalibrates the pooled distribution through a Beta transform and " *
-    "never estimates per-model weights; use the equal or supplied weights of " *
-    "the pool it was fitted to"
+    return "BLP recalibrates the pooled distribution through a Beta transform and " *
+        "never estimates per-model weights; use the equal or supplied weights of " *
+        "the pool it was fitted to"
 end
 
 # Maximum-likelihood Beta fit of the PIT values, with a method-of-moments
@@ -154,12 +158,12 @@ function _fit_beta(u::AbstractVector{<:Real})
     catch e
         e isa InterruptException && rethrow()
         @warn "BLP: Beta MLE fit failed; falling back to method of moments. This " *
-              "often signals systematic miscalibration of the input PIT values." maxlog = 1
+            "often signals systematic miscalibration of the input PIT values." maxlog = 1
         m = Statistics.mean(u)
         v = Statistics.var(u)
         if v <= 0 || v >= m * (1 - m)
             @warn "BLP: PIT moments are degenerate; using Beta(1, 1) — no " *
-                  "recalibration is applied." maxlog = 1
+                "recalibration is applied." maxlog = 1
             return (1.0, 1.0)
         end
         c = m * (1 - m) / v - 1

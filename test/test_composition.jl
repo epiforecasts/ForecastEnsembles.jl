@@ -5,14 +5,14 @@
 
     # ---- CRPSStacking → LinearPool ----------------------------------------
     rng = MersenneTwister(2026)
-    T = 40;
+    T = 40
     K = 80
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
     rows = DataFrame[]
     for (mid, sampler) in (
-        ("m_good", (y, rng) -> y .+ randn(rng, K)),
-        ("m_noisy", (y, rng) -> 5.0 .* randn(rng, K))
-    )
+            ("m_good", (y, rng) -> y .+ randn(rng, K)),
+            ("m_noisy", (y, rng) -> 5.0 .* randn(rng, K)),
+        )
         for t in 1:T
             push!(
                 rows,
@@ -35,7 +35,7 @@
     @test !ForecastEnsembles.is_per_quantile(w)
     w_df = DataFrame(w)
     @test sort(propertynames(w_df)) == [:model_id, :weight]
-    @test sum(w_df.weight) ≈ 1.0 atol = 1e-8
+    @test sum(w_df.weight) ≈ 1.0 atol = 1.0e-8
 
     # Pass the fitted method directly to LinearPool / QuantileEnsemble.
     lp = LinearPool(weights = fitted_crps, n_samples = 1000)
@@ -46,12 +46,15 @@
     @test DataFrame(qe.weights).weight ≈ w_df.weight
 
     # ---- QRA → weights() returns DataFrame only when fit is "simplex-shape"
-    n = 100;
+    n = 100
     levels = [0.1, 0.5, 0.9]
     y = randn(rng, n)
     qrows = DataFrame[]
-    for (mid, prediction) in (("m_a", y .+ 0.3 .* randn(rng, n)), (
-        "m_b", y .+ 0.3 .* randn(rng, n)))
+    for (mid, prediction) in (
+            ("m_a", y .+ 0.3 .* randn(rng, n)), (
+                "m_b", y .+ 0.3 .* randn(rng, n),
+            ),
+        )
         for τ in levels
             zτ = quantile(Normal(0, 1), τ)
             push!(
@@ -82,7 +85,7 @@
     w_q = weights(fitted_q_ok)
     @test w_q isa EnsembleWeights
     @test !ForecastEnsembles.is_per_quantile(w_q)
-    @test sum(DataFrame(w_q).weight) ≈ 1.0 atol = 1e-6
+    @test sum(DataFrame(w_q).weight) ≈ 1.0 atol = 1.0e-6
 
     # Per-quantile weights → long-format DataFrame; LinearPool dispatches
     # on shape and does direct vertical pooling.
@@ -97,7 +100,7 @@
     w_pq_df = DataFrame(w_pq)
     @test sort(propertynames(w_pq_df)) == [:model_id, :output_type_id, :weight]
     for τ in unique(w_pq_df.output_type_id)
-        @test sum(w_pq_df[w_pq_df.output_type_id .== τ, :weight]) ≈ 1.0 atol = 1e-6
+        @test sum(w_pq_df[w_pq_df.output_type_id .== τ, :weight]) ≈ 1.0 atol = 1.0e-6
     end
 
     # End-to-end: per-quantile weights from QRA produce the same predictions
@@ -110,7 +113,7 @@
         rename(select(via_qe, :t, :output_type_id, :value), :value => :v_qe);
         on = [:t, :output_type_id]
     )
-    @test maximum(abs.(j.value .- j.v_qe)) < 1e-10
+    @test maximum(abs.(j.value .- j.v_qe)) < 1.0e-10
 
     # MixtureEnsemble refuses per-quantile weights — that path is now
     # explicitly QuantileEnsemble's job.

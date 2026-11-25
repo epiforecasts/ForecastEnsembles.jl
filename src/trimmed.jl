@@ -66,10 +66,13 @@ See [`TrimmedMean`](@ref). The output `model_id` is `"hub-ensemble"`.
 """
 function combine(ft::ForecastTable, m::TrimmedMean; rng::AbstractRNG = default_rng())
     ot = output_type(ft)
-    ot in (:quantile, :cdf) || throw(ArgumentError(
-        "TrimmedMean aggregates comparable per-(task, output_type_id) values " *
-        "across models; it supports :quantile and :cdf, not :$ot (sample indices " *
-        "are not aligned across models — use MixtureEnsemble)."))
+    ot in (:quantile, :cdf) || throw(
+        ArgumentError(
+            "TrimmedMean aggregates comparable per-(task, output_type_id) values " *
+                "across models; it supports :quantile and :cdf, not :$ot (sample indices " *
+                "are not aligned across models — use MixtureEnsemble)."
+        )
+    )
 
     df = ft.data
     group_cols = vcat([:output_type, :output_type_id], ft.task_id_cols)
@@ -78,12 +81,16 @@ function combine(ft::ForecastTable, m::TrimmedMean; rng::AbstractRNG = default_r
     # Model participation varies per task, so key the check off the smallest
     # group — any task where trimming rounds to zero is a silent no-op there,
     # even when better-covered tasks do trim.
-    n_min = minimum(DataFrames.combine(DataFrames.groupby(df, group_cols),
-        DataFrames.nrow => :n).n)
+    n_min = minimum(
+        DataFrames.combine(
+            DataFrames.groupby(df, group_cols),
+            DataFrames.nrow => :n
+        ).n
+    )
     if m.fraction > 0 && round(Int, m.fraction * n_min) == 0
         @warn "TrimmedMean(fraction = $(m.fraction)) trims nothing for tasks with " *
-              "as few as $n_min models (round(fraction × n) = 0): the result is the " *
-              "plain mean there. Raise `fraction` or add models to trim." maxlog = 1
+            "as few as $n_min models (round(fraction × n) = 0): the result is the " *
+            "plain mean there. Raise `fraction` or add models to trim." maxlog = 1
     end
     frac = m.fraction
     mode = m.mode

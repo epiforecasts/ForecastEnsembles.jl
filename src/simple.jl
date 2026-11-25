@@ -30,17 +30,19 @@ function combine(ft::ForecastTable, m::QuantileEnsemble; rng::AbstractRNG = defa
             joined = leftjoin(df, wdf; on = join_cols)
             any(ismissing, joined.weight)::Bool && throw(
                 ArgumentError(
-                "per-quantile weights are missing some (model_id, output_type_id) pairs",
-            ),
+                    "per-quantile weights are missing some (model_id, output_type_id) pairs",
+                ),
             )
         else
             models_present = unique(df[!, ft.model_id_col])
             miss = setdiff(models_present, wdf.model_id)
             isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
             extra = setdiff(wdf.model_id, models_present)
-            isempty(extra) || @warn("weights provided for models not present in the data " *
-                  "(possible typo in model_id): $extra",
-                maxlog = 1,)
+            isempty(extra) || @warn(
+                "weights provided for models not present in the data " *
+                    "(possible typo in model_id): $extra",
+                maxlog = 1,
+            )
             joined = leftjoin(df, wdf; on = ft.model_id_col => :model_id)
         end
         agg_fun = m.agg === :mean ? _weighted_mean : _weighted_median
@@ -61,10 +63,16 @@ end
 
 function _weighted_mean(v::AbstractVector, w::AbstractVector)
     sw = sum(w)
-    isfinite(sw) || throw(ArgumentError(
-        "ensemble weights sum to $sw; all weights must be finite"))
-    sw > 0 || throw(ArgumentError(
-        "ensemble weights sum to $sw; a positive sum is required to combine"))
+    isfinite(sw) || throw(
+        ArgumentError(
+            "ensemble weights sum to $sw; all weights must be finite"
+        )
+    )
+    sw > 0 || throw(
+        ArgumentError(
+            "ensemble weights sum to $sw; a positive sum is required to combine"
+        )
+    )
     return dot(v, w) / sw
 end
 
@@ -76,10 +84,16 @@ function _weighted_median(v::AbstractVector, w::AbstractVector)
     vs = v[perm]
     ws = w[perm]
     total = sum(ws)
-    isfinite(total) || throw(ArgumentError(
-        "ensemble weights sum to $total; all weights must be finite"))
-    total > 0 || throw(ArgumentError(
-        "ensemble weights sum to $total; a positive sum is required to combine"))
+    isfinite(total) || throw(
+        ArgumentError(
+            "ensemble weights sum to $total; all weights must be finite"
+        )
+    )
+    total > 0 || throw(
+        ArgumentError(
+            "ensemble weights sum to $total; a positive sum is required to combine"
+        )
+    )
     cw = 0.0
     @inbounds for i in eachindex(vs)
         cw += ws[i]

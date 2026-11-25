@@ -44,11 +44,11 @@
 
     # φ = 1 is exactly equal weighting.
     phi1 = fit(CRPSStacking(; lambda = 1.0, time_col = :t), train, obs)
-    @test phi1.weights.weight ≈ equal.weights.weight atol = 1e-8
+    @test phi1.weights.weight ≈ equal.weights.weight atol = 1.0e-8
 
     # :equal symbol too.
     eq_sym = fit(CRPSStacking(; lambda = :equal, time_col = :t), train, obs)
-    @test eq_sym.weights.weight ≈ equal.weights.weight atol = 1e-8
+    @test eq_sym.weights.weight ≈ equal.weights.weight atol = 1.0e-8
 
     # The lopensemble ramp leans recent, but only mildly (oldest ≈ 1,
     # newest 2): between equal and strong decay.
@@ -57,7 +57,7 @@
 
     # Function form: quadratic ramp expressed directly matches :lopensemble.
     fn = fit(CRPSStacking(; lambda = u -> 2 - (1 - u)^2, time_col = :t), train, obs)
-    @test fn.weights.weight ≈ ramp.weights.weight atol = 1e-8
+    @test fn.weights.weight ≈ ramp.weights.weight atol = 1.0e-8
 
     # Vector form: explicit per-time weights (one per unique t).
     T = length(unique(obs.t))
@@ -111,13 +111,13 @@ end
     uniform = DataFrame(t = 1:T, weight = fill(1.0, T))
     w_u = fit(CRPSStacking(; task_weights = uniform), train, obs)
     w_0 = fit(CRPSStacking(), train, obs)
-    @test w_u.weights.weight ≈ w_0.weights.weight atol = 1e-8
+    @test w_u.weights.weight ≈ w_0.weights.weight atol = 1.0e-8
 
     # task_weights equivalent to the exponential lambda gives the same fit.
     expo = DataFrame(t = 1:T, weight = [0.7^(T - t) for t in 1:T])
     w_e = fit(CRPSStacking(; task_weights = expo), train, obs)
     w_l = fit(CRPSStacking(; lambda = 0.7, time_col = :t), train, obs)
-    @test w_e.weights.weight ≈ w_l.weights.weight atol = 1e-8
+    @test w_e.weights.weight ≈ w_l.weights.weight atol = 1.0e-8
 
     # Missing a task raises.
     @test_throws ArgumentError fit(

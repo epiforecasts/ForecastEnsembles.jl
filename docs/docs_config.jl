@@ -44,7 +44,7 @@ const LINKCHECK_IGNORE = [
     # Own docs site — not live until the first gh-pages deploy.
     r"epiforecasts\.io/ForecastEnsembles\.jl",
     # Own repo blob links (e.g. CITATION.cff) — 404 until the branch is on main.
-    r"github\.com/epiforecasts/ForecastEnsembles\.jl/blob"
+    r"github\.com/epiforecasts/ForecastEnsembles\.jl/blob",
 ]
 
 # README -> index.md link rewrites: `from => to` pairs applied line by line,

@@ -1,4 +1,3 @@
-
 """
     combine(ft::ForecastTable, m::MixtureEnsemble; rng = default_rng()) -> ForecastTable
 
@@ -23,7 +22,7 @@ function _linear_pool(
         ::Val{:sample},
         m::MixtureEnsemble,
         rng::AbstractRNG
-)
+    )
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
 
@@ -131,7 +130,7 @@ function _linear_pool(
         ::Val{:quantile},
         m::MixtureEnsemble,
         ::AbstractRNG
-)
+    )
     df = ft.data
     weights = _weights_vector(m.weights, ft, df)
 
@@ -176,7 +175,7 @@ function _mixture_quantile(
         dists::Vector{QuantileDistribution},
         ws::AbstractVector{<:Real},
         τ::Real
-)
+    )
     lo = minimum(quantile(d, τ) for d in dists)
     hi = maximum(quantile(d, τ) for d in dists)
     lo == hi && return lo
@@ -188,7 +187,7 @@ function _mixture_quantile(
         else
             hi = mid
         end
-        (hi - lo) <= 1e-12 * max(1.0, abs(lo), abs(hi)) && break
+        (hi - lo) <= 1.0e-12 * max(1.0, abs(lo), abs(hi)) && break
     end
     return 0.5 * (lo + hi)
 end
@@ -204,7 +203,7 @@ function _weights_vector(
         weights::Union{Nothing, EnsembleWeights},
         ft::ForecastTable,
         df::AbstractDataFrame
-)
+    )
     models = unique(df[!, ft.model_id_col])
     if weights === nothing
         return Dict(m => 1.0 / length(models) for m in models)
@@ -213,9 +212,11 @@ function _weights_vector(
     miss = setdiff(models, wdf.model_id)
     isempty(miss) || throw(ArgumentError("no weight provided for models: $miss"))
     extra = setdiff(wdf.model_id, models)
-    isempty(extra) || @warn("weights provided for models not present in the data " *
-          "(possible typo in model_id): $extra",
-        maxlog = 1,)
+    isempty(extra) || @warn(
+        "weights provided for models not present in the data " *
+            "(possible typo in model_id): $extra",
+        maxlog = 1,
+    )
     return Dict(row.model_id => Float64(row.weight) for row in eachrow(wdf))
 end
 

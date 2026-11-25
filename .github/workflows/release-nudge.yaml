@@ -4,8 +4,9 @@
 # changes (thin caller of the EpiAware/.github reusable). Runs weekly and
 # on demand; when main has commits since the last release/tag that are
 # not yet registered, it opens or refreshes a single `release-nudge`
-# issue explaining what to do (bump via `/version`, update NEWS.md, then
-# `/register`). Closes that issue once everything is released. See the
+# issue explaining what to do (bump via `/version`, then `/register`;
+# the notes are written on the GitHub release itself). Closes that
+# issue once everything is released. See the
 # reusable workflow's own header for the mention-safety and staleness
 # rules it applies.
 
@@ -32,5 +33,6 @@ permissions:
 
 jobs:
   release-nudge:
-    uses: EpiAware/.github/.github/workflows/release-nudge.yml@a4e9e60c0ace848d21b6cf931d6a66414fc3bdd5
-    secrets: inherit  # pragma: allowlist secret
+    uses: EpiAware/.github/.github/workflows/release-nudge.yml@df21fa61dc0f7b0ac9d811f336a1f87512e7aaba
+    secrets:
+      DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

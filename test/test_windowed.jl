@@ -8,8 +8,11 @@
     K = 60
     obs = DataFrame(t = 1:T, observed = randn(rng, T))
     rows = DataFrame[]
-    for (mid, s) in (("m_a", (y, r) -> y .+ randn(r, K)), (
-        "m_b", (y, r) -> 2.0 .* randn(r, K)))
+    for (mid, s) in (
+            ("m_a", (y, r) -> y .+ randn(r, K)), (
+                "m_b", (y, r) -> 2.0 .* randn(r, K),
+            ),
+        )
         for t in 1:T
             push!(
                 rows,
@@ -43,14 +46,17 @@
     # Guards.
     @test_throws ArgumentError Windowed(CRPSStacking(), 0; time_col = :t)
     @test_throws ArgumentError fit(
-        Windowed(CRPSStacking(), 5; time_col = :nope), train, obs)
+        Windowed(CRPSStacking(), 5; time_col = :nope), train, obs
+    )
 
     # Composes as a scheme in backtest — rolling vs expanding window.
     include(joinpath(@__DIR__, "score_helpers.jl"))
     function sample_crps(fc, o)
         d = innerjoin(DataFrame(fc), o; on = :t)
-        per = DataFrames.combine(DataFrames.groupby(d, :t),
-            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s)
+        per = DataFrames.combine(
+            DataFrames.groupby(d, :t),
+            [:value, :observed] => ((v, y) -> crps(Float64.(v), Float64(first(y)))) => :s
+        )
         return mean(per.s)
     end
     res = backtest(
@@ -58,7 +64,7 @@
         obs,
         [
             "expanding" => CRPSStacking(),
-            "rolling" => Windowed(CRPSStacking(), 8; time_col = :t)
+            "rolling" => Windowed(CRPSStacking(), 8; time_col = :t),
         ];
         time_col = :t,
         min_train = 12,

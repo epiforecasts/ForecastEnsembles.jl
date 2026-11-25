@@ -11,10 +11,10 @@
 
     # Interior points should match exactly at the knot probabilities.
     for (p, v) in zip(probs, vals)
-        @test quantile(qd, p) ≈ v atol = 1e-9
+        @test quantile(qd, p) ≈ v atol = 1.0e-9
     end
     # CDF round-trip.
-    @test ForecastEnsembles.cdf(qd, vals[5]) ≈ probs[5] atol = 1e-9
+    @test ForecastEnsembles.cdf(qd, vals[5]) ≈ probs[5] atol = 1.0e-9
 
     # Tail extrapolation should be reasonable for a normal-distributed sample.
     @test quantile(qd, 0.001) < vals[1]
@@ -34,10 +34,10 @@ end
     qd = ForecastEnsembles.QuantileDistribution(probs, vals)
     # cdf at the tied boundary is the step probability at that knot, not the
     # median (0.5) of a degenerate spike.
-    @test ForecastEnsembles.cdf(qd, 0.0) ≈ 0.1 atol = 1e-8
+    @test ForecastEnsembles.cdf(qd, 0.0) ≈ 0.1 atol = 1.0e-8
     # Just above the tie, cdf jumps toward the next level (atom mass 0.15 up to
     # p = 0.25); a loose `> 0.2` bound catches a regression to the old 0.1.
-    @test ForecastEnsembles.cdf(qd, 1e-6) > 0.2
+    @test ForecastEnsembles.cdf(qd, 1.0e-6) > 0.2
     # Still a valid CDF: monotone and in [0, 1].
     cs = [ForecastEnsembles.cdf(qd, x) for x in range(-2.0, 12.0; length = 60)]
     @test issorted(cs)
@@ -51,5 +51,5 @@ end
     probs = [0.1, 0.25, 0.5, 0.9]
     vals = fill(3.0, 4)
     qd = ForecastEnsembles.QuantileDistribution(probs, vals)
-    @test ForecastEnsembles.cdf(qd, 3.0) ≈ 0.5 atol = 1e-8
+    @test ForecastEnsembles.cdf(qd, 3.0) ≈ 0.5 atol = 1.0e-8
 end
